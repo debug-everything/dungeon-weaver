@@ -1,0 +1,95 @@
+import Phaser from 'phaser';
+import { SCENE_KEYS } from '../config/constants';
+
+export class BootScene extends Phaser.Scene {
+  constructor() {
+    super({ key: SCENE_KEYS.BOOT });
+  }
+
+  preload(): void {
+    // Create loading bar
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    const progressBar = this.add.graphics();
+    const progressBox = this.add.graphics();
+    progressBox.fillStyle(0x222222, 0.8);
+    progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+
+    const loadingText = this.add.text(width / 2, height / 2 - 50, 'Loading...', {
+      font: '20px monospace',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (value: number) => {
+      progressBar.clear();
+      progressBar.fillStyle(0x8b4513, 1);
+      progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
+    });
+
+    this.load.on('complete', () => {
+      progressBar.destroy();
+      progressBox.destroy();
+      loadingText.destroy();
+    });
+
+    // Load player
+    this.load.image('hero_basic', 'assets/items/hero_basic.png');
+
+    // Load monsters
+    this.load.image('monster_zombie', 'assets/items/monster_zombie.png');
+    this.load.image('monster_skelet', 'assets/items/monster_skelet.png');
+    this.load.image('monster_orc', 'assets/items/monster_orc.png');
+    this.load.image('monster_goblin', 'assets/items/monster_goblin.png');
+    this.load.image('monster_demon', 'assets/items/monster_demon.png');
+
+    // Load NPCs
+    this.load.image('npc_merchant', 'assets/items/npc_merchant.png');
+    this.load.image('npc_merchant_2', 'assets/items/npc_merchant_2.png');
+    this.load.image('npc_sage', 'assets/items/npc_sage.png');
+
+    // Load weapons
+    this.load.image('weapon_sword_wooden', 'assets/items/weapon_sword_wooden.png');
+    this.load.image('weapon_sword_rusty', 'assets/items/weapon_sword_rusty.png');
+    this.load.image('weapon_sword_steel', 'assets/items/weapon_sword_steel.png');
+    this.load.image('weapon_sword_silver', 'assets/items/weapon_sword_silver.png');
+    this.load.image('weapon_sword_ruby', 'assets/items/weapon_sword_ruby.png');
+    this.load.image('weapon_sword_golden', 'assets/items/weapon_sword_golden.png');
+    this.load.image('weapon_dagger_small', 'assets/items/weapon_dagger_small.png');
+    this.load.image('weapon_dagger_steel', 'assets/items/weapon_dagger_steel.png');
+    this.load.image('weapon_dagger_golden', 'assets/items/weapon_dagger_golden.png');
+    this.load.image('weapon_hammer', 'assets/items/weapon_hammer.png');
+    this.load.image('weapon_sledgehammer', 'assets/items/weapon_sledgehammer.png');
+    this.load.image('weapon_katana_silver', 'assets/items/weapon_katana_silver.png');
+
+    // Load potions
+    this.load.image('flask_red', 'assets/items/flask_red.png');
+    this.load.image('flask_big_red', 'assets/items/flask_big_red.png');
+    this.load.image('flask_blue', 'assets/items/flask_blue.png');
+    this.load.image('flask_green', 'assets/items/flask_green.png');
+    this.load.image('flask_yellow', 'assets/items/flask_yellow.png');
+
+    // Load environment
+    this.load.image('floor_plain', 'assets/items/floor_plain.png');
+    this.load.image('floor_stain_1', 'assets/items/floor_stain_1.png');
+    this.load.image('floor_stain_2', 'assets/items/floor_stain_2.png');
+    this.load.image('wall_center', 'assets/items/wall_center.png');
+    this.load.image('wall_left', 'assets/items/wall_left.png');
+    this.load.image('wall_right', 'assets/items/wall_right.png');
+    this.load.image('wall_top_center', 'assets/items/wall_top_center.png');
+    this.load.image('wall_top_left', 'assets/items/wall_top_left.png');
+    this.load.image('wall_top_right', 'assets/items/wall_top_right.png');
+    this.load.image('door_closed', 'assets/items/door_closed.png');
+    this.load.image('door_open', 'assets/items/door_open.png');
+    this.load.image('chest_closed', 'assets/items/chest_closed.png');
+    this.load.image('chest_open_empty', 'assets/items/chest_open_empty.png');
+    this.load.image('chest_open_full', 'assets/items/chest_open_full.png');
+
+    // Load UI elements
+    this.load.image('box', 'assets/items/box.png');
+  }
+
+  create(): void {
+    this.scene.start(SCENE_KEYS.MENU);
+  }
+}

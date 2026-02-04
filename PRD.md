@@ -1,0 +1,296 @@
+# Dungeon Crawler RPG - Product Requirements Document
+
+## Overview
+A top-down dungeon crawler game built with Phaser 3 featuring RPG elements including combat, inventory management, equipment systems, and NPC interactions.
+
+---
+
+## Phase 1: Core Foundation (MVP) ✅
+
+### Project Setup
+- [x] Vite + TypeScript configuration
+- [x] Phaser 3 integration
+- [x] Asset loading system with progress bar
+- [x] Scene management architecture
+
+### Player System
+- [x] Player entity with sprite rendering
+- [x] WASD/Arrow key movement
+- [x] Camera follow
+- [x] Collision detection with walls
+- [x] Player health system
+- [x] Player gold/currency system
+- [x] Facing direction tracking
+
+### Combat System
+- [x] SPACE key to attack
+- [x] Directional attack hitbox based on facing
+- [x] Damage calculation with weapon stats
+- [x] Critical hit system (10% chance, 1.5x damage)
+- [x] Damage variance (85%-115%)
+- [x] Visual feedback (damage numbers, hit effects)
+- [x] Attack cooldown based on weapon speed
+
+### Monster System
+- [x] 5 monster types implemented:
+  - [x] Zombie (slow, low damage)
+  - [x] Skeleton (standard enemy)
+  - [x] Goblin (fast, weak)
+  - [x] Orc (tough melee)
+  - [x] Demon (boss/elite)
+- [x] AI state machine (IDLE, CHASING, ATTACKING)
+- [x] Detection range and aggro
+- [x] Monster health bars
+- [x] Death animations
+- [x] Loot drops (gold + items)
+
+### NPC & Shop System
+- [x] 3 NPC merchants:
+  - [x] Marcus the Merchant (basic weapons & potions)
+  - [x] Elena the Exotic (rare/exotic weapons)
+  - [x] Aldric the Sage (consumables & magic items)
+- [x] E key interaction when near NPC
+- [x] Interaction prompt display
+- [x] NPC dialogue system
+- [x] Shop UI with item list and details panel
+- [x] Buy functionality with gold deduction
+- [x] Stock tracking per item
+
+### Inventory System
+- [x] 20-slot inventory grid
+- [x] Item stacking for consumables
+- [x] Click to equip weapons
+- [x] Click to use consumables
+- [x] Item tooltips on hover
+- [x] I key to open/close inventory
+
+### Equipment System
+- [x] 6 equipment slots (weapon, head, chest, legs, boots, shield)
+- [x] Equip/unequip functionality
+- [x] Stats display (damage, speed, defense)
+- [x] Equipment affects combat calculations
+
+### Items & Weapons
+- [x] 14 weapons implemented:
+  - [x] Wooden Sword, Rusty Sword, Steel Sword, Silver Sword, Ruby Sword, Golden Sword
+  - [x] Small Dagger, Steel Dagger, Golden Dagger
+  - [x] War Hammer, Sledgehammer
+  - [x] Silver Katana
+- [x] 5 consumables:
+  - [x] Health Potion (25 HP)
+  - [x] Large Health Potion (50 HP)
+  - [x] Mana Potion
+  - [x] Antidote
+  - [x] Speed Potion
+
+### Dungeon Generation
+- [x] Procedural room generation
+- [x] Corridor connections between rooms
+- [x] Floor tile variations
+- [x] Wall collision boundaries
+- [x] Safe room (first room with NPCs)
+- [x] Monster spawning in dungeon rooms
+- [x] Boss room (last room with Demon)
+
+### UI/HUD
+- [x] Health bar with color coding (green/yellow/red)
+- [x] Gold counter
+- [x] Equipped weapon display
+- [x] Controls reminder text
+- [x] Item pickup notifications
+- [x] Main menu with start button
+
+### Game Flow
+- [x] Boot scene with asset loading
+- [x] Menu scene
+- [x] Game scene with pause functionality
+- [x] Game over on player death
+- [x] Return to menu on death
+
+---
+
+## Phase 2: Enhanced Gameplay
+
+### Combat Enhancements
+- [ ] Knockback on hit
+- [ ] Invincibility frames after taking damage
+- [ ] Combo attack system
+- [ ] Charged attacks
+- [ ] Dodge/roll mechanic
+
+### Monster Enhancements
+- [ ] Additional monster types (5-10 more)
+- [ ] Monster variants (armored, elite, etc.)
+- [ ] Ranged enemy attacks
+- [ ] Boss attack patterns
+- [ ] Monster spawners/nests
+
+### Armor System
+- [ ] Head armor items
+- [ ] Chest armor items
+- [ ] Leg armor items
+- [ ] Boot items
+- [ ] Shield items
+- [ ] Armor defense calculations
+- [ ] Visual equipment on player sprite
+
+### Dungeon Improvements
+- [ ] Multiple dungeon floors/levels
+- [ ] Stairs/ladders between floors
+- [ ] Locked doors requiring keys
+- [ ] Secret rooms
+- [ ] Treasure chests with loot
+- [ ] Environmental hazards (traps, spikes, lava)
+
+### Items Expansion
+- [ ] Keys and lockpicks
+- [ ] Scrolls with special effects
+- [ ] Rings with passive bonuses
+- [ ] Amulets with passive bonuses
+- [ ] Throwing weapons
+- [ ] Bombs/explosives
+
+---
+
+## Phase 3: Progression Systems
+
+### Experience & Leveling
+- [ ] XP gain from killing monsters
+- [ ] Level up system
+- [ ] Stat increases on level up
+- [ ] Level display in UI
+
+### Skills & Abilities
+- [ ] Skill tree system
+- [ ] Active abilities (fireball, heal, etc.)
+- [ ] Passive abilities
+- [ ] Ability cooldowns
+- [ ] Mana/energy resource
+
+### Quests
+- [ ] Quest log UI
+- [ ] Quest NPCs
+- [ ] Kill quests
+- [ ] Fetch quests
+- [ ] Quest rewards
+- [ ] Quest tracking on HUD
+
+### Character Classes
+- [ ] Warrior class
+- [ ] Rogue class
+- [ ] Mage class
+- [ ] Class-specific abilities
+- [ ] Class selection at game start
+
+---
+
+## Phase 4: World Expansion
+
+### Multiple Areas
+- [ ] Town hub area
+- [ ] Multiple dungeon themes (cave, castle, crypt)
+- [ ] Overworld map
+- [ ] Area transitions
+
+### NPCs Expansion
+- [ ] Quest-giving NPCs
+- [ ] Blacksmith (weapon upgrades)
+- [ ] Enchanter (magic enhancements)
+- [ ] Healer NPC
+- [ ] NPC schedules and locations
+
+### Crafting System
+- [ ] Crafting materials
+- [ ] Crafting recipes
+- [ ] Crafting UI
+- [ ] Weapon/armor crafting
+- [ ] Potion brewing
+
+---
+
+## Phase 5: Polish & Meta
+
+### Save System
+- [ ] Local storage save
+- [ ] Auto-save functionality
+- [ ] Multiple save slots
+- [ ] Save/load UI
+
+### Audio
+- [ ] Background music
+- [ ] Combat sound effects
+- [ ] UI sound effects
+- [ ] Ambient dungeon sounds
+- [ ] Volume controls
+
+### Visual Polish
+- [ ] Particle effects
+- [ ] Screen shake
+- [ ] Smooth camera transitions
+- [ ] Lighting/shadows
+- [ ] Weather effects
+
+### Accessibility
+- [ ] Rebindable controls
+- [ ] Difficulty settings
+- [ ] Colorblind mode
+- [ ] Screen reader support
+
+### Performance
+- [ ] Object pooling
+- [ ] Chunk-based rendering
+- [ ] Asset optimization
+- [ ] Mobile touch controls
+
+---
+
+## Technical Debt & Improvements
+
+### Code Quality
+- [ ] Unit tests for systems
+- [ ] Integration tests
+- [ ] Code documentation
+- [ ] Performance profiling
+
+### Architecture
+- [ ] Event bus system refinement
+- [ ] State management (Redux-like)
+- [ ] Entity-Component-System refactor
+- [ ] Plugin system for modding
+
+---
+
+## Asset Requirements
+
+### Currently Using
+- [x] 0x72 Dungeon Tileset (16x16)
+- [x] Individual sprite PNGs from tileset
+
+### Future Needs
+- [ ] Additional monster sprites
+- [ ] Armor/equipment sprites
+- [ ] Effect animations (spells, explosions)
+- [ ] UI elements (buttons, frames)
+- [ ] Tileset variations for different dungeon themes
+
+---
+
+## Metrics & Success Criteria
+
+### MVP Success
+- [x] Game loads without errors
+- [x] Player can move and attack
+- [x] Monsters respond to player
+- [x] Items can be bought and equipped
+- [x] Game loop is functional (play -> die -> restart)
+
+### Phase 2+ Success
+- [ ] 30+ minutes of gameplay content
+- [ ] 3+ dungeon floors
+- [ ] 15+ monster types
+- [ ] 50+ items
+- [ ] Player retention through progression
+
+---
+
+*Last Updated: Phase 1 Complete*
