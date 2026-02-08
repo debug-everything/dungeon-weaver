@@ -1,0 +1,645 @@
+[
+  {
+    "id": "quest_goblin_menace",
+    "name": "The Goblin Menace",
+    "type": "destroy",
+    "description": "Marcus needs help clearing out the goblins infesting the dungeon.",
+    "npcId": "npc_merchant",
+    "level": 1,
+    "objectives": [
+      {
+        "id": "kill_goblins",
+        "type": "kill",
+        "description": "Kill goblins",
+        "target": "goblin",
+        "requiredCount": 3,
+        "consumeOnTurnIn": false
+      }
+    ],
+    "rewards": {
+      "xp": 50,
+      "gold": 30,
+      "items": [{ "itemId": "weapon_dagger_steel", "quantity": 1 }]
+    },
+    "dialog": {
+      "offer": [
+        {
+          "id": "offer_1",
+          "speaker": "Marcus the Merchant",
+          "text": "Those blasted goblins have been raiding my supply carts! I can't keep my shop stocked at this rate. Could you clear out at least three of them?",
+          "responses": [
+            { "text": "I'll take care of those goblins for you.", "nextNodeId": "offer_accept", "action": { "type": "accept_quest" } },
+            { "text": "I'm not interested right now.", "nextNodeId": "offer_decline", "action": { "type": "decline_quest" } },
+            { "text": "Maybe you should learn to fight them yourself.", "nextNodeId": "offer_hostile", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "offer_accept",
+          "speaker": "Marcus the Merchant",
+          "text": "Excellent! Slay three of those little thieves and I'll make it worth your while. I've got a fine steel dagger set aside for you."
+        },
+        {
+          "id": "offer_decline",
+          "speaker": "Marcus the Merchant",
+          "text": "I understand, adventurer. The offer stands if you change your mind."
+        },
+        {
+          "id": "offer_hostile",
+          "speaker": "Marcus the Merchant",
+          "text": "Ha! I'm a merchant, not a warrior. But I know how to reward those who are."
+        }
+      ],
+      "inProgress": [
+        {
+          "id": "progress_1",
+          "speaker": "Marcus the Merchant",
+          "text": "Still working on those goblins? Keep at it! The dungeon is crawling with the little pests.",
+          "responses": [
+            { "text": "I'm on it.", "nextNodeId": "progress_ack", "action": { "type": "end_dialog" } },
+            { "text": "How many more do I need?", "nextNodeId": "progress_count", "action": { "type": "end_dialog" } },
+            { "text": "These goblins are tougher than expected.", "nextNodeId": "progress_tough", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "progress_ack",
+          "speaker": "Marcus the Merchant",
+          "text": "Good luck out there!"
+        },
+        {
+          "id": "progress_count",
+          "speaker": "Marcus the Merchant",
+          "text": "Check your quest tracker - it'll tell you how many remain."
+        },
+        {
+          "id": "progress_tough",
+          "speaker": "Marcus the Merchant",
+          "text": "They're quick, but they're fragile. Watch for their charge attacks."
+        }
+      ],
+      "readyToTurnIn": [
+        {
+          "id": "turnin_1",
+          "speaker": "Marcus the Merchant",
+          "text": "You've done it! I can already see fewer goblins lurking about. Here's your reward, as promised!",
+          "responses": [
+            { "text": "Glad I could help. I'll take that reward.", "nextNodeId": "turnin_accept", "action": { "type": "turn_in_quest" } },
+            { "text": "It was nothing. Pay up.", "nextNodeId": "turnin_blunt", "action": { "type": "turn_in_quest" } },
+            { "text": "Keep the reward, I did it for the thrill.", "nextNodeId": "turnin_generous", "action": { "type": "turn_in_quest" } }
+          ]
+        },
+        {
+          "id": "turnin_accept",
+          "speaker": "Marcus the Merchant",
+          "text": "Here you are - gold and a fine steel dagger! My shipments should be safer now."
+        },
+        {
+          "id": "turnin_blunt",
+          "speaker": "Marcus the Merchant",
+          "text": "Straight to business, eh? I like that. Here's everything I promised."
+        },
+        {
+          "id": "turnin_generous",
+          "speaker": "Marcus the Merchant",
+          "text": "Nonsense! A deal's a deal. Take the reward - you've earned it."
+        }
+      ],
+      "completed": [
+        {
+          "id": "done_1",
+          "speaker": "Marcus the Merchant",
+          "text": "Thanks again for dealing with those goblins. My supply lines are running smoothly now!",
+          "responses": [
+            { "text": "Happy to help.", "nextNodeId": "done_ack", "action": { "type": "end_dialog" } },
+            { "text": "Got any more work?", "nextNodeId": "done_more", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "done_ack",
+          "speaker": "Marcus the Merchant",
+          "text": "You're a true hero. Don't forget to check my shop for new stock!"
+        },
+        {
+          "id": "done_more",
+          "speaker": "Marcus the Merchant",
+          "text": "Not at the moment, but keep checking back!"
+        }
+      ]
+    }
+  },
+  {
+    "id": "quest_lost_shipment",
+    "name": "The Lost Shipment",
+    "type": "recover",
+    "description": "Aldric needs health potions recovered from the dungeon to continue his research.",
+    "npcId": "npc_sage",
+    "level": 1,
+    "objectives": [
+      {
+        "id": "collect_potions",
+        "type": "collect",
+        "description": "Collect health potions",
+        "target": "flask_red",
+        "requiredCount": 3,
+        "consumeOnTurnIn": true
+      }
+    ],
+    "rewards": {
+      "xp": 40,
+      "gold": 25,
+      "items": [{ "itemId": "flask_big_red", "quantity": 2 }]
+    },
+    "dialog": {
+      "offer": [
+        {
+          "id": "offer_1",
+          "speaker": "Aldric the Sage",
+          "text": "My last shipment of health potions was lost in the dungeon. I need at least three for my research. Could you gather them for me? Monsters sometimes carry them.",
+          "responses": [
+            { "text": "I'll find those potions for you.", "nextNodeId": "offer_accept", "action": { "type": "accept_quest" } },
+            { "text": "Not right now, sorry.", "nextNodeId": "offer_decline", "action": { "type": "decline_quest" } },
+            { "text": "Why can't you get them yourself, old man?", "nextNodeId": "offer_hostile", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "offer_accept",
+          "speaker": "Aldric the Sage",
+          "text": "Wonderful! Bring me three health potions and I'll reward you with some of my finest large potions. They're far more potent."
+        },
+        {
+          "id": "offer_decline",
+          "speaker": "Aldric the Sage",
+          "text": "The spirits are patient, and so am I. Return when you're ready."
+        },
+        {
+          "id": "offer_hostile",
+          "speaker": "Aldric the Sage",
+          "text": "Ha! These old bones aren't suited for dungeon crawling anymore. But I make up for it with wisdom... and generous rewards."
+        }
+      ],
+      "inProgress": [
+        {
+          "id": "progress_1",
+          "speaker": "Aldric the Sage",
+          "text": "Have you found the potions yet? Monsters in the dungeon sometimes drop them when defeated.",
+          "responses": [
+            { "text": "Still looking.", "nextNodeId": "progress_ack", "action": { "type": "end_dialog" } },
+            { "text": "Where should I look?", "nextNodeId": "progress_hint", "action": { "type": "end_dialog" } },
+            { "text": "This is taking forever.", "nextNodeId": "progress_impatient", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "progress_ack",
+          "speaker": "Aldric the Sage",
+          "text": "Keep searching. The dungeon will provide."
+        },
+        {
+          "id": "progress_hint",
+          "speaker": "Aldric the Sage",
+          "text": "Monsters often carry potions. Defeat enough of them and you're sure to find some."
+        },
+        {
+          "id": "progress_impatient",
+          "speaker": "Aldric the Sage",
+          "text": "Patience is the companion of wisdom, young one. You'll find them."
+        }
+      ],
+      "readyToTurnIn": [
+        {
+          "id": "turnin_1",
+          "speaker": "Aldric the Sage",
+          "text": "Ah, you have the potions! I can sense their essence from here. Hand them over and I'll give you your reward.",
+          "responses": [
+            { "text": "Here are your potions, Aldric.", "nextNodeId": "turnin_accept", "action": { "type": "turn_in_quest" } },
+            { "text": "These better be worth the trouble.", "nextNodeId": "turnin_blunt", "action": { "type": "turn_in_quest" } },
+            { "text": "Do you really need all three?", "nextNodeId": "turnin_question", "action": { "type": "turn_in_quest" } }
+          ]
+        },
+        {
+          "id": "turnin_accept",
+          "speaker": "Aldric the Sage",
+          "text": "Perfect! And as promised, here are two large health potions. They'll serve you much better in the deeper chambers."
+        },
+        {
+          "id": "turnin_blunt",
+          "speaker": "Aldric the Sage",
+          "text": "Oh, they are! These large potions heal twice as much. A fair trade, I'd say."
+        },
+        {
+          "id": "turnin_question",
+          "speaker": "Aldric the Sage",
+          "text": "I'm afraid so - the arcane formula requires exactly three. But these large potions will more than compensate you!"
+        }
+      ],
+      "completed": [
+        {
+          "id": "done_1",
+          "speaker": "Aldric the Sage",
+          "text": "My research progresses well, thanks to those potions. You have my gratitude.",
+          "responses": [
+            { "text": "Glad I could help with your research.", "nextNodeId": "done_ack", "action": { "type": "end_dialog" } },
+            { "text": "Need anything else?", "nextNodeId": "done_more", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "done_ack",
+          "speaker": "Aldric the Sage",
+          "text": "The ancient spirits smile upon you, adventurer."
+        },
+        {
+          "id": "done_more",
+          "speaker": "Aldric the Sage",
+          "text": "Not at the moment, but the spirits may guide me to ask again."
+        }
+      ]
+    }
+  },
+  {
+    "id": "quest_orc_persecution",
+    "name": "Orc Persecution",
+    "type": "destroy",
+    "description": "Elena is being threatened by orc warriors. She needs someone to thin their ranks.",
+    "npcId": "npc_merchant_2",
+    "level": 2,
+    "objectives": [
+      {
+        "id": "kill_orcs",
+        "type": "kill",
+        "description": "Kill orc warriors",
+        "target": "orc",
+        "requiredCount": 2,
+        "consumeOnTurnIn": false
+      }
+    ],
+    "rewards": {
+      "xp": 75,
+      "gold": 50,
+      "items": [{ "itemId": "weapon_sword_silver", "quantity": 1 }]
+    },
+    "dialog": {
+      "offer": [
+        {
+          "id": "offer_1",
+          "speaker": "Elena the Exotic",
+          "text": "Those brute orc warriors have been threatening my trade routes. I need at least two of them dealt with before I can safely import more rare goods. Interested?",
+          "responses": [
+            { "text": "Consider it done. I'll handle the orcs.", "nextNodeId": "offer_accept", "action": { "type": "accept_quest" } },
+            { "text": "Orcs are dangerous. Maybe later.", "nextNodeId": "offer_decline", "action": { "type": "decline_quest" } },
+            { "text": "Sounds like a problem you should solve with gold, not swords.", "nextNodeId": "offer_hostile", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "offer_accept",
+          "speaker": "Elena the Exotic",
+          "text": "Wonderful! Kill two orc warriors and I'll reward you with a silver sword from my personal collection. It's worth more than its weight in gold."
+        },
+        {
+          "id": "offer_decline",
+          "speaker": "Elena the Exotic",
+          "text": "I understand. Orcs are fearsome foes. The offer remains open when you're ready."
+        },
+        {
+          "id": "offer_hostile",
+          "speaker": "Elena the Exotic",
+          "text": "You can't bribe an orc, darling. But you can certainly be rewarded for defeating one."
+        }
+      ],
+      "inProgress": [
+        {
+          "id": "progress_1",
+          "speaker": "Elena the Exotic",
+          "text": "How goes the orc hunting? Those brutes tend to lurk in the deeper rooms.",
+          "responses": [
+            { "text": "Making progress.", "nextNodeId": "progress_ack", "action": { "type": "end_dialog" } },
+            { "text": "Any tips for fighting orcs?", "nextNodeId": "progress_hint", "action": { "type": "end_dialog" } },
+            { "text": "These orcs hit hard.", "nextNodeId": "progress_tough", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "progress_ack",
+          "speaker": "Elena the Exotic",
+          "text": "Excellent. I look forward to hearing of your victory."
+        },
+        {
+          "id": "progress_hint",
+          "speaker": "Elena the Exotic",
+          "text": "They're slow but strong. Keep your distance and strike when they're recovering from an attack."
+        },
+        {
+          "id": "progress_tough",
+          "speaker": "Elena the Exotic",
+          "text": "Indeed they do. Make sure you have potions ready. The reward will be worth the bruises."
+        }
+      ],
+      "readyToTurnIn": [
+        {
+          "id": "turnin_1",
+          "speaker": "Elena the Exotic",
+          "text": "I can tell by that victorious look - the orcs have been dealt with! Time for your reward.",
+          "responses": [
+            { "text": "The orcs won't bother you anymore.", "nextNodeId": "turnin_accept", "action": { "type": "turn_in_quest" } },
+            { "text": "That silver sword - hand it over.", "nextNodeId": "turnin_blunt", "action": { "type": "turn_in_quest" } },
+            { "text": "It was quite the battle.", "nextNodeId": "turnin_story", "action": { "type": "turn_in_quest" } }
+          ]
+        },
+        {
+          "id": "turnin_accept",
+          "speaker": "Elena the Exotic",
+          "text": "You have my deepest thanks! Here - a silver sword and a pouch of gold. You've earned every coin."
+        },
+        {
+          "id": "turnin_blunt",
+          "speaker": "Elena the Exotic",
+          "text": "Direct! I like that. Here it is - a fine silver blade, plus gold for your trouble."
+        },
+        {
+          "id": "turnin_story",
+          "speaker": "Elena the Exotic",
+          "text": "I'm sure it was! Here's your reward. That silver sword will serve you well in future battles."
+        }
+      ],
+      "completed": [
+        {
+          "id": "done_1",
+          "speaker": "Elena the Exotic",
+          "text": "Trade is flowing smoothly again, thanks to you. My inventory has never been better!",
+          "responses": [
+            { "text": "Glad your business is thriving.", "nextNodeId": "done_ack", "action": { "type": "end_dialog" } },
+            { "text": "Got any more jobs?", "nextNodeId": "done_more", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "done_ack",
+          "speaker": "Elena the Exotic",
+          "text": "Come browse my wares anytime, darling. You've earned a loyal customer discount... in spirit."
+        },
+        {
+          "id": "done_more",
+          "speaker": "Elena the Exotic",
+          "text": "Nothing right now, but danger always finds a way back. Check in later."
+        }
+      ]
+    }
+  },
+  {
+    "id": "quest_sages_apprentice",
+    "name": "The Sage's Apprentice",
+    "type": "rescue",
+    "description": "Aldric's apprentice was overwhelmed by skeletons deep in the dungeon. Clear the undead to make the path safe.",
+    "npcId": "npc_sage",
+    "level": 2,
+    "objectives": [
+      {
+        "id": "kill_skeletons",
+        "type": "kill",
+        "description": "Kill skeletons",
+        "target": "skelet",
+        "requiredCount": 4,
+        "consumeOnTurnIn": false
+      }
+    ],
+    "rewards": {
+      "xp": 60,
+      "gold": 40,
+      "items": [{ "itemId": "flask_big_red", "quantity": 3 }]
+    },
+    "dialog": {
+      "offer": [
+        {
+          "id": "offer_1",
+          "speaker": "Aldric the Sage",
+          "text": "My apprentice ventured too deep and barely escaped a pack of skeletons. The path must be cleared before they can return safely. Will you slay four skeletons for me?",
+          "responses": [
+            { "text": "I'll clear the skeletons out.", "nextNodeId": "offer_accept", "action": { "type": "accept_quest" } },
+            { "text": "I have other priorities right now.", "nextNodeId": "offer_decline", "action": { "type": "decline_quest" } },
+            { "text": "Your apprentice should learn to fight.", "nextNodeId": "offer_hostile", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "offer_accept",
+          "speaker": "Aldric the Sage",
+          "text": "Bless you! Destroy four skeletons and I'll prepare my finest healing potions as payment. Three large ones should keep you alive in the deepest depths."
+        },
+        {
+          "id": "offer_decline",
+          "speaker": "Aldric the Sage",
+          "text": "I understand. My apprentice can wait a while longer. Return when you're able."
+        },
+        {
+          "id": "offer_hostile",
+          "speaker": "Aldric the Sage",
+          "text": "They're a scholar, not a soldier. Not everyone solves problems with a blade... though right now, that's exactly what's needed."
+        }
+      ],
+      "inProgress": [
+        {
+          "id": "progress_1",
+          "speaker": "Aldric the Sage",
+          "text": "The skeletons still roam. My apprentice grows anxious. How goes the hunt?",
+          "responses": [
+            { "text": "Working on it.", "nextNodeId": "progress_ack", "action": { "type": "end_dialog" } },
+            { "text": "Where do skeletons usually appear?", "nextNodeId": "progress_hint", "action": { "type": "end_dialog" } },
+            { "text": "Those bones are fast.", "nextNodeId": "progress_tough", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "progress_ack",
+          "speaker": "Aldric the Sage",
+          "text": "The spirits watch over you. Be careful."
+        },
+        {
+          "id": "progress_hint",
+          "speaker": "Aldric the Sage",
+          "text": "Skeletons haunt the middle chambers. They're quick but brittle - a strong hit will shatter them."
+        },
+        {
+          "id": "progress_tough",
+          "speaker": "Aldric the Sage",
+          "text": "Fast but fragile. Time your attacks well and they'll crumble."
+        }
+      ],
+      "readyToTurnIn": [
+        {
+          "id": "turnin_1",
+          "speaker": "Aldric the Sage",
+          "text": "The arcane winds tell me the skeletal threat has diminished. You've succeeded!",
+          "responses": [
+            { "text": "The path is clear for your apprentice.", "nextNodeId": "turnin_accept", "action": { "type": "turn_in_quest" } },
+            { "text": "Those skeletons won't bother anyone now.", "nextNodeId": "turnin_blunt", "action": { "type": "turn_in_quest" } },
+            { "text": "Your 'arcane winds' could've mentioned how many there were.", "nextNodeId": "turnin_joke", "action": { "type": "turn_in_quest" } }
+          ]
+        },
+        {
+          "id": "turnin_accept",
+          "speaker": "Aldric the Sage",
+          "text": "My apprentice can now return safely. Here - three large healing potions, brewed with extra care!"
+        },
+        {
+          "id": "turnin_blunt",
+          "speaker": "Aldric the Sage",
+          "text": "Indeed! Here's your well-earned reward. These potions will serve you well."
+        },
+        {
+          "id": "turnin_joke",
+          "speaker": "Aldric the Sage",
+          "text": "Ha! The winds are vague about details. But they're very clear about rewarding heroes. Take these potions!"
+        }
+      ],
+      "completed": [
+        {
+          "id": "done_1",
+          "speaker": "Aldric the Sage",
+          "text": "My apprentice has returned safely and resumed their studies. You have my eternal gratitude.",
+          "responses": [
+            { "text": "Happy to hear they're safe.", "nextNodeId": "done_ack", "action": { "type": "end_dialog" } },
+            { "text": "Any other troubles?", "nextNodeId": "done_more", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "done_ack",
+          "speaker": "Aldric the Sage",
+          "text": "May the ancient spirits guide your blade, brave one."
+        },
+        {
+          "id": "done_more",
+          "speaker": "Aldric the Sage",
+          "text": "All is peaceful for now. But the dungeon is never truly quiet for long."
+        }
+      ]
+    }
+  },
+  {
+    "id": "quest_undead_uprising",
+    "name": "The Undead Uprising",
+    "type": "investigate",
+    "description": "Marcus has heard reports of zombies appearing in unusual numbers. Investigate and eliminate the threat.",
+    "npcId": "npc_merchant",
+    "level": 2,
+    "objectives": [
+      {
+        "id": "kill_zombies",
+        "type": "kill",
+        "description": "Kill zombies",
+        "target": "zombie",
+        "requiredCount": 3,
+        "consumeOnTurnIn": false
+      },
+      {
+        "id": "collect_evidence",
+        "type": "collect",
+        "description": "Collect health potions as evidence",
+        "target": "flask_red",
+        "requiredCount": 2,
+        "consumeOnTurnIn": true
+      }
+    ],
+    "rewards": {
+      "xp": 65,
+      "gold": 35,
+      "items": [{ "itemId": "weapon_hammer", "quantity": 1 }]
+    },
+    "dialog": {
+      "offer": [
+        {
+          "id": "offer_1",
+          "speaker": "Marcus the Merchant",
+          "text": "Something foul is stirring in the dungeon. Zombies are appearing in numbers I've never seen before. I need someone to investigate - kill three zombies and bring back two health potions you find as evidence of the corruption.",
+          "responses": [
+            { "text": "I'll investigate the undead uprising.", "nextNodeId": "offer_accept", "action": { "type": "accept_quest" } },
+            { "text": "Sounds too dangerous right now.", "nextNodeId": "offer_decline", "action": { "type": "decline_quest" } },
+            { "text": "Zombies? You're being dramatic.", "nextNodeId": "offer_hostile", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "offer_accept",
+          "speaker": "Marcus the Merchant",
+          "text": "Be careful out there! Kill three zombies and recover two health potions from the corrupted areas. I'll reward you with a war hammer - perfect for crushing the undead."
+        },
+        {
+          "id": "offer_decline",
+          "speaker": "Marcus the Merchant",
+          "text": "I don't blame you. But someone needs to look into this before it gets worse."
+        },
+        {
+          "id": "offer_hostile",
+          "speaker": "Marcus the Merchant",
+          "text": "Dramatic? I've lost three delivery runners this week! When you see the horde yourself, you'll understand."
+        }
+      ],
+      "inProgress": [
+        {
+          "id": "progress_1",
+          "speaker": "Marcus the Merchant",
+          "text": "Any progress on the undead situation? Remember, I need the zombies dealt with AND those potion samples.",
+          "responses": [
+            { "text": "Making progress on both fronts.", "nextNodeId": "progress_ack", "action": { "type": "end_dialog" } },
+            { "text": "Why do you need the potions?", "nextNodeId": "progress_hint", "action": { "type": "end_dialog" } },
+            { "text": "Zombies are everywhere down there.", "nextNodeId": "progress_tough", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "progress_ack",
+          "speaker": "Marcus the Merchant",
+          "text": "Good. Stay vigilant - zombies are slow but relentless."
+        },
+        {
+          "id": "progress_hint",
+          "speaker": "Marcus the Merchant",
+          "text": "The potions found near zombie nests may be tainted. I need to examine them to understand what's causing this uprising."
+        },
+        {
+          "id": "progress_tough",
+          "speaker": "Marcus the Merchant",
+          "text": "That confirms my fears. Clear what you can and bring those samples back."
+        }
+      ],
+      "readyToTurnIn": [
+        {
+          "id": "turnin_1",
+          "speaker": "Marcus the Merchant",
+          "text": "You look like you've been through quite the ordeal! Do you have the zombie kills and the potion evidence?",
+          "responses": [
+            { "text": "Here's everything you need, Marcus.", "nextNodeId": "turnin_accept", "action": { "type": "turn_in_quest" } },
+            { "text": "Mission complete. Where's my hammer?", "nextNodeId": "turnin_blunt", "action": { "type": "turn_in_quest" } },
+            { "text": "That was more zombies than you mentioned...", "nextNodeId": "turnin_complaint", "action": { "type": "turn_in_quest" } }
+          ]
+        },
+        {
+          "id": "turnin_accept",
+          "speaker": "Marcus the Merchant",
+          "text": "Excellent work! These potion samples will help me understand the corruption. Here's the war hammer I promised - it'll crush undead bones like twigs!"
+        },
+        {
+          "id": "turnin_blunt",
+          "speaker": "Marcus the Merchant",
+          "text": "Right here! A fine war hammer, perfect for your next encounter with the undead. Gold too, of course."
+        },
+        {
+          "id": "turnin_complaint",
+          "speaker": "Marcus the Merchant",
+          "text": "I feared as much. The situation is worse than I thought. Take this hammer and gold - you'll need them for what's to come."
+        }
+      ],
+      "completed": [
+        {
+          "id": "done_1",
+          "speaker": "Marcus the Merchant",
+          "text": "I've analyzed the potions you brought back. There's definitely dark magic at work, but the immediate threat has passed.",
+          "responses": [
+            { "text": "Glad the investigation helped.", "nextNodeId": "done_ack", "action": { "type": "end_dialog" } },
+            { "text": "Dark magic? Should I be worried?", "nextNodeId": "done_more", "action": { "type": "end_dialog" } }
+          ]
+        },
+        {
+          "id": "done_ack",
+          "speaker": "Marcus the Merchant",
+          "text": "More than you know. Stay safe out there, friend."
+        },
+        {
+          "id": "done_more",
+          "speaker": "Marcus the Merchant",
+          "text": "Perhaps... but that's a problem for another day. For now, the dungeon is safer thanks to you."
+        }
+      ]
+    }
+  }
+]

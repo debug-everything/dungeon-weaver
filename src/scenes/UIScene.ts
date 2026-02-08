@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
-import { Equipment } from '../types';
+import { Equipment, QuestReward } from '../types';
+import { GameScene } from './GameScene';
 
 export class UIScene extends Phaser.Scene {
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -9,6 +10,7 @@ export class UIScene extends Phaser.Scene {
   private weaponIcon!: Phaser.GameObjects.Image;
   private weaponText!: Phaser.GameObjects.Text;
   private _controlsText!: Phaser.GameObjects.Text;
+  private questTrackerContainer!: Phaser.GameObjects.Container;
 
   private currentHealth: number = 100;
   private maxHealth: number = 100;
@@ -70,6 +72,9 @@ export class UIScene extends Phaser.Scene {
       color: '#c9a227'
     }).setOrigin(0, 0.5);
 
+    // Quest tracker (below health bar)
+    this.questTrackerContainer = this.add.container(20, 56);
+
     // Controls reminder
     this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact', {
       fontSize: '10px',
@@ -85,6 +90,9 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipmentChanged, this);
     gameScene.events.on(EVENTS.MONSTER_KILLED, this.onMonsterKilled, this);
     gameScene.events.on(EVENTS.ITEM_PICKED_UP, this.onItemPickedUp, this);
+    gameScene.events.on(EVENTS.QUEST_ACCEPTED, this.updateQuestTracker, this);
+    gameScene.events.on(EVENTS.QUEST_PROGRESS_UPDATED, this.updateQuestTracker, this);
+    gameScene.events.on(EVENTS.QUEST_TURNED_IN, this.onQuestTurnedIn, this);
 
     // Clean up on scene shutdown
     this.events.on('shutdown', () => {
@@ -93,6 +101,9 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.off(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipmentChanged, this);
       gameScene.events.off(EVENTS.MONSTER_KILLED, this.onMonsterKilled, this);
       gameScene.events.off(EVENTS.ITEM_PICKED_UP, this.onItemPickedUp, this);
+      gameScene.events.off(EVENTS.QUEST_ACCEPTED, this.updateQuestTracker, this);
+      gameScene.events.off(EVENTS.QUEST_PROGRESS_UPDATED, this.updateQuestTracker, this);
+      gameScene.events.off(EVENTS.QUEST_TURNED_IN, this.onQuestTurnedIn, this);
     });
   }
 
@@ -169,6 +180,78 @@ export class UIScene extends Phaser.Scene {
       y: notification.y - 30,
       alpha: 0,
       duration: 1500,
+      onComplete: () => notification.destroy()
+    });
+  }
+
+  private updateQuestTracker(): void {
+    this.questTrackerContainer.removeAll(true);
+
+    const gameScene = this.scene.get(SCENE_KEYS.GAME) as GameScene;
+    const activeQuests = gameScene.questSystem.getActiveQuests();
+
+    if (activeQuests.length === 0) return;
+
+    let yOffset = 0;
+
+    // Show up to 3 active quests
+    const displayQuests = activeQuests.slice(0, 3);
+    for (const { definition, state } of displayQuests) {
+      // Quest name
+      const statusColor = state.status === 'completed' ? '#88ff88' : '#c9a227';
+      const nameText = this.add.text(0, yOffset, definition.name, {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        color: statusColor,
+        stroke: '#000000',
+        strokeThickness: 2
+      });
+      this.questTrackerContainer.add(nameText);
+      yOffset += 14;
+
+      // Objectives
+      for (const objProgress of state.objectiveProgress) {
+        const objective = definition.objectives.find(o => o.id === objProgress.objectiveId);
+        if (!objective) continue;
+
+        const checkmark = objProgress.completed ? '[x]' : '[ ]';
+        const objColor = objProgress.completed ? '#88ff88' : '#aaaaaa';
+        const objText = this.add.text(8, yOffset, `${checkmark} ${objective.description}: ${objProgress.currentCount}/${objective.requiredCount}`, {
+          fontSize: '9px',
+          fontFamily: 'monospace',
+          color: objColor,
+          stroke: '#000000',
+          strokeThickness: 1
+        });
+        this.questTrackerContainer.add(objText);
+        yOffset += 12;
+      }
+
+      yOffset += 4;
+    }
+  }
+
+  private onQuestTurnedIn(_questId: string, rewards: QuestReward): void {
+    this.updateQuestTracker();
+
+    // Show reward notification
+    let rewardText = 'Quest Complete!';
+    if (rewards.gold) rewardText += ` +${rewards.gold}g`;
+    if (rewards.xp) rewardText += ` +${rewards.xp}xp`;
+
+    const notification = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, rewardText, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ffd700',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: notification,
+      y: notification.y - 40,
+      alpha: 0,
+      duration: 2500,
       onComplete: () => notification.destroy()
     });
   }

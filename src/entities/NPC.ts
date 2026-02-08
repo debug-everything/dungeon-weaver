@@ -73,32 +73,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   }
 
   interact(): void {
-    // Show random dialogue
-    const dialogue = Phaser.Utils.Array.GetRandom(this.npcData.dialogue);
-
-    // Display dialogue bubble
-    const bubble = this.scene.add.text(this.x, this.y - 50, dialogue, {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-      backgroundColor: '#4a4a6a',
-      padding: { x: 8, y: 4 },
-      wordWrap: { width: 150 }
-    }).setOrigin(0.5).setDepth(300);
-
-    // Fade out after delay
-    this.scene.time.delayedCall(2000, () => {
-      this.scene.tweens.add({
-        targets: bubble,
-        alpha: 0,
-        y: bubble.y - 20,
-        duration: 500,
-        onComplete: () => bubble.destroy()
-      });
-    });
-
-    // Open shop
-    this.scene.events.emit(EVENTS.OPEN_SHOP, this.npcData);
+    this.scene.events.emit(EVENTS.OPEN_NPC_INTERACTION, this.npcData);
   }
 
   isInRange(x: number, y: number): boolean {

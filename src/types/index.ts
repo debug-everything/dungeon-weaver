@@ -103,3 +103,70 @@ export interface DungeonTile {
   type: 'floor' | 'wall' | 'door';
   walkable: boolean;
 }
+
+// Quest system types (JSON-serializable for future LLM generation)
+export type QuestType = 'rescue' | 'recover' | 'destroy' | 'investigate';
+export type QuestStatus = 'available' | 'active' | 'completed' | 'turned_in';
+export type QuestObjectiveType = 'kill' | 'collect' | 'talk_to' | 'explore';
+export type DialogAction =
+  | { type: 'accept_quest' }
+  | { type: 'decline_quest' }
+  | { type: 'end_dialog' }
+  | { type: 'turn_in_quest' };
+
+export interface DialogNode {
+  id: string;
+  speaker: string;
+  text: string;
+  responses?: DialogResponse[];
+}
+
+export interface DialogResponse {
+  text: string;
+  nextNodeId: string;
+  action?: DialogAction;
+}
+
+export interface QuestObjective {
+  id: string;
+  type: QuestObjectiveType;
+  description: string;
+  target: string; // monster type id or item id
+  requiredCount: number;
+  consumeOnTurnIn: boolean;
+}
+
+export interface QuestReward {
+  xp: number;
+  gold?: number;
+  items?: { itemId: string; quantity: number }[];
+}
+
+export interface QuestDefinition {
+  id: string;
+  name: string;
+  type: QuestType;
+  description: string;
+  npcId: string;
+  level: number;
+  dialog: {
+    offer: DialogNode[];
+    inProgress: DialogNode[];
+    readyToTurnIn: DialogNode[];
+    completed: DialogNode[];
+  };
+  objectives: QuestObjective[];
+  rewards: QuestReward;
+}
+
+export interface QuestObjectiveProgress {
+  objectiveId: string;
+  currentCount: number;
+  completed: boolean;
+}
+
+export interface QuestState {
+  questId: string;
+  status: QuestStatus;
+  objectiveProgress: QuestObjectiveProgress[];
+}

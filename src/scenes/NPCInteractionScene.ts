@@ -1,0 +1,233 @@
+import Phaser from 'phaser';
+import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
+import { NPCData } from '../types';
+import { QuestSystem } from '../systems/QuestSystem';
+
+interface NPCInteractionData {
+  npcData: NPCData;
+  questSystem: QuestSystem;
+}
+
+interface MenuOption {
+  label: string;
+  indicator?: string;
+  callback: () => void;
+  bg: Phaser.GameObjects.Rectangle;
+  text: Phaser.GameObjects.Text;
+}
+
+export class NPCInteractionScene extends Phaser.Scene {
+  private npcData!: NPCData;
+  private questSystem!: QuestSystem;
+  private menuItems: Phaser.GameObjects.Container[] = [];
+  private options: MenuOption[] = [];
+  private selectedIndex: number = 0;
+
+  constructor() {
+    super({ key: SCENE_KEYS.NPC_INTERACTION });
+  }
+
+  init(data: NPCInteractionData): void {
+    this.npcData = data.npcData;
+    this.questSystem = data.questSystem;
+  }
+
+  create(): void {
+    this.menuItems = [];
+    this.options = [];
+    this.selectedIndex = 0;
+
+    // Semi-transparent background
+    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.5);
+    bg.setInteractive();
+    bg.on('pointerdown', () => this.closeMenu());
+
+    // Build menu options
+    const optionDefs: { label: string; indicator?: string; callback: () => void }[] = [];
+
+    // Talk option - always visible
+    optionDefs.push({
+      label: 'Talk',
+      callback: () => this.handleTalk()
+    });
+
+    // Shop option - visible if NPC has shop inventory
+    if (this.npcData.shopInventory && this.npcData.shopInventory.length > 0) {
+      optionDefs.push({
+        label: 'Shop',
+        callback: () => this.handleShop()
+      });
+    }
+
+    // Quest option - visible if NPC has any non-turned-in quests
+    if (this.questSystem.hasAnyQuest(this.npcData.id)) {
+      let indicator: string | undefined;
+      if (this.questSystem.hasQuestReadyToTurnIn(this.npcData.id)) {
+        indicator = '?';
+      } else if (this.questSystem.hasQuestAvailable(this.npcData.id)) {
+        indicator = '!';
+      }
+      optionDefs.push({
+        label: 'Quest',
+        indicator,
+        callback: () => this.handleQuest()
+      });
+    }
+
+    // Panel dimensions
+    const panelWidth = 200;
+    const optionHeight = 40;
+    const panelPadding = 16;
+    const titleHeight = 40;
+    const panelHeight = titleHeight + optionDefs.length * optionHeight + panelPadding;
+    const panelX = GAME_WIDTH / 2;
+    const panelY = GAME_HEIGHT / 2;
+
+    // Panel background
+    const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x2a2a4a, 0.95);
+    panel.setStrokeStyle(2, 0x4a4a6a);
+    panel.setInteractive(); // Prevent click-through
+
+    // NPC name title
+    this.add.text(panelX, panelY - panelHeight / 2 + titleHeight / 2 + 4, this.npcData.name, {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#c9a227'
+    }).setOrigin(0.5);
+
+    // Separator line
+    const sepY = panelY - panelHeight / 2 + titleHeight;
+    const sep = this.add.graphics();
+    sep.lineStyle(1, 0x4a4a6a);
+    sep.lineBetween(panelX - panelWidth / 2 + 10, sepY, panelX + panelWidth / 2 - 10, sepY);
+
+    // Menu options
+    optionDefs.forEach((option, index) => {
+      const optY = panelY - panelHeight / 2 + titleHeight + optionHeight / 2 + index * optionHeight + 4;
+      const container = this.add.container(panelX, optY);
+
+      // Option background (for hover)
+      const optBg = this.add.rectangle(0, 0, panelWidth - 16, optionHeight - 4, 0x3a3a5a, 0);
+      optBg.setInteractive({ useHandCursor: true });
+
+      // Arrow + label
+      let labelText = `> ${option.label}`;
+      if (option.indicator) {
+        labelText += ` [${option.indicator}]`;
+      }
+
+      const label = this.add.text(-(panelWidth / 2) + 24, 0, labelText, {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ffffff'
+      }).setOrigin(0, 0.5);
+
+      // Color the indicator
+      if (option.indicator) {
+        if (option.indicator === '?') {
+          label.setColor('#88ff88');
+        }
+      }
+
+      container.add([optBg, label]);
+      this.menuItems.push(container);
+      this.options.push({ label: option.label, indicator: option.indicator, callback: option.callback, bg: optBg, text: label });
+
+      optBg.on('pointerover', () => {
+        this.selectedIndex = index;
+        this.updateSelection();
+      });
+      optBg.on('pointerout', () => {
+        optBg.setFillStyle(0x3a3a5a, 0);
+        label.setColor(option.indicator === '?' ? '#88ff88' : '#ffffff');
+      });
+      optBg.on('pointerdown', () => option.callback());
+    });
+
+    // Highlight initial selection
+    this.updateSelection();
+
+    // Keyboard navigation
+    this.input.keyboard?.on('keydown-UP', () => this.moveSelection(-1));
+    this.input.keyboard?.on('keydown-W', () => this.moveSelection(-1));
+    this.input.keyboard?.on('keydown-DOWN', () => this.moveSelection(1));
+    this.input.keyboard?.on('keydown-S', () => this.moveSelection(1));
+    this.input.keyboard?.on('keydown-ENTER', () => this.activateSelection());
+    this.input.keyboard?.on('keydown-SPACE', () => this.activateSelection());
+    this.input.keyboard?.on('keydown-ESC', () => this.closeMenu());
+  }
+
+  private moveSelection(delta: number): void {
+    if (this.options.length === 0) return;
+    this.selectedIndex = (this.selectedIndex + delta + this.options.length) % this.options.length;
+    this.updateSelection();
+  }
+
+  private activateSelection(): void {
+    if (this.options.length === 0) return;
+    this.options[this.selectedIndex].callback();
+  }
+
+  private updateSelection(): void {
+    this.options.forEach((opt, i) => {
+      if (i === this.selectedIndex) {
+        opt.bg.setFillStyle(0x5a5a7a, 1);
+        opt.text.setColor('#ffdd55');
+      } else {
+        opt.bg.setFillStyle(0x3a3a5a, 0);
+        opt.text.setColor(opt.indicator === '?' ? '#88ff88' : '#ffffff');
+      }
+    });
+  }
+
+  private handleTalk(): void {
+    // Show random dialogue in a temporary text, then close
+    const dialogue = Phaser.Utils.Array.GetRandom(this.npcData.dialogue);
+
+    // Clear menu items
+    this.menuItems.forEach(c => c.setVisible(false));
+
+    const talkText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `"${dialogue}"`, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      backgroundColor: '#2a2a4a',
+      padding: { x: 16, y: 12 },
+      wordWrap: { width: 280 },
+      align: 'center'
+    }).setOrigin(0.5);
+
+    // Auto-close after a delay
+    this.time.delayedCall(2500, () => {
+      this.closeMenu();
+    });
+
+    // Or click/key to close immediately
+    talkText.setInteractive({ useHandCursor: true });
+    talkText.on('pointerdown', () => this.closeMenu());
+  }
+
+  private handleShop(): void {
+    this.scene.stop();
+    this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.OPEN_SHOP, this.npcData);
+  }
+
+  private handleQuest(): void {
+    const quest = this.questSystem.getMostActionableQuest(this.npcData.id);
+    if (!quest) {
+      this.closeMenu();
+      return;
+    }
+
+    this.scene.stop();
+    this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.OPEN_QUEST_DIALOG, {
+      npcData: this.npcData,
+      questId: quest.definition.id
+    });
+  }
+
+  private closeMenu(): void {
+    this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.CLOSE_NPC_INTERACTION);
+    this.scene.stop();
+  }
+}

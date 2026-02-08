@@ -3,9 +3,11 @@ import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, IN
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
-import { DungeonRoom } from '../types';
+import { DungeonRoom, NPCData } from '../types';
 import { MONSTERS } from '../data/monsters';
 import { NPCS } from '../data/npcs';
+import { QUESTS } from '../data/quests';
+import { QuestSystem } from '../systems/QuestSystem';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -17,6 +19,9 @@ export class GameScene extends Phaser.Scene {
   private dungeon: number[][] = [];
   private rooms: DungeonRoom[] = [];
   private isPaused: boolean = false;
+  public questSystem!: QuestSystem;
+  private respawnTimer!: Phaser.Time.TimerEvent;
+  private readonly maxMonsters = 20;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -58,6 +63,20 @@ export class GameScene extends Phaser.Scene {
 
     // Spawn monsters in other rooms
     this.spawnMonsters();
+
+    // Respawn timer - replenish monsters every 15 seconds
+    this.respawnTimer = this.time.addEvent({
+      delay: 15000,
+      callback: this.respawnMonsters,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Initialize quest system
+    this.questSystem = new QuestSystem(this);
+    for (const quest of Object.values(QUESTS)) {
+      this.questSystem.registerQuest(quest);
+    }
 
     // Setup event listeners
     this.setupEventListeners();
@@ -238,6 +257,48 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private respawnMonsters(): void {
+    // Count living monsters
+    const livingMonsters = this.monsters.getChildren().filter(m => m.active).length;
+    if (livingMonsters >= this.maxMonsters) return;
+
+    // Only respawn if below half the max
+    if (livingMonsters >= this.maxMonsters / 2) return;
+
+    // Pick a random non-safe room (skip room 0)
+    if (this.rooms.length <= 1) return;
+
+    const nonBossTypes = Object.keys(MONSTERS).filter(t => t !== 'monster_demon');
+    if (nonBossTypes.length === 0) return;
+
+    // Try to find a room far enough from the player
+    const candidateRooms = this.rooms.slice(1).filter(room => {
+      const roomWorldX = room.centerX * TILE_SIZE * SCALE;
+      const roomWorldY = room.centerY * TILE_SIZE * SCALE;
+      const distToPlayer = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y, roomWorldX, roomWorldY
+      );
+      // Only spawn if player is at least 3 tiles away from room center
+      return distToPlayer > TILE_SIZE * SCALE * 3;
+    });
+
+    if (candidateRooms.length === 0) return;
+
+    const room = Phaser.Utils.Array.GetRandom(candidateRooms);
+    const spawnCount = Phaser.Math.Between(1, 2);
+
+    for (let i = 0; i < spawnCount && livingMonsters + i < this.maxMonsters; i++) {
+      const monsterType = Phaser.Utils.Array.GetRandom(nonBossTypes);
+      const monsterData = MONSTERS[monsterType];
+      const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
+      const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;
+
+      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      monster.setTarget(this.player);
+      this.monsters.add(monster);
+    }
+  }
+
   private setupEventListeners(): void {
     // Player attack
     this.events.on('player-attack', (attackData: { x: number; y: number; width: number; height: number; damage: { damage: number; isCritical: boolean } }) => {
@@ -332,8 +393,22 @@ export class GameScene extends Phaser.Scene {
       this.resumeGame();
     });
 
-    // Open shop
-    this.events.on(EVENTS.OPEN_SHOP, (npcData: typeof NPCS[keyof typeof NPCS]) => {
+    // Open NPC interaction menu
+    this.events.on(EVENTS.OPEN_NPC_INTERACTION, (npcData: NPCData) => {
+      this.pauseGame();
+      this.scene.launch(SCENE_KEYS.NPC_INTERACTION, {
+        npcData,
+        questSystem: this.questSystem
+      });
+    });
+
+    // Close NPC interaction menu
+    this.events.on(EVENTS.CLOSE_NPC_INTERACTION, () => {
+      this.resumeGame();
+    });
+
+    // Open shop (can come from NPC interaction menu)
+    this.events.on(EVENTS.OPEN_SHOP, (npcData: NPCData) => {
       this.pauseGame();
       this.scene.launch(SCENE_KEYS.SHOP, {
         npcData,
@@ -345,6 +420,22 @@ export class GameScene extends Phaser.Scene {
 
     // Close shop
     this.events.on(EVENTS.CLOSE_SHOP, () => {
+      this.resumeGame();
+    });
+
+    // Open quest dialog
+    this.events.on(EVENTS.OPEN_QUEST_DIALOG, (data: { npcData: NPCData; questId: string }) => {
+      this.pauseGame();
+      this.scene.launch(SCENE_KEYS.QUEST_DIALOG, {
+        npcData: data.npcData,
+        questId: data.questId,
+        questSystem: this.questSystem,
+        player: this.player
+      });
+    });
+
+    // Close quest dialog
+    this.events.on(EVENTS.CLOSE_QUEST_DIALOG, () => {
       this.resumeGame();
     });
 
