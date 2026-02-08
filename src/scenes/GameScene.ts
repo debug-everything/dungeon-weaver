@@ -138,18 +138,24 @@ export class GameScene extends Phaser.Scene {
     let x = roomA.centerX;
     let y = roomA.centerY;
 
-    // Horizontal corridor
+    // Horizontal corridor (3 tiles tall for clearance)
     while (x !== roomB.centerX) {
-      if (y >= 0 && y < DUNGEON_HEIGHT && x >= 0 && x < DUNGEON_WIDTH) {
-        this.dungeon[y][x] = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const cy = y + dy;
+        if (cy >= 0 && cy < DUNGEON_HEIGHT && x >= 0 && x < DUNGEON_WIDTH) {
+          this.dungeon[cy][x] = 0;
+        }
       }
       x += x < roomB.centerX ? 1 : -1;
     }
 
-    // Vertical corridor
+    // Vertical corridor (3 tiles wide for clearance)
     while (y !== roomB.centerY) {
-      if (y >= 0 && y < DUNGEON_HEIGHT && x >= 0 && x < DUNGEON_WIDTH) {
-        this.dungeon[y][x] = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        const cx = x + dx;
+        if (y >= 0 && y < DUNGEON_HEIGHT && cx >= 0 && cx < DUNGEON_WIDTH) {
+          this.dungeon[y][cx] = 0;
+        }
       }
       y += y < roomB.centerY ? 1 : -1;
     }

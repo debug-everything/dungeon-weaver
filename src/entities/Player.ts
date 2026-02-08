@@ -22,6 +22,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private lastAttackTime: number = 0;
   private facingDirection: Direction = 'down';
   private attackHitbox: Phaser.GameObjects.Rectangle | null = null;
+  private weaponSprite: Phaser.GameObjects.Image | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'hero_basic');
@@ -138,8 +139,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const range = this.inventory.getWeaponRange();
     let hitboxX = this.x;
     let hitboxY = this.y;
-    let hitboxWidth = range;
-    let hitboxHeight = range;
+    const hitboxWidth = range;
+    const hitboxHeight = range;
 
     switch (this.facingDirection) {
       case 'up':
@@ -156,9 +157,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         break;
     }
 
-    // Visual feedback for attack
-    this.attackHitbox = this.scene.add.rectangle(hitboxX, hitboxY, hitboxWidth, hitboxHeight, 0xffffff, 0.3);
-    this.attackHitbox.setDepth(100);
+    // Create sword swing animation
+    this.createSwordSwing();
 
     // Store hitbox info for collision checking
     this.scene.events.emit('player-attack', {
@@ -170,12 +170,149 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
 
     // Clean up after attack
-    this.scene.time.delayedCall(100, () => {
+    const attackDuration = 150;
+    this.scene.time.delayedCall(attackDuration, () => {
       if (this.attackHitbox) {
         this.attackHitbox.destroy();
         this.attackHitbox = null;
       }
       this.isAttacking = false;
+    });
+  }
+
+  private createSwordSwing(): void {
+    const weapon = this.inventory.getEquippedWeapon();
+    const weaponTexture = weapon?.sprite || 'weapon_sword_wooden';
+
+    // Position and rotation settings based on facing direction
+    let startAngle: number;
+    let endAngle: number;
+    let offsetX: number;
+    let offsetY: number;
+    const swingDistance = 20;
+
+    switch (this.facingDirection) {
+      case 'right':
+        startAngle = -90;
+        endAngle = 90;
+        offsetX = 8;
+        offsetY = 0;
+        break;
+      case 'left':
+        startAngle = 90;
+        endAngle = -90;
+        offsetX = -8;
+        offsetY = 0;
+        break;
+      case 'up':
+        startAngle = 180;
+        endAngle = 0;
+        offsetX = 0;
+        offsetY = -8;
+        break;
+      case 'down':
+      default:
+        startAngle = 0;
+        endAngle = 180;
+        offsetX = 0;
+        offsetY = 8;
+        break;
+    }
+
+    // Create weapon sprite
+    this.weaponSprite = this.scene.add.image(this.x + offsetX, this.y + offsetY, weaponTexture);
+    this.weaponSprite.setScale(SCALE * 1.2);
+    this.weaponSprite.setDepth(this.depth + 1);
+    this.weaponSprite.setAngle(startAngle);
+    this.weaponSprite.setOrigin(0.5, 1); // Pivot from handle
+
+    // Swing animation
+    this.scene.tweens.add({
+      targets: this.weaponSprite,
+      angle: endAngle,
+      duration: 120,
+      ease: 'Power2',
+      onUpdate: () => {
+        // Keep weapon attached to player during swing
+        if (this.weaponSprite) {
+          const progress = (this.weaponSprite.angle - startAngle) / (endAngle - startAngle);
+          const swingOffset = Math.sin(progress * Math.PI) * swingDistance;
+
+          switch (this.facingDirection) {
+            case 'right':
+              this.weaponSprite.setPosition(this.x + offsetX + swingOffset, this.y + offsetY);
+              break;
+            case 'left':
+              this.weaponSprite.setPosition(this.x + offsetX - swingOffset, this.y + offsetY);
+              break;
+            case 'up':
+              this.weaponSprite.setPosition(this.x + offsetX, this.y + offsetY - swingOffset);
+              break;
+            case 'down':
+              this.weaponSprite.setPosition(this.x + offsetX, this.y + offsetY + swingOffset);
+              break;
+          }
+        }
+      },
+      onComplete: () => {
+        if (this.weaponSprite) {
+          // Quick fade out
+          this.scene.tweens.add({
+            targets: this.weaponSprite,
+            alpha: 0,
+            duration: 50,
+            onComplete: () => {
+              this.weaponSprite?.destroy();
+              this.weaponSprite = null;
+            }
+          });
+        }
+      }
+    });
+
+    // Add slash trail effect
+    this.createSlashEffect(offsetX, offsetY, startAngle, endAngle);
+  }
+
+  private createSlashEffect(offsetX: number, offsetY: number, startAngle: number, endAngle: number): void {
+    const slashGraphics = this.scene.add.graphics();
+    slashGraphics.setDepth(this.depth + 2);
+
+    const centerX = this.x + offsetX;
+    const centerY = this.y + offsetY;
+    const radius = 24;
+
+    // Convert angles to radians
+    const startRad = Phaser.Math.DegToRad(startAngle - 90);
+    const endRad = Phaser.Math.DegToRad(endAngle - 90);
+
+    // Animate the slash arc
+    this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 100,
+      ease: 'Power1',
+      onUpdate: (tween) => {
+        const progress = tween.getValue();
+        slashGraphics.clear();
+
+        // Draw arc with gradient alpha
+        const currentAngle = startRad + (endRad - startRad) * progress;
+
+        slashGraphics.lineStyle(3, 0xffffff, 0.8 * (1 - progress * 0.5));
+        slashGraphics.beginPath();
+        slashGraphics.arc(centerX, centerY, radius, startRad, currentAngle, startAngle > endAngle);
+        slashGraphics.strokePath();
+
+        // Inner glow
+        slashGraphics.lineStyle(6, 0xffff88, 0.3 * (1 - progress));
+        slashGraphics.beginPath();
+        slashGraphics.arc(centerX, centerY, radius - 2, startRad, currentAngle, startAngle > endAngle);
+        slashGraphics.strokePath();
+      },
+      onComplete: () => {
+        slashGraphics.destroy();
+      }
     });
   }
 

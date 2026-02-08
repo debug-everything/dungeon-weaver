@@ -32,6 +32,12 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset state from previous launches (scene instance is reused)
+    this.slotContainers = [];
+    this.equipmentSlots.clear();
+    this._selectedSlot = -1;
+    this.tooltipContainer = null;
+
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     bg.setInteractive();

@@ -40,6 +40,10 @@ export class ShopScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset state from previous launches (scene instance is reused)
+    this.itemButtons = [];
+    this.selectedIndex = -1;
+
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     bg.setInteractive();
