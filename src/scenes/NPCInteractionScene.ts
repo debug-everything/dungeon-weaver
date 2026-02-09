@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
-import { NPCData } from '../types';
+import { NPCData, QuestDefinition } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
+import { getAvailableQuests, acceptDynamicQuest } from '../services/ApiClient';
 
 interface NPCInteractionData {
   npcData: NPCData;
@@ -22,6 +23,7 @@ export class NPCInteractionScene extends Phaser.Scene {
   private menuItems: Phaser.GameObjects.Container[] = [];
   private options: MenuOption[] = [];
   private selectedIndex: number = 0;
+  private prevGamepadButtons: boolean[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.NPC_INTERACTION });
@@ -36,6 +38,7 @@ export class NPCInteractionScene extends Phaser.Scene {
     this.menuItems = [];
     this.options = [];
     this.selectedIndex = 0;
+    this.prevGamepadButtons = [];
 
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.5);
@@ -157,6 +160,20 @@ export class NPCInteractionScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.closeMenu());
   }
 
+  update(): void {
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const prev = this.prevGamepadButtons;
+    const justDown = (i: number) => (pad.buttons[i]?.pressed ?? false) && !(prev[i] ?? false);
+
+    if (justDown(12)) this.moveSelection(-1);  // D-pad up
+    if (justDown(13)) this.moveSelection(1);   // D-pad down
+    if (justDown(0)) this.activateSelection(); // A button
+    if (justDown(1)) this.closeMenu();         // B button
+
+    this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
+  }
+
   private moveSelection(delta: number): void {
     if (this.options.length === 0) return;
     this.selectedIndex = (this.selectedIndex + delta + this.options.length) % this.options.length;
@@ -212,11 +229,28 @@ export class NPCInteractionScene extends Phaser.Scene {
     this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.OPEN_SHOP, this.npcData);
   }
 
-  private handleQuest(): void {
+  private async handleQuest(): Promise<void> {
+    // Try to fetch and register LLM quests for this NPC
+    try {
+      const llmQuests = await getAvailableQuests(this.npcData.id) as QuestDefinition[];
+      for (const quest of llmQuests) {
+        if (!this.questSystem.getQuestDefinition(quest.id)) {
+          this.questSystem.registerDynamicQuest(quest);
+        }
+      }
+    } catch {
+      // Backend unavailable — fall back to static quests only
+    }
+
     const quest = this.questSystem.getMostActionableQuest(this.npcData.id);
     if (!quest) {
       this.closeMenu();
       return;
+    }
+
+    // If it's a dynamic quest being accepted, notify the backend
+    if (quest.definition.id.startsWith('quest_llm_') && quest.state.status === 'available') {
+      acceptDynamicQuest(quest.definition.id).catch(() => {});
     }
 
     this.scene.stop();

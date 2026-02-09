@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { QuestDefinition, QuestState, QuestObjectiveProgress, QuestReward, MonsterData } from '../types';
+import { QuestDefinition, QuestState, QuestObjectiveProgress, QuestReward, MonsterData, DungeonRoom, QuestMapIndicator } from '../types';
 import { EVENTS } from '../config/constants';
 import { InventorySystem } from './InventorySystem';
+import { FogOfWarSystem } from './FogOfWarSystem';
 
 export class QuestSystem {
   private scene: Phaser.Scene;
@@ -37,11 +38,19 @@ export class QuestSystem {
     });
   }
 
-  acceptQuest(questId: string): boolean {
+  acceptQuest(questId: string, rooms?: DungeonRoom[]): boolean {
     const state = this.questStates.get(questId);
     if (!state || state.status !== 'available') return false;
 
     state.status = 'active';
+
+    // Assign a target room (skip safe room at index 0)
+    if (rooms && rooms.length > 1) {
+      const nonSafeRooms = rooms.slice(1);
+      const targetRoom = nonSafeRooms[Math.floor(Math.random() * nonSafeRooms.length)];
+      state.targetRoom = { x: targetRoom.x, y: targetRoom.y, width: targetRoom.width, height: targetRoom.height };
+    }
+
     this.scene.events.emit(EVENTS.QUEST_ACCEPTED, questId);
     this.scene.events.emit(EVENTS.QUEST_LOG_CHANGED);
     return true;
@@ -139,6 +148,44 @@ export class QuestSystem {
       }
     }
     return results;
+  }
+
+  getQuestMapIndicators(fogSystem: FogOfWarSystem): QuestMapIndicator[] {
+    const indicators: QuestMapIndicator[] = [];
+    for (const [questId, state] of this.questStates) {
+      if (state.status !== 'active' && state.status !== 'completed') continue;
+      if (!state.targetRoom) continue;
+
+      const definition = this.quests.get(questId);
+      if (!definition) continue;
+
+      const room = state.targetRoom;
+      let isVisible = false;
+      let isExplored = false;
+
+      for (let ry = room.y; ry < room.y + room.height && !isVisible; ry++) {
+        for (let rx = room.x; rx < room.x + room.width && !isVisible; rx++) {
+          if (fogSystem.isVisible(rx, ry)) isVisible = true;
+          else if (fogSystem.isExplored(rx, ry)) isExplored = true;
+        }
+      }
+
+      const primaryObjectiveType = definition.objectives[0]?.type ?? 'explore';
+      indicators.push({
+        questId,
+        questName: definition.name,
+        targetArea: room,
+        type: primaryObjectiveType,
+        isVisible,
+        isExplored,
+        completed: state.status === 'completed'
+      });
+    }
+    return indicators;
+  }
+
+  registerDynamicQuest(definition: QuestDefinition): void {
+    this.registerQuest(definition);
   }
 
   private onMonsterKilled(monsterData: MonsterData): void {

@@ -11,6 +11,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private inventoryKey!: Phaser.Input.Keyboard.Key;
   private interactKey!: Phaser.Input.Keyboard.Key;
+  private mapKey!: Phaser.Input.Keyboard.Key;
 
   public health: number;
   public maxHealth: number;
@@ -23,6 +24,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private facingDirection: Direction = 'down';
   private attackHitbox: Phaser.GameObjects.Rectangle | null = null;
   private weaponSprite: Phaser.GameObjects.Image | null = null;
+
+  // Gamepad button tracking (for justDown detection)
+  private prevGamepadButtons: boolean[] = [];
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'hero_basic');
@@ -72,6 +76,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.inventoryKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
     this.interactKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.mapKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
   }
 
   update(time: number): void {
@@ -81,6 +86,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleAttack(time);
     this.handleInventoryKey();
     this.handleInteractKey();
+    this.handleMapKey();
+    this.updateGamepadState();
   }
 
   private handleMovement(): void {
@@ -93,7 +100,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     let velocityX = 0;
     let velocityY = 0;
 
-    // Check horizontal movement
+    // Check horizontal movement (keyboard)
     if (this.cursors.left.isDown || this.wasd.A.isDown) {
       velocityX = -PLAYER_SPEED;
       this.facingDirection = 'left';
@@ -104,13 +111,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setFlipX(false);
     }
 
-    // Check vertical movement
+    // Check vertical movement (keyboard)
     if (this.cursors.up.isDown || this.wasd.W.isDown) {
       velocityY = -PLAYER_SPEED;
       this.facingDirection = 'up';
     } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
       velocityY = PLAYER_SPEED;
       this.facingDirection = 'down';
+    }
+
+    // Gamepad left stick overrides
+    const pad = this.getGamepad();
+    if (pad && velocityX === 0 && velocityY === 0) {
+      const deadzone = 0.2;
+      if (pad.leftStick.x < -deadzone) {
+        velocityX = -PLAYER_SPEED;
+        this.facingDirection = 'left';
+        this.setFlipX(true);
+      } else if (pad.leftStick.x > deadzone) {
+        velocityX = PLAYER_SPEED;
+        this.facingDirection = 'right';
+        this.setFlipX(false);
+      }
+      if (pad.leftStick.y < -deadzone) {
+        velocityY = -PLAYER_SPEED;
+        this.facingDirection = 'up';
+      } else if (pad.leftStick.y > deadzone) {
+        velocityY = PLAYER_SPEED;
+        this.facingDirection = 'down';
+      }
     }
 
     // Normalize diagonal movement
@@ -124,8 +153,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private handleAttack(time: number): void {
     const cooldown = this.combat.getAttackCooldown();
+    const keyboardAttack = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+    const gamepadAttack = this.isGamepadButtonJustDown(0); // A button
 
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) && time - this.lastAttackTime > cooldown) {
+    if ((keyboardAttack || gamepadAttack) && time - this.lastAttackTime > cooldown) {
       this.performAttack();
       this.lastAttackTime = time;
     }
@@ -317,14 +348,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private handleInventoryKey(): void {
-    if (Phaser.Input.Keyboard.JustDown(this.inventoryKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.inventoryKey) || this.isGamepadButtonJustDown(3)) { // Y button
       this.scene.events.emit(EVENTS.OPEN_INVENTORY);
     }
   }
 
   private handleInteractKey(): void {
-    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.interactKey) || this.isGamepadButtonJustDown(2)) { // X button
       this.scene.events.emit('player-interact', { x: this.x, y: this.y, direction: this.facingDirection });
+    }
+  }
+
+  private handleMapKey(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.mapKey) || this.isGamepadButtonJustDown(8)) { // Back/Select button
+      this.scene.events.emit(EVENTS.OPEN_MAP);
     }
   }
 
@@ -390,6 +427,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   getFacingDirection(): Direction {
     return this.facingDirection;
+  }
+
+  private getGamepad(): Phaser.Input.Gamepad.Gamepad | null {
+    if (!this.scene.input.gamepad || this.scene.input.gamepad.total === 0) return null;
+    return this.scene.input.gamepad.getPad(0);
+  }
+
+  private isGamepadButtonJustDown(buttonIndex: number): boolean {
+    const pad = this.getGamepad();
+    if (!pad) return false;
+    const isDown = pad.buttons[buttonIndex]?.pressed ?? false;
+    const wasDown = this.prevGamepadButtons[buttonIndex] ?? false;
+    return isDown && !wasDown;
+  }
+
+  private updateGamepadState(): void {
+    const pad = this.getGamepad();
+    if (!pad) return;
+    this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
   }
 
   getInteractionPoint(): { x: number; y: number } {

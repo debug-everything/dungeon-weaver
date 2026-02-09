@@ -25,6 +25,7 @@ export class ShopScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private itemButtons: Phaser.GameObjects.Container[] = [];
   private detailsPanel!: Phaser.GameObjects.Container;
+  private prevGamepadButtons: boolean[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.SHOP });
@@ -43,6 +44,7 @@ export class ShopScene extends Phaser.Scene {
     // Reset state from previous launches (scene instance is reused)
     this.itemButtons = [];
     this.selectedIndex = -1;
+    this.prevGamepadButtons = [];
 
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
@@ -90,6 +92,17 @@ export class ShopScene extends Phaser.Scene {
 
     // ESC to close
     this.input.keyboard?.on('keydown-ESC', () => this.closeShop());
+  }
+
+  update(): void {
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const prev = this.prevGamepadButtons;
+    const justDown = (i: number) => (pad.buttons[i]?.pressed ?? false) && !(prev[i] ?? false);
+
+    if (justDown(1)) this.closeShop(); // B button
+
+    this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
   }
 
   private createShopList(startX: number, startY: number): void {

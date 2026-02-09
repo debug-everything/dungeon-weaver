@@ -15,6 +15,7 @@ export const MAX_ROOMS = 8;
 
 export const INTERACTION_DISTANCE = 32;
 export const ATTACK_COOLDOWN = 400;
+export const VISIBILITY_RADIUS = 6;
 
 export const INVENTORY_SLOTS = 20;
 export const INVENTORY_COLS = 5;
@@ -27,7 +28,8 @@ export const SCENE_KEYS = {
   INVENTORY: 'InventoryScene',
   SHOP: 'ShopScene',
   NPC_INTERACTION: 'NPCInteractionScene',
-  QUEST_DIALOG: 'QuestDialogScene'
+  QUEST_DIALOG: 'QuestDialogScene',
+  MAP: 'MapScene'
 } as const;
 
 export const EVENTS = {
@@ -50,5 +52,7 @@ export const EVENTS = {
   QUEST_OBJECTIVE_COMPLETED: 'quest-objective-completed',
   QUEST_READY_TO_TURN_IN: 'quest-ready-to-turn-in',
   QUEST_TURNED_IN: 'quest-turned-in',
-  QUEST_LOG_CHANGED: 'quest-log-changed'
+  QUEST_LOG_CHANGED: 'quest-log-changed',
+  OPEN_MAP: 'open-map',
+  CLOSE_MAP: 'close-map'
 } as const;

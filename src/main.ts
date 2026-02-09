@@ -8,6 +8,7 @@ import { InventoryScene } from './scenes/InventoryScene';
 import { ShopScene } from './scenes/ShopScene';
 import { NPCInteractionScene } from './scenes/NPCInteractionScene';
 import { QuestDialogScene } from './scenes/QuestDialogScene';
+import { MapScene } from './scenes/MapScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -15,6 +16,9 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   pixelArt: true,
+  input: {
+    gamepad: true
+  },
   physics: {
     default: 'arcade',
     arcade: {
@@ -22,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene],
+  scene: [BootScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene, MapScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

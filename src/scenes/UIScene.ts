@@ -14,6 +14,7 @@ export class UIScene extends Phaser.Scene {
 
   private currentHealth: number = 100;
   private maxHealth: number = 100;
+  private gamepadConnected: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.UI });
@@ -76,7 +77,7 @@ export class UIScene extends Phaser.Scene {
     this.questTrackerContainer = this.add.container(20, 56);
 
     // Controls reminder
-    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact', {
+    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#666666'
@@ -105,6 +106,18 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.off(EVENTS.QUEST_PROGRESS_UPDATED, this.updateQuestTracker, this);
       gameScene.events.off(EVENTS.QUEST_TURNED_IN, this.onQuestTurnedIn, this);
     });
+  }
+
+  update(): void {
+    const hasGamepad = (this.input.gamepad?.total ?? 0) > 0;
+    if (hasGamepad !== this.gamepadConnected) {
+      this.gamepadConnected = hasGamepad;
+      if (hasGamepad) {
+        this._controlsText.setText('LS: Move | A: Attack | X: Interact | Y: Inventory | Select: Map');
+      } else {
+        this._controlsText.setText('WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map');
+      }
+    }
   }
 
   private updateHealthBar(): void {

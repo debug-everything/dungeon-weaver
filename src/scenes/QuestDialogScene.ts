@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
-import { NPCData, DialogNode, QuestDefinition, QuestState } from '../types';
+import { NPCData, DialogNode, QuestDefinition, QuestState, DungeonRoom } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
 import { Player } from '../entities/Player';
 
@@ -9,6 +9,7 @@ interface QuestDialogData {
   questId: string;
   questSystem: QuestSystem;
   player: Player;
+  rooms?: DungeonRoom[];
 }
 
 interface ResponseOption {
@@ -23,6 +24,7 @@ export class QuestDialogScene extends Phaser.Scene {
   private player!: Player;
   private questDef!: QuestDefinition;
   private questState!: QuestState;
+  private rooms?: DungeonRoom[];
 
   private dialogNodes!: DialogNode[];
   private currentNode!: DialogNode;
@@ -32,6 +34,7 @@ export class QuestDialogScene extends Phaser.Scene {
   private responseOptions: ResponseOption[] = [];
   private selectedIndex: number = 0;
   private isTerminalNode: boolean = false;
+  private prevGamepadButtons: boolean[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.QUEST_DIALOG });
@@ -42,6 +45,7 @@ export class QuestDialogScene extends Phaser.Scene {
     this.questId = data.questId;
     this.questSystem = data.questSystem;
     this.player = data.player;
+    this.rooms = data.rooms;
     this.turnedIn = false;
   }
 
@@ -130,6 +134,20 @@ export class QuestDialogScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ENTER', () => this.activateSelection());
     this.input.keyboard?.on('keydown-SPACE', () => this.activateSelection());
     this.input.keyboard?.on('keydown-ESC', () => this.closeDialog());
+  }
+
+  update(): void {
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const prev = this.prevGamepadButtons;
+    const justDown = (i: number) => (pad.buttons[i]?.pressed ?? false) && !(prev[i] ?? false);
+
+    if (justDown(12)) this.moveSelection(-1);  // D-pad up
+    if (justDown(13)) this.moveSelection(1);   // D-pad down
+    if (justDown(0)) this.activateSelection(); // A button
+    if (justDown(1)) this.closeDialog();       // B button
+
+    this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
   }
 
   private moveSelection(delta: number): void {
@@ -242,7 +260,7 @@ export class QuestDialogScene extends Phaser.Scene {
     if (action) {
       switch (action.type) {
         case 'accept_quest':
-          this.questSystem.acceptQuest(this.questId);
+          this.questSystem.acceptQuest(this.questId, this.rooms);
           break;
 
         case 'decline_quest':

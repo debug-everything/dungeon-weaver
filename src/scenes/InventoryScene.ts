@@ -18,6 +18,7 @@ export class InventoryScene extends Phaser.Scene {
   private _selectedSlot: number = -1;
   private tooltipContainer: Phaser.GameObjects.Container | null = null;
   private statsText!: Phaser.GameObjects.Text;
+  private prevGamepadButtons: boolean[] = [];
 
   private readonly SLOT_SIZE = 48;
   private readonly SLOT_PADDING = 4;
@@ -37,6 +38,7 @@ export class InventoryScene extends Phaser.Scene {
     this.equipmentSlots.clear();
     this._selectedSlot = -1;
     this.tooltipContainer = null;
+    this.prevGamepadButtons = [];
 
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
@@ -86,6 +88,17 @@ export class InventoryScene extends Phaser.Scene {
     this.updateInventoryDisplay();
     this.updateEquipmentDisplay();
     this.updateStats();
+  }
+
+  update(): void {
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const prev = this.prevGamepadButtons;
+    const justDown = (i: number) => (pad.buttons[i]?.pressed ?? false) && !(prev[i] ?? false);
+
+    if (justDown(1) || justDown(3)) this.closeInventory(); // B or Y button
+
+    this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
   }
 
   private createInventoryGrid(startX: number, startY: number): void {

@@ -169,4 +169,15 @@ export interface QuestState {
   questId: string;
   status: QuestStatus;
   objectiveProgress: QuestObjectiveProgress[];
+  targetRoom?: { x: number; y: number; width: number; height: number };
+}
+
+export interface QuestMapIndicator {
+  questId: string;
+  questName: string;
+  targetArea: { x: number; y: number; width: number; height: number };
+  type: QuestObjectiveType;
+  isVisible: boolean;
+  isExplored: boolean;
+  completed: boolean;
 }
