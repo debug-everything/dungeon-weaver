@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createSave, listSaves, getSave, updateSave, deleteSave } from '../services/gameStateService.js';
 import type { CreateSaveRequest } from '../types/api.js';
+import { apiLogger } from '../logger.js';
 
 export const gameStateRouter = Router();
 
@@ -15,7 +16,7 @@ gameStateRouter.post('/', (req, res) => {
     const save = createSave(data);
     res.status(201).json(save);
   } catch (err) {
-    console.error('Error creating save:', err);
+    apiLogger.error({ err }, 'Error creating save');
     res.status(500).json({ error: 'Failed to create save' });
   }
 });
@@ -26,7 +27,7 @@ gameStateRouter.get('/', (_req, res) => {
     const saves = listSaves();
     res.json(saves);
   } catch (err) {
-    console.error('Error listing saves:', err);
+    apiLogger.error({ err }, 'Error listing saves');
     res.status(500).json({ error: 'Failed to list saves' });
   }
 });
@@ -41,7 +42,7 @@ gameStateRouter.get('/:id', (req, res) => {
     }
     res.json(save);
   } catch (err) {
-    console.error('Error getting save:', err);
+    apiLogger.error({ err }, 'Error getting save');
     res.status(500).json({ error: 'Failed to get save' });
   }
 });
@@ -57,7 +58,7 @@ gameStateRouter.put('/:id', (req, res) => {
     }
     res.json(save);
   } catch (err) {
-    console.error('Error updating save:', err);
+    apiLogger.error({ err }, 'Error updating save');
     res.status(500).json({ error: 'Failed to update save' });
   }
 });
@@ -72,7 +73,7 @@ gameStateRouter.delete('/:id', (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting save:', err);
+    apiLogger.error({ err }, 'Error deleting save');
     res.status(500).json({ error: 'Failed to delete save' });
   }
 });

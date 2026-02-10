@@ -3,6 +3,7 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants
 import { NPCData, QuestDefinition } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
 import { getAvailableQuests, acceptDynamicQuest } from '../services/ApiClient';
+import { registerMonsterVariant, registerItemVariant } from '../systems/VariantRegistry';
 
 interface NPCInteractionData {
   npcData: NPCData;
@@ -235,6 +236,17 @@ export class NPCInteractionScene extends Phaser.Scene {
       const llmQuests = await getAvailableQuests(this.npcData.id) as QuestDefinition[];
       for (const quest of llmQuests) {
         if (!this.questSystem.getQuestDefinition(quest.id)) {
+          // Register any variant monsters/items before the quest itself
+          if (quest.variants?.monsters) {
+            for (const mv of quest.variants.monsters) {
+              registerMonsterVariant(mv);
+            }
+          }
+          if (quest.variants?.items) {
+            for (const iv of quest.variants.items) {
+              registerItemVariant(iv);
+            }
+          }
           this.questSystem.registerDynamicQuest(quest);
         }
       }

@@ -107,6 +107,47 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Game over on player death
 - [x] Return to menu on death
 
+### Backend Server ✅
+- [x] Express + better-sqlite3 backend (`server/`)
+- [x] Save/load game state API (`/api/saves`)
+- [x] Vite proxy routing `/api` to `http://localhost:4201`
+
+### LLM-Powered Dynamic Quest Generation ✅
+- [x] OpenAI-compatible LLM integration (`server/src/services/llmService.ts`)
+- [x] Configurable via environment variables (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`)
+- [x] Auto-enabled when `LLM_API_KEY` is set, gracefully disabled otherwise
+- [x] Quest pool service pre-generates 2 quests, replenishes in background
+- [x] Quest validator ensures LLM output conforms to game schema (valid NPCs, monsters, items, dialog structure)
+- [x] REST endpoints: `GET /api/quests/available`, `GET /api/quests/available/:npcId`, `POST /api/quests/accept`
+- [x] Debug endpoint: `GET /api/quests/pool-status`
+- [x] Frontend `ApiClient` wired to fetch/accept dynamic quests
+- [x] `[LLM]` prefixed server-side logging for all LLM activity
+
+### Hardcoded Quest System ✅
+- [x] Quest templates with full dialog trees
+- [x] Quest types: rescue, recover, destroy, investigate
+- [x] Objective types: kill, collect
+- [x] Quest state machine: available → active → completed → turned_in
+- [x] Quest map indicators with fog-of-war integration
+- [x] NPC quest interaction (offer, in-progress, turn-in dialogs)
+
+### Dynamic Quest Variants ✅
+- [x] LLM can generate variant monsters (custom names, scaled stats, reuse base sprites)
+- [x] LLM can generate variant items (custom names/descriptions, reuse base sprites)
+- [x] Variant schema in LLM system prompt with validation
+- [x] Runtime registration of variants into MONSTERS/ITEMS registries on quest accept
+- [x] Kill objectives use base type for matching (works with existing QuestSystem)
+- [x] Quest-aware monster respawns (50% bias toward active quest target types)
+- [x] Server-side kill count cap (max 5) for completability
+
+### Fog of War ✅
+- [x] Tile-based visibility system
+- [x] Bresenham line-of-sight with diagonal corner blocking
+- [x] Explored vs visible vs hidden states
+
+### Game Controller Support ✅
+- [x] Gamepad input for movement and actions
+
 ---
 
 ## Phase 2: Enhanced Gameplay

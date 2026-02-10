@@ -1,0 +1,208 @@
+# Dungeon Crawler RPG - Game Design Document
+
+## World
+
+### Dungeon Layout
+- Procedurally generated per session
+- 40x30 tile grid (each tile 16px, rendered at 2x scale)
+- Up to 8 rooms connected by 3-tile-wide corridors
+- Room 0 is the **safe room** (NPCs, no monsters)
+- Last room is the **boss room** (always contains a Demon Lord)
+- Doors appear at room entrances (60% chance, 100% for boss room). Opened with E key.
+
+### Fog of War
+- Tile-based visibility with Bresenham line-of-sight
+- Visibility radius: 6 tiles
+- Three states: **hidden** (black), **explored** (dimmed), **visible** (clear)
+- Diagonal corners block vision when both adjacent orthogonal tiles are walls
+
+---
+
+## Player
+
+| Stat | Value |
+|------|-------|
+| Max Health | 100 |
+| Speed | 120 |
+| Starting Gold | 50 |
+| Inventory Slots | 20 |
+| Interaction Distance | 32px |
+
+### Combat
+- Attack with SPACE key (directional based on facing)
+- Critical hit: 10% chance, 1.5x damage
+- Damage variance: 85%-115% of base
+- Attack cooldown: 400ms base (modified by weapon speed)
+
+---
+
+## Monsters
+
+### Bestiary
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold |
+|------|----|--------|----|-----|-------|--------|----|------|
+| Zombie | `zombie` | `monster_zombie` | 15 | 3 | 40 | 100 | 10 | 2-8 |
+| Skeleton | `skelet` | `monster_skelet` | 12 | 4 | 60 | 120 | 15 | 5-12 |
+| Goblin | `goblin` | `monster_goblin` | 10 | 2 | 90 | 140 | 12 | 8-20 |
+| Orc | `orc` | `monster_orc` | 25 | 6 | 55 | 110 | 25 | 10-25 |
+| Demon Lord | `demon` | `monster_demon` | 75 | 10 | 70 | 180 | 100 | 50-100 |
+
+### AI Behavior
+- **States:** Idle, Chasing, Attacking
+- Monsters detect player within their detect range and begin chasing
+- Each monster type has its own attack range and cooldown
+- Demon Lord is boss-only (never spawns from respawns)
+
+### Spawning
+- Initial: 2-4 monsters per room (skip safe room), boss in last room
+- Respawn: every 15 seconds, 1-2 monsters in a random room far from the player
+- Max monsters: 20
+- Quest-aware respawning: 50% bias toward active kill quest target types
+
+### Loot Tables
+
+| Monster | Drops |
+|---------|-------|
+| Zombie | Health Potion (20%), Small Dagger (5%) |
+| Skeleton | Health Potion (15%), Rusty Sword (8%) |
+| Goblin | Health Potion (25%), Steel Dagger (10%) |
+| Orc | Large Health Potion (15%), Steel Sword (8%), War Hammer (5%) |
+| Demon Lord | Large Health Potion (50%), Ruby Sword (20%), Silver Katana (15%) |
+
+---
+
+## Items
+
+### Weapons - Swords
+
+| Item | ID | DMG | Speed | Range | Value |
+|------|----|-----|-------|-------|-------|
+| Wooden Sword | `weapon_sword_wooden` | 5 | 1.2 | 24 | 15 |
+| Rusty Sword | `weapon_sword_rusty` | 8 | 1.0 | 26 | 25 |
+| Steel Sword | `weapon_sword_steel` | 15 | 1.0 | 28 | 100 |
+| Silver Sword | `weapon_sword_silver` | 20 | 1.1 | 28 | 200 |
+| Golden Sword | `weapon_sword_golden` | 25 | 0.9 | 28 | 400 |
+| Ruby Sword | `weapon_sword_ruby` | 30 | 1.0 | 30 | 500 |
+
+### Weapons - Daggers
+
+| Item | ID | DMG | Speed | Range | Value |
+|------|----|-----|-------|-------|-------|
+| Small Dagger | `weapon_dagger_small` | 4 | 1.8 | 16 | 10 |
+| Steel Dagger | `weapon_dagger_steel` | 8 | 1.6 | 18 | 50 |
+| Golden Dagger | `weapon_dagger_golden` | 12 | 1.5 | 18 | 150 |
+
+### Weapons - Heavy
+
+| Item | ID | DMG | Speed | Range | Value |
+|------|----|-----|-------|-------|-------|
+| War Hammer | `weapon_hammer` | 22 | 0.7 | 24 | 180 |
+| Sledgehammer | `weapon_sledgehammer` | 35 | 0.5 | 28 | 350 |
+| Silver Katana | `weapon_katana_silver` | 28 | 1.3 | 32 | 450 |
+
+### Consumables
+
+| Item | ID | Effect | Value | Max Stack |
+|------|----|--------|-------|-----------|
+| Health Potion | `flask_red` | Heal 25 HP | 20 | 10 |
+| Large Health Potion | `flask_big_red` | Heal 50 HP | 45 | 10 |
+| Mana Potion | `flask_blue` | (unused) | 25 | 10 |
+| Antidote | `flask_green` | (unused) | 30 | 10 |
+| Speed Potion | `flask_yellow` | (unused) | 40 | 10 |
+
+### Equipment Slots
+Weapon, Head, Chest, Legs, Boots, Shield (only Weapon is populated currently)
+
+---
+
+## NPCs
+
+| NPC | ID | Role | Specialty |
+|-----|----|------|-----------|
+| Marcus the Merchant | `npc_merchant` | Shop | Basic weapons & potions |
+| Elena the Exotic | `npc_merchant_2` | Shop | Rare/exotic weapons |
+| Aldric the Sage | `npc_sage` | Shop | Consumables & potions |
+
+All NPCs are located in the safe room (room 0).
+
+---
+
+## Quest System
+
+### Quest Types
+- **Destroy** — kill monsters
+- **Recover** — collect items
+- **Rescue** — (narrative, described in quest text)
+- **Investigate** — (narrative, described in quest text)
+
+### Objective Types
+- **Kill** — target is a monster base type (e.g. `"goblin"`)
+- **Collect** — target is an item ID or variant item ID
+
+### Quest Flow
+`available` -> `active` -> `completed` -> `turned_in`
+
+Each quest is assigned a target room (non-safe) when accepted. Quest map indicators show the target area with fog-of-war integration.
+
+### Sources
+- **Hardcoded quests** — defined in `src/data/quests.json`, always available
+- **LLM-generated quests** — fetched from backend quest pool when player interacts with NPC
+
+### Balance Constraints
+| Parameter | Range |
+|-----------|-------|
+| Kill objective count | 1-4 (server caps at 5) |
+| Collect objective count | 1-3 |
+| XP reward | 25-200 |
+| Gold reward | 10-100 |
+| Quest level | 1-5 |
+| Max objectives per quest | 3 |
+
+---
+
+## Dynamic Quest Variants
+
+LLM-generated quests can define **variant** monsters and items — custom-named versions of existing base types that reuse their sprites.
+
+### Monster Variants
+- Clone a base monster (e.g. `monster_goblin`)
+- Apply a `statMultiplier` (0.5-2.0) to health, damage, XP reward, and gold drop
+- Keep the base `type` for quest kill matching (e.g. killing any `goblin`-type counts)
+- Keep the base `sprite` (no new art needed)
+- Example: "Hunchback Goblin" — baseType `goblin`, statMultiplier 1.3
+
+### Item Variants
+- Clone a base item (e.g. `weapon_sword_steel`)
+- Set a custom name and description
+- Keep the base sprite and stats
+- Can be used as collect objectives or quest rewards
+- Example: "Cursed Blade" — baseItem `weapon_sword_steel`
+
+### Available Base Types
+
+**Monsters (5 sprites):**
+`monster_zombie`, `monster_skelet`, `monster_goblin`, `monster_orc`, `monster_demon`
+
+**Items (17 sprites):**
+`weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`
+
+---
+
+## Shops
+
+### Pricing
+Each NPC has fixed buy/sell prices per item. Sell price is roughly 40% of buy price.
+
+### Stock
+Each item has a fixed stock count per NPC. Stock does not replenish.
+
+---
+
+## Game Flow
+
+1. **Boot** — Load assets with progress bar
+2. **Menu** — Start game
+3. **Gameplay** — Explore dungeon, fight monsters, talk to NPCs, complete quests
+4. **Death** — Camera fade, return to menu
+5. **Save** — F5 quick-save via backend API

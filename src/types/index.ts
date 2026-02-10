@@ -142,6 +142,21 @@ export interface QuestReward {
   items?: { itemId: string; quantity: number }[];
 }
 
+export interface MonsterVariant {
+  variantId: string;
+  baseType: MonsterType;
+  baseSprite: string;
+  name: string;
+  statMultiplier: number;
+}
+
+export interface ItemVariant {
+  variantId: string;
+  baseItem: string;
+  name: string;
+  description: string;
+}
+
 export interface QuestDefinition {
   id: string;
   name: string;
@@ -157,6 +172,10 @@ export interface QuestDefinition {
   };
   objectives: QuestObjective[];
   rewards: QuestReward;
+  variants?: {
+    monsters?: MonsterVariant[];
+    items?: ItemVariant[];
+  };
 }
 
 export interface QuestObjectiveProgress {

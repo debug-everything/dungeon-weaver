@@ -323,8 +323,8 @@ export class GameScene extends Phaser.Scene {
           floor.setDepth(0);
           this.floors.add(floor);
 
+          // Door sprite is 32x32 (already matches scaled tile size) — no setScale needed
           const door = this.physics.add.staticImage(worldX + scaledTile / 2, worldY + scaledTile / 2, 'door_closed');
-          door.setScale(SCALE);
           door.setDepth(1);
           door.refreshBody();
           this.doors.add(door);
@@ -403,6 +403,24 @@ export class GameScene extends Phaser.Scene {
     const nonBossTypes = Object.keys(MONSTERS).filter(t => t !== 'monster_demon');
     if (nonBossTypes.length === 0) return;
 
+    // Build quest-target monster types from active kill objectives
+    const questTargetTypes: string[] = [];
+    if (this.questSystem) {
+      for (const { definition, state } of this.questSystem.getActiveQuests()) {
+        if (state.status !== 'active') continue;
+        for (let i = 0; i < definition.objectives.length; i++) {
+          const obj = definition.objectives[i];
+          const progress = state.objectiveProgress[i];
+          if (obj.type === 'kill' && !progress?.completed) {
+            const spriteKey = `monster_${obj.target}`;
+            if (nonBossTypes.includes(spriteKey)) {
+              questTargetTypes.push(spriteKey);
+            }
+          }
+        }
+      }
+    }
+
     // Try to find a room far enough from the player
     const candidateRooms = this.rooms.slice(1).filter(room => {
       const roomWorldX = room.centerX * TILE_SIZE * SCALE;
@@ -420,7 +438,13 @@ export class GameScene extends Phaser.Scene {
     const spawnCount = Phaser.Math.Between(1, 2);
 
     for (let i = 0; i < spawnCount && livingMonsters + i < this.maxMonsters; i++) {
-      const monsterType = Phaser.Utils.Array.GetRandom(nonBossTypes);
+      // 50% chance to bias toward a quest target type (if any active)
+      let monsterType: string;
+      if (questTargetTypes.length > 0 && Math.random() < 0.5) {
+        monsterType = Phaser.Utils.Array.GetRandom(questTargetTypes);
+      } else {
+        monsterType = Phaser.Utils.Array.GetRandom(nonBossTypes);
+      }
       const monsterData = MONSTERS[monsterType];
       const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
       const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;

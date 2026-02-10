@@ -3,5 +3,6 @@ dist/
 .DS_Store
 *.log
 server/data/
+server/logs/
 server/.env
 

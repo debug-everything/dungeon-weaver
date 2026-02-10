@@ -4,12 +4,13 @@ const VALID_NPC_IDS = ['npc_merchant', 'npc_merchant_2', 'npc_sage'];
 const VALID_QUEST_TYPES = ['rescue', 'recover', 'destroy', 'investigate'];
 const VALID_MONSTER_TYPES = ['zombie', 'skelet', 'orc', 'goblin', 'demon'];
 const VALID_ITEM_IDS = [
-  'weapon_sword_wooden', 'weapon_sword_steel', 'weapon_sword_silver',
+  'weapon_sword_wooden', 'weapon_sword_rusty', 'weapon_sword_steel', 'weapon_sword_silver',
   'weapon_sword_golden', 'weapon_sword_ruby', 'weapon_dagger_small',
   'weapon_dagger_steel', 'weapon_dagger_golden', 'weapon_katana_silver',
   'weapon_hammer', 'weapon_sledgehammer',
   'flask_red', 'flask_big_red', 'flask_blue', 'flask_green', 'flask_yellow'
 ];
+const VALID_MONSTER_SPRITES = ['monster_zombie', 'monster_skelet', 'monster_orc', 'monster_goblin', 'monster_demon'];
 const VALID_OBJECTIVE_TYPES = ['kill', 'collect', 'talk_to', 'explore'];
 const VALID_DIALOG_ACTIONS = ['accept_quest', 'decline_quest', 'end_dialog', 'turn_in_quest'];
 const DIALOG_PHASES = ['offer', 'inProgress', 'readyToTurnIn', 'completed'] as const;
@@ -33,6 +34,46 @@ export function validateQuest(quest: unknown): ValidationResult {
   if (!q.npcId || !VALID_NPC_IDS.includes(q.npcId)) errors.push(`Invalid npcId: ${q.npcId}`);
   if (typeof q.level !== 'number' || q.level < 1) errors.push('Invalid level');
 
+  // Variants (optional)
+  const variantItemIds = new Set<string>();
+  if (q.variants) {
+    if (q.variants.monsters) {
+      if (!Array.isArray(q.variants.monsters)) {
+        errors.push('variants.monsters must be an array');
+      } else {
+        const seenVariantIds = new Set<string>();
+        for (const mv of q.variants.monsters) {
+          if (!mv.variantId || typeof mv.variantId !== 'string') errors.push('Monster variant missing variantId');
+          else if (seenVariantIds.has(mv.variantId)) errors.push(`Duplicate monster variantId: ${mv.variantId}`);
+          else seenVariantIds.add(mv.variantId);
+
+          if (!VALID_MONSTER_TYPES.includes(mv.baseType)) errors.push(`Invalid monster variant baseType: ${mv.baseType}`);
+          if (!VALID_MONSTER_SPRITES.includes(mv.baseSprite)) errors.push(`Invalid monster variant baseSprite: ${mv.baseSprite}`);
+          if (!mv.name || typeof mv.name !== 'string') errors.push('Monster variant missing name');
+          if (typeof mv.statMultiplier !== 'number' || mv.statMultiplier < 0.5 || mv.statMultiplier > 2.0) {
+            errors.push(`Invalid statMultiplier: ${mv.statMultiplier} (must be 0.5-2.0)`);
+          }
+        }
+      }
+    }
+    if (q.variants.items) {
+      if (!Array.isArray(q.variants.items)) {
+        errors.push('variants.items must be an array');
+      } else {
+        const seenVariantIds = new Set<string>();
+        for (const iv of q.variants.items) {
+          if (!iv.variantId || typeof iv.variantId !== 'string') errors.push('Item variant missing variantId');
+          else if (seenVariantIds.has(iv.variantId)) errors.push(`Duplicate item variantId: ${iv.variantId}`);
+          else { seenVariantIds.add(iv.variantId); variantItemIds.add(iv.variantId); }
+
+          if (!VALID_ITEM_IDS.includes(iv.baseItem)) errors.push(`Invalid item variant baseItem: ${iv.baseItem}`);
+          if (!iv.name || typeof iv.name !== 'string') errors.push('Item variant missing name');
+          if (!iv.description || typeof iv.description !== 'string') errors.push('Item variant missing description');
+        }
+      }
+    }
+  }
+
   // Objectives
   if (!Array.isArray(q.objectives) || q.objectives.length === 0) {
     errors.push('Missing or empty objectives');
@@ -43,11 +84,15 @@ export function validateQuest(quest: unknown): ValidationResult {
       if (obj.type === 'kill' && !VALID_MONSTER_TYPES.includes(obj.target)) {
         errors.push(`Invalid kill target: ${obj.target}`);
       }
-      if (obj.type === 'collect' && !VALID_ITEM_IDS.includes(obj.target)) {
+      if (obj.type === 'collect' && !VALID_ITEM_IDS.includes(obj.target) && !variantItemIds.has(obj.target)) {
         errors.push(`Invalid collect target: ${obj.target}`);
       }
       if (typeof obj.requiredCount !== 'number' || obj.requiredCount < 1) {
         errors.push('Invalid requiredCount');
+      }
+      // Cap kill objectives at 5
+      if (obj.type === 'kill' && typeof obj.requiredCount === 'number' && obj.requiredCount > 5) {
+        obj.requiredCount = 5;
       }
     }
   }
@@ -58,7 +103,7 @@ export function validateQuest(quest: unknown): ValidationResult {
   } else {
     if (q.rewards.items) {
       for (const item of q.rewards.items) {
-        if (!VALID_ITEM_IDS.includes(item.itemId)) {
+        if (!VALID_ITEM_IDS.includes(item.itemId) && !variantItemIds.has(item.itemId)) {
           errors.push(`Invalid reward item: ${item.itemId}`);
         }
       }
