@@ -12,6 +12,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private inventoryKey!: Phaser.Input.Keyboard.Key;
   private interactKey!: Phaser.Input.Keyboard.Key;
   private mapKey!: Phaser.Input.Keyboard.Key;
+  private questLogKey!: Phaser.Input.Keyboard.Key;
 
   public health: number;
   public maxHealth: number;
@@ -77,6 +78,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.inventoryKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
     this.interactKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.mapKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+    this.questLogKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
   }
 
   update(time: number): void {
@@ -87,6 +89,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleInventoryKey();
     this.handleInteractKey();
     this.handleMapKey();
+    this.handleQuestLogKey();
     this.updateGamepadState();
   }
 
@@ -362,6 +365,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private handleMapKey(): void {
     if (Phaser.Input.Keyboard.JustDown(this.mapKey) || this.isGamepadButtonJustDown(8)) { // Back/Select button
       this.scene.events.emit(EVENTS.OPEN_MAP);
+    }
+  }
+
+  private handleQuestLogKey(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.questLogKey)) {
+      this.scene.events.emit(EVENTS.OPEN_QUEST_LOG);
     }
   }
 

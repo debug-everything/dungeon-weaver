@@ -209,12 +209,12 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [ ] Mana/energy resource
 
 ### Quests
-- [ ] Quest log UI
-- [ ] Quest NPCs
-- [ ] Kill quests
-- [ ] Fetch quests
-- [ ] Quest rewards
-- [ ] Quest tracking on HUD
+- [x] Quest log UI (Q key overlay with active/completed quests, NPC turn-in guidance)
+- [x] Quest NPCs (all 3 NPCs give quests — hardcoded + LLM-generated)
+- [x] Kill quests
+- [x] Fetch quests (collect objectives with loot injection for LLM variant items)
+- [x] Quest rewards
+- [x] Quest tracking on HUD
 
 ### Character Classes
 - [ ] Warrior class

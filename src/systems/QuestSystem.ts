@@ -109,20 +109,24 @@ export class QuestSystem {
     return results;
   }
 
-  /** Returns the most actionable quest for an NPC: ready-to-turn-in > available > active */
+  /** Returns the most actionable quest for an NPC: ready-to-turn-in > active > available */
   getMostActionableQuest(npcId: string): { definition: QuestDefinition; state: QuestState } | null {
     const quests = this.getQuestsForNPC(npcId);
-    // Priority: completed (ready to turn in) > available > active
+    // Priority: completed (ready to turn in) > active (in progress) > available
     const readyToTurnIn = quests.find(q => q.state.status === 'completed');
     if (readyToTurnIn) return readyToTurnIn;
-
-    const available = quests.find(q => q.state.status === 'available');
-    if (available) return available;
 
     const active = quests.find(q => q.state.status === 'active');
     if (active) return active;
 
+    const available = quests.find(q => q.state.status === 'available');
+    if (available) return available;
+
     return null;
+  }
+
+  hasActiveQuest(npcId: string): boolean {
+    return this.getQuestsForNPC(npcId).some(q => q.state.status === 'active');
   }
 
   hasQuestAvailable(npcId: string): boolean {

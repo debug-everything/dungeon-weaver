@@ -89,16 +89,20 @@ LLM quests can define variant monsters and items — custom-named versions of ex
 2. Server validates variant definitions (base types, sprites, multipliers)
 3. Frontend receives quest via `GET /api/quests/available/:npcId`
 4. `NPCInteractionScene.handleQuest()` calls `VariantRegistry.registerMonsterVariant/registerItemVariant` before registering the quest
-5. `GameScene.respawnMonsters()` biases 50% of spawns toward active kill quest target types
+5. `VariantRegistry.injectQuestLoot()` adds collect-objective items to relevant monster loot tables (35% drop chance, matched to kill-objective monster types or all non-boss monsters)
+6. `GameScene.respawnMonsters()` biases 50% of spawns toward active kill quest target types
 
 ## Client Architecture
 
 ### Scene Graph
 ```
 BootScene → MenuScene → GameScene (parallel: UIScene)
-                          ├── InventoryScene (overlay)
+                          ├── InventoryScene (overlay, I key)
                           ├── ShopScene (overlay)
-                          └── NPCInteractionScene (overlay)
+                          ├── NPCInteractionScene (overlay)
+                          ├── QuestDialogScene (overlay)
+                          ├── QuestLogScene (overlay, Q key)
+                          └── MapScene (overlay, M key)
 ```
 
 ### Data Flow

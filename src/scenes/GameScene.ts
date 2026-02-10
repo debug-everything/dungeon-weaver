@@ -350,15 +350,22 @@ export class GameScene extends Phaser.Scene {
 
     const safeRoom = this.rooms[0];
     const npcIds = Object.keys(NPCS);
-    const spacing = 40;
+    const scaledTile = TILE_SIZE * SCALE;
+
+    // Place NPCs in separate corners of the room (1 tile inset from walls)
+    const positions = [
+      { x: safeRoom.x + 1, y: safeRoom.y + 1 },                                    // top-left
+      { x: safeRoom.x + safeRoom.width - 2, y: safeRoom.y + 1 },                   // top-right
+      { x: safeRoom.x + Math.floor(safeRoom.width / 2), y: safeRoom.y + safeRoom.height - 2 } // bottom-center
+    ];
 
     npcIds.forEach((npcId, index) => {
       const npcData = NPCS[npcId];
-      const offsetX = (index - 1) * spacing;
+      const pos = positions[index % positions.length];
       const npc = new NPC(
         this,
-        safeRoom.centerX * TILE_SIZE * SCALE + offsetX,
-        (safeRoom.centerY - 1) * TILE_SIZE * SCALE,
+        pos.x * scaledTile + scaledTile / 2,
+        pos.y * scaledTile + scaledTile / 2,
         npcData
       );
       this.npcs.add(npc);
@@ -631,6 +638,19 @@ export class GameScene extends Phaser.Scene {
 
     // Close map
     this.events.on(EVENTS.CLOSE_MAP, () => {
+      this.resumeGame();
+    });
+
+    // Open quest log
+    this.events.on(EVENTS.OPEN_QUEST_LOG, () => {
+      this.pauseGame();
+      this.scene.launch(SCENE_KEYS.QUEST_LOG, {
+        questSystem: this.questSystem
+      });
+    });
+
+    // Close quest log
+    this.events.on(EVENTS.CLOSE_QUEST_LOG, () => {
       this.resumeGame();
     });
 

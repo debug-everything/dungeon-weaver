@@ -47,6 +47,7 @@ src/
     ├── UIScene.ts             # HUD overlay
     ├── InventoryScene.ts      # Inventory modal
     ├── NPCInteractionScene.ts # NPC dialog & quest UI
+    ├── QuestLogScene.ts       # Quest log overlay (Q key)
     └── ShopScene.ts           # Shop interface
 
 server/
@@ -72,6 +73,8 @@ server/
 - **SPACE**: Attack (sword swing animation)
 - **I**: Open/close inventory
 - **E**: Interact with NPCs
+- **Q**: Open/close quest log
+- **M**: Open/close dungeon map
 - **ESC**: Close modals
 
 ## Key Patterns
@@ -158,6 +161,8 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Fog of war with Bresenham line-of-sight
 - ✅ Save/load via backend API
 - ✅ Game controller support
+- ✅ Quest log overlay (Q key)
+- ✅ Quest loot injection for LLM collect objectives
 
 ## Planned Features (See PRD.md)
 - Phase 2: Armor, more monsters, dungeon floors, dodge mechanic

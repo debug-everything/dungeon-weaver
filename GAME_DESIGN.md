@@ -124,7 +124,7 @@ Weapon, Head, Chest, Legs, Boots, Shield (only Weapon is populated currently)
 | Elena the Exotic | `npc_merchant_2` | Shop | Rare/exotic weapons |
 | Aldric the Sage | `npc_sage` | Shop | Consumables & potions |
 
-All NPCs are located in the safe room (room 0).
+All NPCs are located in the safe room (room 0), spread to separate corners to avoid label overlap.
 
 ---
 
@@ -144,6 +144,17 @@ All NPCs are located in the safe room (room 0).
 `available` -> `active` -> `completed` -> `turned_in`
 
 Each quest is assigned a target room (non-safe) when accepted. Quest map indicators show the target area with fog-of-war integration.
+
+**NPC quest priority:** When a player interacts with an NPC, the most actionable quest is shown: `completed (ready to turn in)` > `active (in progress)` > `available`. An NPC will not offer a new quest while it has an active quest in progress. Declined quests remain `available` and will be re-offered on next interaction.
+
+**Quest option** is always visible in the NPC menu (even when all hardcoded quests are done) so LLM-generated quests can be discovered. If no quests are available, the NPC says so.
+
+### Quest Log (Q key)
+Overlay scene showing all active and completed quests grouped by status:
+- **Ready to Turn In** (green) — shows NPC name to return to
+- **In Progress** (gold) — shows objective progress (e.g. "Kill goblins: 2/3")
+- Scrollable with arrow keys / d-pad
+- Close with Q, ESC, or gamepad B
 
 ### Sources
 - **Hardcoded quests** — defined in `src/data/quests.json`, always available
@@ -178,6 +189,9 @@ LLM-generated quests can define **variant** monsters and items — custom-named 
 - Keep the base sprite and stats
 - Can be used as collect objectives or quest rewards
 - Example: "Cursed Blade" — baseItem `weapon_sword_steel`
+
+### Quest Loot Injection
+When a quest has **collect** objectives, `injectQuestLoot()` adds the target item to monster loot tables (35% drop chance) so it can actually drop. If the quest also has kill objectives, the item is only injected into matching monster types; otherwise into all non-boss monsters. This ensures LLM-generated collect quests are always completable.
 
 ### Available Base Types
 

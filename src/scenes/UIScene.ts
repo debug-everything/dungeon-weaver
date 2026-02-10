@@ -77,7 +77,7 @@ export class UIScene extends Phaser.Scene {
     this.questTrackerContainer = this.add.container(20, 56);
 
     // Controls reminder
-    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map', {
+    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map | Q: Quests', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#666666'

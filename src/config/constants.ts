@@ -29,7 +29,8 @@ export const SCENE_KEYS = {
   SHOP: 'ShopScene',
   NPC_INTERACTION: 'NPCInteractionScene',
   QUEST_DIALOG: 'QuestDialogScene',
-  MAP: 'MapScene'
+  MAP: 'MapScene',
+  QUEST_LOG: 'QuestLogScene'
 } as const;
 
 export const EVENTS = {
@@ -54,5 +55,7 @@ export const EVENTS = {
   QUEST_TURNED_IN: 'quest-turned-in',
   QUEST_LOG_CHANGED: 'quest-log-changed',
   OPEN_MAP: 'open-map',
-  CLOSE_MAP: 'close-map'
+  CLOSE_MAP: 'close-map',
+  OPEN_QUEST_LOG: 'open-quest-log',
+  CLOSE_QUEST_LOG: 'close-quest-log'
 } as const;

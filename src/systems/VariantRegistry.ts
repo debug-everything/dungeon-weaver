@@ -1,4 +1,4 @@
-import { MonsterVariant, ItemVariant } from '../types';
+import { MonsterVariant, ItemVariant, QuestDefinition } from '../types';
 import { MONSTERS } from '../data/monsters';
 import { ITEMS } from '../data/items';
 
@@ -58,4 +58,39 @@ export function registerItemVariant(variant: ItemVariant): void {
     description: variant.description,
     sprite: base.sprite
   };
+}
+
+/**
+ * For quests with 'collect' objectives, inject the target item into
+ * relevant monster loot tables so the item can actually drop.
+ * If the quest also has 'kill' objectives, inject into those monster types.
+ * Otherwise, inject into all non-boss monster loot tables.
+ */
+export function injectQuestLoot(quest: QuestDefinition): void {
+  const collectObjectives = quest.objectives.filter(o => o.type === 'collect');
+  if (collectObjectives.length === 0) return;
+
+  const killTargetTypes = quest.objectives
+    .filter(o => o.type === 'kill')
+    .map(o => o.target);
+
+  for (const obj of collectObjectives) {
+    const itemId = obj.target;
+    if (!ITEMS[itemId]) continue;
+
+    const dropChance = 0.35;
+
+    for (const monster of Object.values(MONSTERS)) {
+      // Skip boss
+      if (monster.type === 'demon') continue;
+
+      // If quest has kill targets, only inject into matching monster types
+      if (killTargetTypes.length > 0 && !killTargetTypes.includes(monster.type)) continue;
+
+      // Don't add duplicate loot entries
+      if (monster.lootTable.some(e => e.itemId === itemId)) continue;
+
+      monster.lootTable.push({ itemId, chance: dropChance });
+    }
+  }
 }

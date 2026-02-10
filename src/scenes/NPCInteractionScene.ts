@@ -3,7 +3,7 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants
 import { NPCData, QuestDefinition } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
 import { getAvailableQuests, acceptDynamicQuest } from '../services/ApiClient';
-import { registerMonsterVariant, registerItemVariant } from '../systems/VariantRegistry';
+import { registerMonsterVariant, registerItemVariant, injectQuestLoot } from '../systems/VariantRegistry';
 
 interface NPCInteractionData {
   npcData: NPCData;
@@ -63,8 +63,8 @@ export class NPCInteractionScene extends Phaser.Scene {
       });
     }
 
-    // Quest option - visible if NPC has any non-turned-in quests
-    if (this.questSystem.hasAnyQuest(this.npcData.id)) {
+    // Quest option - always visible so LLM quests can be discovered
+    {
       let indicator: string | undefined;
       if (this.questSystem.hasQuestReadyToTurnIn(this.npcData.id)) {
         indicator = '?';
@@ -231,8 +231,8 @@ export class NPCInteractionScene extends Phaser.Scene {
   }
 
   private async handleQuest(): Promise<void> {
-    // Try to fetch and register LLM quests for this NPC
-    try {
+    // Only fetch new LLM quests if the NPC has no active quest in progress
+    if (!this.questSystem.hasActiveQuest(this.npcData.id)) try {
       const llmQuests = await getAvailableQuests(this.npcData.id) as QuestDefinition[];
       for (const quest of llmQuests) {
         if (!this.questSystem.getQuestDefinition(quest.id)) {
@@ -248,6 +248,7 @@ export class NPCInteractionScene extends Phaser.Scene {
             }
           }
           this.questSystem.registerDynamicQuest(quest);
+          injectQuestLoot(quest);
         }
       }
     } catch {
@@ -256,7 +257,7 @@ export class NPCInteractionScene extends Phaser.Scene {
 
     const quest = this.questSystem.getMostActionableQuest(this.npcData.id);
     if (!quest) {
-      this.closeMenu();
+      this.showNoQuestsMessage();
       return;
     }
 
@@ -270,6 +271,23 @@ export class NPCInteractionScene extends Phaser.Scene {
       npcData: this.npcData,
       questId: quest.definition.id
     });
+  }
+
+  private showNoQuestsMessage(): void {
+    this.menuItems.forEach(c => c.setVisible(false));
+
+    const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '"I have no tasks for you right now. Check back later."', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      backgroundColor: '#2a2a4a',
+      padding: { x: 16, y: 12 },
+      wordWrap: { width: 280 },
+      align: 'center'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    msg.on('pointerdown', () => this.closeMenu());
+    this.time.delayedCall(2500, () => this.closeMenu());
   }
 
   private closeMenu(): void {
