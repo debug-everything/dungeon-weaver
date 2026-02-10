@@ -20,6 +20,33 @@ export const VISIBILITY_RADIUS = 6;
 export const INVENTORY_SLOTS = 20;
 export const INVENTORY_COLS = 5;
 
+// Weapon class defaults: arcWidth (degrees), knockback (force), reachMultiplier
+export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback: number; reachMultiplier: number }> = {
+  dagger:  { arcWidth: 90,  knockback: 20, reachMultiplier: 1.0 },
+  sword:   { arcWidth: 120, knockback: 40, reachMultiplier: 1.3 },
+  hammer:  { arcWidth: 160, knockback: 80, reachMultiplier: 1.2 },
+  katana:  { arcWidth: 100, knockback: 30, reachMultiplier: 1.5 },
+  unarmed: { arcWidth: 90,  knockback: 10, reachMultiplier: 1.0 }
+};
+
+// I-frames
+export const PLAYER_IFRAMES_DURATION = 500;
+export const PLAYER_IFRAMES_FLASH_RATE = 80;
+
+// Dodge/roll
+export const DODGE_SPEED = 300;
+export const DODGE_DURATION = 200;
+export const DODGE_COOLDOWN = 600;
+export const DODGE_IFRAMES = 250;
+
+// Combo system
+export const COMBO_WINDOW = 500;
+export const COMBO_DAMAGE_MULTIPLIERS = [1.0, 1.2, 1.5, 1.8, 2.0];
+
+// Charged attacks
+export const CHARGE_TIME = 800;
+export const CHARGE_MIN_TIME = 200;
+
 export const SCENE_KEYS = {
   BOOT: 'BootScene',
   MENU: 'MenuScene',

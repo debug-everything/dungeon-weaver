@@ -77,8 +77,8 @@ export class UIScene extends Phaser.Scene {
     this.questTrackerContainer = this.add.container(20, 56);
 
     // Controls reminder
-    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map | Q: Quests', {
-      fontSize: '10px',
+    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack (hold to charge) | SHIFT: Dodge | I: Inventory | E: Interact | M: Map | Q: Quests', {
+      fontSize: '9px',
       fontFamily: 'monospace',
       color: '#666666'
     }).setOrigin(0.5);
@@ -113,9 +113,9 @@ export class UIScene extends Phaser.Scene {
     if (hasGamepad !== this.gamepadConnected) {
       this.gamepadConnected = hasGamepad;
       if (hasGamepad) {
-        this._controlsText.setText('LS: Move | A: Attack | X: Interact | Y: Inventory | Select: Map');
+        this._controlsText.setText('LS: Move | A: Attack (hold charge) | B: Dodge | X: Interact | Y: Inventory | Select: Map');
       } else {
-        this._controlsText.setText('WASD: Move | SPACE: Attack | I: Inventory | E: Interact | M: Map');
+        this._controlsText.setText('WASD: Move | SPACE: Attack (hold charge) | SHIFT: Dodge | I: Inventory | E: Interact | M: Map | Q: Quests');
       }
     }
   }

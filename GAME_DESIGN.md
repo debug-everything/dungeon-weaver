@@ -29,10 +29,25 @@
 | Interaction Distance | 32px |
 
 ### Combat
-- Attack with SPACE key (directional based on facing)
+- Attack with SPACE key (directional arc based on facing)
 - Critical hit: 10% chance, 1.5x damage
 - Damage variance: 85%-115% of base
 - Attack cooldown: 400ms base (modified by weapon speed)
+- **Attack arcs**: Each weapon class has a distinct arc width, reach multiplier, and knockback force
+- **Invincibility frames**: 500ms after taking damage (flashes at 80ms intervals)
+- **Dodge/roll**: SHIFT key, dashes in facing direction at speed 300 for 200ms, 250ms of i-frames, 600ms cooldown, creates afterimage trail
+- **Combo system**: Chain attacks within 500ms window for increasing damage multipliers (x1.0, x1.2, x1.5, x1.8, x2.0). Taking damage resets combo.
+- **Charged attacks**: Hold SPACE to charge (200ms minimum, 800ms max). Charged attacks deal up to 2.5x damage, 2x knockback, +30 degrees arc. Getting hit cancels charge. Charged attacks don't advance combo.
+
+### Weapon Classes
+
+| Class | Arc Width | Knockback | Reach Mult | Playstyle |
+|-------|-----------|-----------|------------|-----------|
+| Dagger | 90° | 20 | 1.0x | Fast, narrow, close range |
+| Sword | 120° | 40 | 1.3x | Balanced, good arc and reach |
+| Hammer | 160° | 80 | 1.2x | Slow, wide arc, massive knockback |
+| Katana | 100° | 30 | 1.5x | Fast, longest reach |
+| Unarmed | 90° | 10 | 1.0x | Fallback when no weapon equipped |
 
 ---
 
@@ -53,6 +68,7 @@
 - Monsters detect player within their detect range and begin chasing
 - Each monster type has its own attack range and cooldown
 - Demon Lord is boss-only (never spawns from respawns)
+- **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
 
 ### Spawning
 - Initial: 2-4 monsters per room (skip safe room), boss in last room
@@ -76,30 +92,30 @@
 
 ### Weapons - Swords
 
-| Item | ID | DMG | Speed | Range | Value |
-|------|----|-----|-------|-------|-------|
-| Wooden Sword | `weapon_sword_wooden` | 5 | 1.2 | 24 | 15 |
-| Rusty Sword | `weapon_sword_rusty` | 8 | 1.0 | 26 | 25 |
-| Steel Sword | `weapon_sword_steel` | 15 | 1.0 | 28 | 100 |
-| Silver Sword | `weapon_sword_silver` | 20 | 1.1 | 28 | 200 |
-| Golden Sword | `weapon_sword_golden` | 25 | 0.9 | 28 | 400 |
-| Ruby Sword | `weapon_sword_ruby` | 30 | 1.0 | 30 | 500 |
+| Item | ID | DMG | Speed | Range | Class | Value |
+|------|----|-----|-------|-------|-------|-------|
+| Wooden Sword | `weapon_sword_wooden` | 5 | 1.2 | 24 | sword | 15 |
+| Rusty Sword | `weapon_sword_rusty` | 8 | 1.0 | 26 | sword | 25 |
+| Steel Sword | `weapon_sword_steel` | 15 | 1.0 | 28 | sword | 100 |
+| Silver Sword | `weapon_sword_silver` | 20 | 1.1 | 28 | sword | 200 |
+| Golden Sword | `weapon_sword_golden` | 25 | 0.9 | 28 | sword | 400 |
+| Ruby Sword | `weapon_sword_ruby` | 30 | 1.0 | 30 | sword | 500 |
 
 ### Weapons - Daggers
 
-| Item | ID | DMG | Speed | Range | Value |
-|------|----|-----|-------|-------|-------|
-| Small Dagger | `weapon_dagger_small` | 4 | 1.8 | 16 | 10 |
-| Steel Dagger | `weapon_dagger_steel` | 8 | 1.6 | 18 | 50 |
-| Golden Dagger | `weapon_dagger_golden` | 12 | 1.5 | 18 | 150 |
+| Item | ID | DMG | Speed | Range | Class | Value |
+|------|----|-----|-------|-------|-------|-------|
+| Small Dagger | `weapon_dagger_small` | 4 | 1.8 | 16 | dagger | 10 |
+| Steel Dagger | `weapon_dagger_steel` | 8 | 1.6 | 18 | dagger | 50 |
+| Golden Dagger | `weapon_dagger_golden` | 12 | 1.5 | 18 | dagger | 150 |
 
-### Weapons - Heavy
+### Weapons - Heavy / Katana
 
-| Item | ID | DMG | Speed | Range | Value |
-|------|----|-----|-------|-------|-------|
-| War Hammer | `weapon_hammer` | 22 | 0.7 | 24 | 180 |
-| Sledgehammer | `weapon_sledgehammer` | 35 | 0.5 | 28 | 350 |
-| Silver Katana | `weapon_katana_silver` | 28 | 1.3 | 32 | 450 |
+| Item | ID | DMG | Speed | Range | Class | Value |
+|------|----|-----|-------|-------|-------|-------|
+| War Hammer | `weapon_hammer` | 22 | 0.7 | 24 | hammer | 180 |
+| Sledgehammer | `weapon_sledgehammer` | 35 | 0.5 | 28 | hammer | 350 |
+| Silver Katana | `weapon_katana_silver` | 28 | 1.3 | 32 | katana | 450 |
 
 ### Consumables
 

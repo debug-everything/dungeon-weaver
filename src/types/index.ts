@@ -1,6 +1,7 @@
 export type ItemType = 'weapon' | 'armor' | 'consumable' | 'misc';
 export type EquipmentSlot = 'weapon' | 'head' | 'chest' | 'legs' | 'boots' | 'shield';
 export type ArmorType = 'head' | 'chest' | 'legs' | 'boots' | 'shield';
+export type WeaponClass = 'sword' | 'dagger' | 'hammer' | 'katana' | 'unarmed';
 
 export interface ItemStats {
   damage?: number;
@@ -8,6 +9,7 @@ export interface ItemStats {
   speed?: number;
   range?: number;
   healAmount?: number;
+  weaponClass?: WeaponClass;
 }
 
 export interface Item {

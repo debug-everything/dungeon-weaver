@@ -70,7 +70,8 @@ server/
 
 ## Game Controls
 - **WASD / Arrow Keys**: Move player
-- **SPACE**: Attack (sword swing animation)
+- **SPACE**: Attack (tap for normal, hold to charge)
+- **SHIFT**: Dodge/roll in facing direction
 - **I**: Open/close inventory
 - **E**: Interact with NPCs
 - **Q**: Open/close quest log
@@ -146,13 +147,19 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1)
+## Current Features (Phase 1 + 2a)
 - ✅ Procedural dungeon generation
 - ✅ 5 monster types with AI
 - ✅ 3 NPC merchants
 - ✅ 14 weapons, 5 consumables
 - ✅ Inventory & equipment system
-- ✅ Combat with sword swing animation
+- ✅ Combat with arc-based attack hitbox (per-weapon-class arc width and reach)
+- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed
+- ✅ Knockback on hit (weapon-class-specific force, monsters stop at walls)
+- ✅ Invincibility frames (500ms after damage, flashing visual)
+- ✅ Dodge/roll (SHIFT key, afterimage trail, brief i-frames)
+- ✅ Combo system (chain attacks within 500ms for up to 2.0x damage)
+- ✅ Charged attacks (hold SPACE for up to 2.5x damage + extra knockback)
 - ✅ Shop buy system
 - ✅ HUD (health, gold, weapon)
 - ✅ Quest system (hardcoded + LLM-generated dynamic quests)
@@ -160,12 +167,12 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Quest-aware monster respawns (bias toward active quest targets)
 - ✅ Fog of war with Bresenham line-of-sight
 - ✅ Save/load via backend API
-- ✅ Game controller support
+- ✅ Game controller support (A=attack, B=dodge, X=interact, Y=inventory)
 - ✅ Quest log overlay (Q key)
 - ✅ Quest loot injection for LLM collect objectives
 
 ## Planned Features (See PRD.md)
-- Phase 2: Armor, more monsters, dungeon floors, dodge mechanic
+- Phase 2 (remaining): Armor, more monsters, dungeon floors
 - Phase 3: XP/leveling, skills, character classes
 - Phase 4: Multiple areas, crafting
 - Phase 5: Save system polish, audio, accessibility

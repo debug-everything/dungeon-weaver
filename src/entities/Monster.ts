@@ -12,6 +12,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private target: Phaser.Physics.Arcade.Sprite | null = null;
   private lastAttackTime: number = 0;
   private healthBar: Phaser.GameObjects.Graphics | null = null;
+  private isKnockedBack: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: MonsterData) {
     super(scene, x, y, data.sprite);
@@ -64,10 +65,26 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     this.target = target;
   }
 
+  applyKnockback(fromX: number, fromY: number, force: number): void {
+    if (this.isKnockedBack) return;
+
+    const angle = Math.atan2(this.y - fromY, this.x - fromX);
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
+
+    this.isKnockedBack = true;
+    this.scene.time.delayedCall(150, () => {
+      this.isKnockedBack = false;
+    });
+  }
+
   update(time: number): void {
     if (!this.active || this.monsterState === 'dead') return;
 
     this.updateHealthBar();
+
+    // Skip AI during knockback
+    if (this.isKnockedBack) return;
 
     if (!this.target || !this.target.active) {
       this.setMonsterState('idle');

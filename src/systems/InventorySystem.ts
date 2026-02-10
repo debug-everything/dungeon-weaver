@@ -1,4 +1,4 @@
-import { Item, InventoryItem, Equipment, EquipmentSlot } from '../types';
+import { Item, InventoryItem, Equipment, EquipmentSlot, WeaponClass } from '../types';
 import { INVENTORY_SLOTS, EVENTS } from '../config/constants';
 import { getItem } from '../data/items';
 
@@ -145,6 +145,10 @@ export class InventorySystem {
 
   getWeaponRange(): number {
     return this.equipment.weapon?.stats.range || 20;
+  }
+
+  getWeaponClass(): WeaponClass {
+    return this.equipment.weapon?.stats.weaponClass || 'unarmed';
   }
 
   getTotalDefense(): number {

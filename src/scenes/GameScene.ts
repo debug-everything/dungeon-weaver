@@ -463,22 +463,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupEventListeners(): void {
-    // Player attack
-    this.events.on('player-attack', (attackData: { x: number; y: number; width: number; height: number; damage: { damage: number; isCritical: boolean } }) => {
-      const attackRect = new Phaser.Geom.Rectangle(
-        attackData.x - attackData.width / 2,
-        attackData.y - attackData.height / 2,
-        attackData.width,
-        attackData.height
-      );
-
+    // Player attack (arc-based hitbox)
+    this.events.on('player-attack', (attackData: {
+      originX: number; originY: number;
+      direction: number; radius: number; arcWidth: number;
+      damage: { damage: number; isCritical: boolean };
+      knockback: number;
+    }) => {
       this.monsters.getChildren().forEach((monster) => {
         const m = monster as Monster;
         if (!m.active) return;
 
-        const monsterRect = m.getBounds();
-        if (Phaser.Geom.Rectangle.Overlaps(attackRect, monsterRect)) {
+        if (this.player.combat.isInAttackArc(
+          attackData.originX, attackData.originY,
+          m.x, m.y,
+          attackData.direction, attackData.radius, attackData.arcWidth
+        )) {
           m.takeDamage(attackData.damage.damage, attackData.damage.isCritical);
+          m.applyKnockback(attackData.originX, attackData.originY, attackData.knockback);
           this.player.combat.createHitEffect(m.x, m.y);
         }
       });

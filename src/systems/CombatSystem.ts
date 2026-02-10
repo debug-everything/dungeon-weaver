@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { InventorySystem } from './InventorySystem';
+import { COMBO_WINDOW, COMBO_DAMAGE_MULTIPLIERS } from '../config/constants';
 
 export interface DamageResult {
   damage: number;
@@ -10,17 +11,46 @@ export class CombatSystem {
   private scene: Phaser.Scene;
   private inventory: InventorySystem;
 
+  // Combo state
+  private comboCount: number = 0;
+  private lastHitTime: number = 0;
+
   constructor(scene: Phaser.Scene, inventory: InventorySystem) {
     this.scene = scene;
     this.inventory = inventory;
   }
 
-  calculatePlayerDamage(): DamageResult {
+  isInAttackArc(
+    originX: number, originY: number,
+    targetX: number, targetY: number,
+    directionDeg: number, radius: number, arcWidthDeg: number
+  ): boolean {
+    const dx = targetX - originX;
+    const dy = targetY - originY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > radius) return false;
+
+    // atan2 gives angle in radians; convert to degrees (0=right, 90=down)
+    let angleDeg = Phaser.Math.RadToDeg(Math.atan2(dy, dx));
+    if (angleDeg < 0) angleDeg += 360;
+
+    // Normalize direction to 0-360
+    let dir = directionDeg % 360;
+    if (dir < 0) dir += 360;
+
+    // Angular difference (shortest arc)
+    let diff = Math.abs(angleDeg - dir);
+    if (diff > 180) diff = 360 - diff;
+
+    return diff <= arcWidthDeg / 2;
+  }
+
+  calculatePlayerDamage(comboMultiplier: number = 1.0, chargeMultiplier: number = 1.0): DamageResult {
     const baseDamage = this.inventory.getWeaponDamage();
     const variance = Math.random() * 0.3 + 0.85; // 85% to 115% damage
     const isCritical = Math.random() < 0.1; // 10% crit chance
 
-    let damage = Math.floor(baseDamage * variance);
+    let damage = Math.floor(baseDamage * variance * comboMultiplier * chargeMultiplier);
     if (isCritical) {
       damage = Math.floor(damage * 1.5);
     }
@@ -31,9 +61,52 @@ export class CombatSystem {
   calculateMonsterDamage(baseDamage: number, playerDefense: number): DamageResult {
     const variance = Math.random() * 0.3 + 0.85;
     const reduction = Math.max(0, playerDefense * 0.5);
-    let damage = Math.max(1, Math.floor(baseDamage * variance - reduction));
+    const damage = Math.max(1, Math.floor(baseDamage * variance - reduction));
 
     return { damage, isCritical: false };
+  }
+
+  advanceCombo(time: number): void {
+    if (time - this.lastHitTime <= COMBO_WINDOW) {
+      this.comboCount = Math.min(this.comboCount + 1, COMBO_DAMAGE_MULTIPLIERS.length - 1);
+    } else {
+      this.comboCount = 0;
+    }
+    this.lastHitTime = time;
+  }
+
+  getComboMultiplier(): number {
+    return COMBO_DAMAGE_MULTIPLIERS[this.comboCount] ?? 1.0;
+  }
+
+  getComboCount(): number {
+    return this.comboCount;
+  }
+
+  resetCombo(): void {
+    this.comboCount = 0;
+  }
+
+  showComboText(x: number, y: number, count: number): void {
+    if (count < 1) return;
+
+    const comboText = this.scene.add.text(x, y - 30, `x${count + 1}!`, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ffaa00',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(1001);
+
+    this.scene.tweens.add({
+      targets: comboText,
+      y: y - 55,
+      alpha: 0,
+      scale: 1.5,
+      duration: 600,
+      ease: 'Power2',
+      onComplete: () => comboText.destroy()
+    });
   }
 
   showDamageNumber(x: number, y: number, damage: number, isCritical: boolean = false, isHeal: boolean = false): void {

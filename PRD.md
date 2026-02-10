@@ -152,12 +152,14 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ## Phase 2: Enhanced Gameplay
 
-### Combat Enhancements
-- [ ] Knockback on hit
-- [ ] Invincibility frames after taking damage
-- [ ] Combo attack system
-- [ ] Charged attacks
-- [ ] Dodge/roll mechanic
+### Combat Enhancements ✅
+- [x] Knockback on hit (weapon-class-specific force)
+- [x] Invincibility frames after taking damage (500ms with flashing)
+- [x] Combo attack system (up to x5 multiplier within 500ms window)
+- [x] Charged attacks (hold SPACE for up to 2.5x damage)
+- [x] Dodge/roll mechanic (SHIFT key, afterimage trail, i-frames)
+- [x] Attack arc hitbox system (replaces square hitbox, per-weapon-class arc width)
+- [x] Weapon class system (sword/dagger/hammer/katana/unarmed with distinct arc, knockback, reach)
 
 ### Monster Enhancements
 - [ ] Additional monster types (5-10 more)
