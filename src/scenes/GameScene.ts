@@ -474,10 +474,13 @@ export class GameScene extends Phaser.Scene {
         const m = monster as Monster;
         if (!m.active) return;
 
+        // Use actual monster display size for hit radius
+        const targetRadius = Math.max(m.displayWidth, m.displayHeight) / 2;
         if (this.player.combat.isInAttackArc(
           attackData.originX, attackData.originY,
           m.x, m.y,
-          attackData.direction, attackData.radius, attackData.arcWidth
+          attackData.direction, attackData.radius, attackData.arcWidth,
+          targetRadius
         )) {
           m.takeDamage(attackData.damage.damage, attackData.damage.isCritical);
           m.applyKnockback(attackData.originX, attackData.originY, attackData.knockback);

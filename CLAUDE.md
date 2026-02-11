@@ -147,14 +147,15 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a)
+## Current Features (Phase 1 + 2a + 2b)
 - ✅ Procedural dungeon generation
 - ✅ 5 monster types with AI
 - ✅ 3 NPC merchants
-- ✅ 14 weapons, 5 consumables
+- ✅ 12 weapons, 15 armor pieces, 5 consumables
 - ✅ Inventory & equipment system
+- ✅ Armor system (15 pieces across 5 slots, 3 tiers, defense stat with damage reduction)
 - ✅ Combat with arc-based attack hitbox (per-weapon-class arc width and reach)
-- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed
+- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed (arc width + knockback per class)
 - ✅ Knockback on hit (weapon-class-specific force, monsters stop at walls)
 - ✅ Invincibility frames (500ms after damage, flashing visual)
 - ✅ Dodge/roll (SHIFT key, afterimage trail, brief i-frames)

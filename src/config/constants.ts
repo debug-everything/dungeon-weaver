@@ -20,13 +20,13 @@ export const VISIBILITY_RADIUS = 6;
 export const INVENTORY_SLOTS = 20;
 export const INVENTORY_COLS = 5;
 
-// Weapon class defaults: arcWidth (degrees), knockback (force), reachMultiplier
-export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback: number; reachMultiplier: number }> = {
-  dagger:  { arcWidth: 90,  knockback: 20, reachMultiplier: 1.0 },
-  sword:   { arcWidth: 120, knockback: 40, reachMultiplier: 1.3 },
-  hammer:  { arcWidth: 160, knockback: 80, reachMultiplier: 1.2 },
-  katana:  { arcWidth: 100, knockback: 30, reachMultiplier: 1.5 },
-  unarmed: { arcWidth: 90,  knockback: 10, reachMultiplier: 1.0 }
+// Weapon class defaults: arcWidth (degrees), knockback (force)
+export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback: number }> = {
+  dagger:  { arcWidth: 90,  knockback: 20 },
+  sword:   { arcWidth: 120, knockback: 40 },
+  hammer:  { arcWidth: 160, knockback: 80 },
+  katana:  { arcWidth: 100, knockback: 30 },
+  unarmed: { arcWidth: 90,  knockback: 10 }
 };
 
 // I-frames

@@ -78,7 +78,7 @@ export function injectQuestLoot(quest: QuestDefinition): void {
     const itemId = obj.target;
     if (!ITEMS[itemId]) continue;
 
-    const dropChance = 0.35;
+    const dropChance = 0.5;
 
     for (const monster of Object.values(MONSTERS)) {
       // Skip boss

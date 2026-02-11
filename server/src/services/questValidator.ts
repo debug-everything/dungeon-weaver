@@ -8,7 +8,12 @@ const VALID_ITEM_IDS = [
   'weapon_sword_golden', 'weapon_sword_ruby', 'weapon_dagger_small',
   'weapon_dagger_steel', 'weapon_dagger_golden', 'weapon_katana_silver',
   'weapon_hammer', 'weapon_sledgehammer',
-  'flask_red', 'flask_big_red', 'flask_blue', 'flask_green', 'flask_yellow'
+  'flask_red', 'flask_big_red', 'flask_blue', 'flask_green', 'flask_yellow',
+  'armor_head_leather', 'armor_head_iron', 'armor_head_golden',
+  'armor_chest_leather', 'armor_chest_chain', 'armor_chest_plate',
+  'armor_legs_leather', 'armor_legs_chain', 'armor_legs_plate',
+  'armor_boots_leather', 'armor_boots_iron', 'armor_boots_steel',
+  'armor_shield_wooden', 'armor_shield_iron', 'armor_shield_golden'
 ];
 const VALID_MONSTER_SPRITES = ['monster_zombie', 'monster_skelet', 'monster_orc', 'monster_goblin', 'monster_demon'];
 const VALID_OBJECTIVE_TYPES = ['kill', 'collect', 'talk_to', 'explore'];

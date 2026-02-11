@@ -71,7 +71,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Equipment affects combat calculations
 
 ### Items & Weapons
-- [x] 14 weapons implemented:
+- [x] 12 weapons implemented:
   - [x] Wooden Sword, Rusty Sword, Steel Sword, Silver Sword, Ruby Sword, Golden Sword
   - [x] Small Dagger, Steel Dagger, Golden Dagger
   - [x] War Hammer, Sledgehammer
@@ -168,13 +168,17 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [ ] Boss attack patterns
 - [ ] Monster spawners/nests
 
-### Armor System
-- [ ] Head armor items
-- [ ] Chest armor items
-- [ ] Leg armor items
-- [ ] Boot items
-- [ ] Shield items
-- [ ] Armor defense calculations
+### Armor System ✅
+- [x] Head armor items (3 tiers: leather, iron, golden)
+- [x] Chest armor items (3 tiers: leather, chain, plate)
+- [x] Leg armor items (3 tiers: leather, chain, plate)
+- [x] Boot items (3 tiers: leather, iron, steel)
+- [x] Shield items (3 tiers: wooden, iron, golden)
+- [x] Armor defense calculations (reduction = defense * 0.5)
+- [x] Runtime-generated 16x16 pixel art sprites
+- [x] Defense stat in inventory tooltips and shop panel
+- [x] Armor in NPC shops (Marcus: leather set, Elena: endgame)
+- [x] Armor in monster loot tables
 - [ ] Visual equipment on player sprite
 
 ### Dungeon Improvements
@@ -311,7 +315,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ### Future Needs
 - [ ] Additional monster sprites
-- [ ] Armor/equipment sprites
+- [x] Armor sprites (runtime-generated canvas textures)
 - [ ] Effect animations (spells, explosions)
 - [ ] UI elements (buttons, frames)
 - [ ] Tileset variations for different dungeon themes

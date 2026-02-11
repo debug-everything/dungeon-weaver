@@ -23,12 +23,14 @@ export class CombatSystem {
   isInAttackArc(
     originX: number, originY: number,
     targetX: number, targetY: number,
-    directionDeg: number, radius: number, arcWidthDeg: number
+    directionDeg: number, radius: number, arcWidthDeg: number,
+    targetBodyRadius: number = 16
   ): boolean {
     const dx = targetX - originX;
     const dy = targetY - originY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > radius) return false;
+    // Check if arc reaches the target's body edge, not just its center
+    if (dist > radius + targetBodyRadius) return false;
 
     // atan2 gives angle in radians; convert to degrees (0=right, 90=down)
     let angleDeg = Phaser.Math.RadToDeg(Math.atan2(dy, dx));

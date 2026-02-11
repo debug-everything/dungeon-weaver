@@ -229,6 +229,15 @@ export class ShopScene extends Phaser.Scene {
       this.detailsPanel.add(spd);
       statsY += 18;
     }
+    if (item.stats.defense) {
+      const def = this.add.text(100, statsY, `Defense: ${item.stats.defense}`, {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#6688ff'
+      }).setOrigin(0.5);
+      this.detailsPanel.add(def);
+      statsY += 18;
+    }
     if (item.stats.healAmount) {
       const heal = this.add.text(100, statsY, `Heals: ${item.stats.healAmount} HP`, {
         fontSize: '12px',

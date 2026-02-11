@@ -252,7 +252,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const weaponClass = this.inventory.getWeaponClass();
     const classDefaults = WEAPON_CLASS_DEFAULTS[weaponClass];
     const range = this.inventory.getWeaponRange();
-    const radius = range * classDefaults.reachMultiplier;
+    const radius = range * SCALE;
     const arcWidth = classDefaults.arcWidth + chargeArcBonus;
     const directionDeg = this.getDirectionDeg();
 
@@ -269,13 +269,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const damageResult = this.combat.calculatePlayerDamage(comboMultiplier, chargeMultiplier);
     const knockback = classDefaults.knockback * chargeKnockbackBonus;
 
+    // Offset attack origin to match visual slash position
+    const attackOffset = 8;
+    let originX = this.x;
+    let originY = this.y;
+    switch (this.facingDirection) {
+      case 'right': originX += attackOffset; break;
+      case 'left':  originX -= attackOffset; break;
+      case 'up':    originY -= attackOffset; break;
+      case 'down':  originY += attackOffset; break;
+    }
+
     // Create sword swing animation
     this.createSwordSwing(arcWidth, radius);
 
     // Emit arc-based attack data
     this.scene.events.emit('player-attack', {
-      originX: this.x,
-      originY: this.y,
+      originX,
+      originY,
       direction: directionDeg,
       radius,
       arcWidth,
@@ -308,27 +319,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     switch (this.facingDirection) {
       case 'right':
-        startAngle = -halfArc;
-        endAngle = halfArc;
+        startAngle = 90 - halfArc;
+        endAngle = 90 + halfArc;
         offsetX = 8;
         offsetY = 0;
         break;
       case 'left':
-        startAngle = 180 + halfArc;
-        endAngle = 180 - halfArc;
+        startAngle = -90 + halfArc;
+        endAngle = -90 - halfArc;
         offsetX = -8;
         offsetY = 0;
         break;
       case 'up':
-        startAngle = -90 - halfArc;
-        endAngle = -90 + halfArc;
+        startAngle = halfArc;
+        endAngle = -halfArc;
         offsetX = 0;
         offsetY = -8;
         break;
       case 'down':
       default:
-        startAngle = 90 - halfArc;
-        endAngle = 90 + halfArc;
+        startAngle = 180 - halfArc;
+        endAngle = 180 + halfArc;
         offsetX = 0;
         offsetY = 8;
         break;
@@ -336,7 +347,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Create weapon sprite
     this.weaponSprite = this.scene.add.image(this.x + offsetX, this.y + offsetY, weaponTexture);
-    this.weaponSprite.setScale(SCALE * 1.2);
+    this.weaponSprite.setScale(SCALE * 0.8);
     this.weaponSprite.setDepth(this.depth + 1);
     this.weaponSprite.setAngle(startAngle);
     this.weaponSprite.setOrigin(0.5, 1); // Pivot from handle

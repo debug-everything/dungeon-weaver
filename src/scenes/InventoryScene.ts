@@ -331,8 +331,11 @@ export class InventoryScene extends Phaser.Scene {
     });
     this.tooltipContainer.add(name);
 
-    // Item type
-    const type = this.add.text(10, -28, item.type.toUpperCase(), {
+    // Item type (show slot for armor)
+    const typeLabel = item.type === 'armor' && item.slot
+      ? `ARMOR - ${item.slot.toUpperCase()}`
+      : item.type.toUpperCase();
+    const type = this.add.text(10, -28, typeLabel, {
       fontSize: '8px',
       fontFamily: 'monospace',
       color: '#888888'
@@ -357,6 +360,15 @@ export class InventoryScene extends Phaser.Scene {
         color: '#66ff66'
       });
       this.tooltipContainer.add(spd);
+      yOffset += 14;
+    }
+    if (item.stats.defense) {
+      const def = this.add.text(10, yOffset, `Defense: ${item.stats.defense}`, {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        color: '#6688ff'
+      });
+      this.tooltipContainer.add(def);
       yOffset += 14;
     }
     if (item.stats.healAmount) {
