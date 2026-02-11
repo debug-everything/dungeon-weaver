@@ -116,11 +116,12 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] OpenAI-compatible LLM integration (`server/src/services/llmService.ts`)
 - [x] Configurable via environment variables (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`)
 - [x] Auto-enabled when `LLM_API_KEY` is set, gracefully disabled otherwise
-- [x] Quest pool service pre-generates 2 quests, replenishes in background
+- [x] Per-NPC quest pools (1 quest per NPC, on-demand generation, background replenishment)
 - [x] Quest validator ensures LLM output conforms to game schema (valid NPCs, monsters, items, dialog structure)
 - [x] REST endpoints: `GET /api/quests/available`, `GET /api/quests/available/:npcId`, `POST /api/quests/accept`
 - [x] Debug endpoint: `GET /api/quests/pool-status`
 - [x] Frontend `ApiClient` wired to fetch/accept dynamic quests
+- [x] NPC personality profiles influence quest themes, dialog tone, and reward types
 - [x] `[LLM]` prefixed server-side logging for all LLM activity
 
 ### Hardcoded Quest System ✅

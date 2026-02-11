@@ -17,16 +17,21 @@ questsRouter.get('/available', (_req, res) => {
   res.json(quests);
 });
 
-// Get quests for a specific NPC
-questsRouter.get('/available/:npcId', (req, res) => {
+// Get quests for a specific NPC (generates on-demand if pool is empty for this NPC)
+questsRouter.get('/available/:npcId', async (req, res) => {
   if (!config.llm.enabled) {
     llmLogger.debug('GET /quests/available/%s - LLM disabled, returning []', req.params.npcId);
     res.json([]);
     return;
   }
-  const quests = questPoolService.getQuestsForNPC(req.params.npcId);
-  llmLogger.info('GET /quests/available/%s - returning %d quests', req.params.npcId, quests.length);
-  res.json(quests);
+  try {
+    const quests = await questPoolService.getOrGenerateForNPC(req.params.npcId);
+    llmLogger.info('GET /quests/available/%s - returning %d quests', req.params.npcId, quests.length);
+    res.json(quests);
+  } catch (err) {
+    llmLogger.error({ err }, 'Failed to get/generate quests for NPC "%s"', req.params.npcId);
+    res.json([]);
+  }
 });
 
 // Accept a quest (removes from pool, triggers replenishment)

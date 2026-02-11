@@ -61,7 +61,7 @@ server/
 │   ├── services/
 │   │   ├── gameStateService.ts
 │   │   ├── llmService.ts      # OpenAI-compatible LLM wrapper
-│   │   ├── questPoolService.ts # Pre-gen quest pool
+│   │   ├── questPoolService.ts # Per-NPC quest pools
 │   │   └── questValidator.ts  # Quest schema validation
 │   └── types/api.ts
 ├── .env.example
@@ -163,7 +163,8 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Charged attacks (hold SPACE for up to 2.5x damage + extra knockback)
 - ✅ Shop buy system
 - ✅ HUD (health, gold, weapon)
-- ✅ Quest system (hardcoded + LLM-generated dynamic quests)
+- ✅ Quest system (hardcoded + LLM-generated dynamic quests with per-NPC pools)
+- ✅ NPC personality-driven quest generation (each NPC has distinct quest themes/tone)
 - ✅ Dynamic quest variants (LLM-generated custom monsters/items with base sprite reuse)
 - ✅ Quest-aware monster respawns (bias toward active quest targets)
 - ✅ Fog of war with Bresenham line-of-sight

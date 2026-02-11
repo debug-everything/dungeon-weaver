@@ -4,7 +4,24 @@ import { llmLogger } from '../logger.js';
 
 export interface QuestGenerationContext {
   existingQuestIds: string[];
+  targetNpcId: string;
 }
+
+// NPC personality profiles — influence quest themes, dialog tone, and reward types
+export const NPC_PROFILES: Record<string, { name: string; personality: string }> = {
+  npc_merchant: {
+    name: 'Marcus the Merchant',
+    personality: `Marcus is a practical, no-nonsense trader. His quests revolve around protecting trade routes, recovering stolen merchandise, eliminating pests that threaten his business, or sourcing rare goods. He speaks in a direct, business-like manner. He favors "destroy" and "recover" quest types. Rewards lean toward gold and weapons.`
+  },
+  npc_merchant_2: {
+    name: 'Elena the Exotic',
+    personality: `Elena is an adventurous collector of rare and exotic artifacts. Her quests involve tracking down ancient relics, investigating mysterious dungeon anomalies, recovering lost treasures, or hunting rare monster variants. She speaks with wonder and excitement. She favors "investigate" and "recover" quest types. Rewards lean toward rare weapons and unique variant items.`
+  },
+  npc_sage: {
+    name: 'Aldric the Sage',
+    personality: `Aldric is a scholarly mystic obsessed with arcane knowledge. His quests involve researching supernatural phenomena, collecting alchemical ingredients, investigating cursed areas, or destroying undead abominations. He speaks in a wise, somewhat cryptic manner. He favors "investigate" and "destroy" quest types. Rewards lean toward potions and consumables.`
+  }
+};
 
 // Matches the frontend QuestDefinition type
 export interface GeneratedQuestDefinition {
@@ -230,8 +247,12 @@ function getClient(): OpenAI {
 export async function generateQuestDefinition(context: QuestGenerationContext): Promise<GeneratedQuestDefinition> {
   const openai = getClient();
 
+  const npcProfile = NPC_PROFILES[context.targetNpcId];
+  const npcDirective = npcProfile
+    ? `Assign this quest to NPC "${context.targetNpcId}" ("${npcProfile.name}").\n\nNPC PERSONALITY:\n${npcProfile.personality}\n\nLet this personality shape the quest theme, dialog tone, objective choices, and reward types.`
+    : `Assign this quest to NPC "${context.targetNpcId}". Use the matching speaker name from NPC_NAMES.`;
   const userPrompt = `Generate a unique quest. Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.
-Pick a random NPC and create an interesting quest with varied dialog. Make the quest feel distinct and flavorful.`;
+${npcDirective} Create an interesting quest with varied dialog. Make the quest feel distinct and flavorful.`;
 
   llmLogger.info('API call starting - model: %s, baseURL: %s, json_mode: %s', config.llm.model, config.llm.baseURL, supportsJsonMode !== false);
 

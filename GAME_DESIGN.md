@@ -223,7 +223,19 @@ Overlay scene showing all active and completed quests grouped by status:
 
 ### Sources
 - **Hardcoded quests** — defined in `src/data/quests.json`, always available
-- **LLM-generated quests** — fetched from backend quest pool when player interacts with NPC
+- **LLM-generated quests** — fetched from per-NPC backend quest pools when player interacts with NPC
+
+### Per-NPC Quest Pools
+Each NPC has its own independent quest pool (1 quest pre-generated at startup). When a quest is accepted, only that NPC's pool is replenished in the background. If a player talks to an NPC with an empty pool, a quest is generated on-demand. This ensures every NPC always has quests available regardless of how many the player completes.
+
+### NPC Quest Personalities
+Quest generation includes NPC personality context that shapes quest themes, dialog tone, and reward types:
+
+| NPC | Personality | Preferred Quest Types | Reward Tendencies |
+|-----|------------|----------------------|-------------------|
+| Marcus the Merchant | Practical, commerce-focused | destroy, recover | Gold, weapons |
+| Elena the Exotic | Adventurous, artifact collector | investigate, recover | Rare weapons, variant items |
+| Aldric the Sage | Scholarly, mystical | investigate, destroy | Potions, consumables |
 
 ### Balance Constraints
 | Parameter | Range |
@@ -256,7 +268,7 @@ LLM-generated quests can define **variant** monsters and items — custom-named 
 - Example: "Cursed Blade" — baseItem `weapon_sword_steel`
 
 ### Quest Loot Injection
-When a quest has **collect** objectives, `injectQuestLoot()` adds the target item to monster loot tables (50% drop chance) so it can actually drop. If the quest also has kill objectives, the item is only injected into matching monster types; otherwise into all non-boss monsters. This ensures LLM-generated collect quests are always completable.
+When a quest has **collect** objectives, `injectQuestLoot()` adds the target item to monster loot tables (50% drop chance per kill) so it can actually drop. If the quest also has kill objectives, the item is only injected into matching monster types; otherwise into all non-boss monsters. This ensures LLM-generated collect quests are always completable.
 
 ### Available Base Types
 

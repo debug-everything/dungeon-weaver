@@ -50,10 +50,17 @@ The LLM generates dynamic quest definitions that supplement hardcoded quests.
 
 **Flow:**
 1. Server starts → checks if LLM is enabled
-2. If enabled: `questPoolService.initialize()` pre-generates 2 quests via LLM
+2. If enabled: `questPoolService.initialize()` pre-generates 1 quest per NPC (3 total) via LLM
 3. Frontend calls `GET /api/quests/available/:npcId` when player interacts with NPC
 4. If LLM disabled: returns `[]`, game uses only hardcoded quests
-5. If LLM enabled: returns quests from pool, pool auto-replenishes in background
+5. If LLM enabled: returns quests from NPC's pool; generates on-demand if empty; auto-replenishes in background
+
+**Per-NPC Pools:** Each NPC has its own independent quest pool (1 quest each, 3 total). When a quest is accepted, only that NPC's pool is replenished. This ensures every NPC always has quests available.
+
+**NPC Personality Profiles:** Quest generation includes NPC personality context (`NPC_PROFILES` in `llmService.ts`) that shapes quest themes, dialog tone, and reward types:
+- **Marcus** — practical, commerce-focused quests (protect trade, recover goods). Favors destroy/recover types.
+- **Elena** — adventurous, artifact-hunting quests (ancient relics, rare finds). Favors investigate/recover types.
+- **Aldric** — scholarly, arcane quests (supernatural research, alchemical ingredients). Favors investigate/destroy types.
 
 **JSON Mode:** The LLM service uses `response_format: { type: 'json_object' }` when the provider supports it (auto-detected on first call). Falls back to prompt-based JSON otherwise.
 
@@ -89,7 +96,7 @@ LLM quests can define variant monsters and items — custom-named versions of ex
 2. Server validates variant definitions (base types, sprites, multipliers)
 3. Frontend receives quest via `GET /api/quests/available/:npcId`
 4. `NPCInteractionScene.handleQuest()` calls `VariantRegistry.registerMonsterVariant/registerItemVariant` before registering the quest
-5. `VariantRegistry.injectQuestLoot()` adds collect-objective items to relevant monster loot tables (35% drop chance, matched to kill-objective monster types or all non-boss monsters)
+5. `VariantRegistry.injectQuestLoot()` adds collect-objective items to relevant monster loot tables (50% drop chance, matched to kill-objective monster types or all non-boss monsters)
 6. `GameScene.respawnMonsters()` biases 50% of spawns toward active kill quest target types
 
 ## Client Architecture
