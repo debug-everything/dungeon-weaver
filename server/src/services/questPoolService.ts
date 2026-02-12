@@ -96,7 +96,7 @@ class QuestPoolService {
     return [...(this.pools.get(npcId) ?? [])];
   }
 
-  async getOrGenerateForNPC(npcId: string): Promise<GeneratedQuestDefinition[]> {
+  getOrGenerateForNPC(npcId: string): GeneratedQuestDefinition[] {
     // Check story arc first — arc quests take priority
     const arcQuest = storyArcService.getCurrentQuestForNPC(npcId);
     if (arcQuest) {
@@ -107,10 +107,14 @@ class QuestPoolService {
     const pool = this.pools.get(npcId) ?? [];
     if (pool.length > 0) return [...pool];
 
-    // No quests for this NPC — generate one on-demand
-    llmLogger.info('No quests in pool for NPC "%s", generating on-demand...', npcId);
-    await this.generateOne(npcId);
-    return [...(this.pools.get(npcId) ?? [])];
+    // No quests ready — trigger background generation, return empty immediately
+    if (!this.generating.get(npcId)) {
+      llmLogger.info('No quests ready for NPC "%s", generating in background...', npcId);
+      this.replenishNPC(npcId).catch(err => {
+        llmLogger.error({ err }, 'Background quest generation failed for NPC "%s"', npcId);
+      });
+    }
+    return [];
   }
 
   acceptQuest(questId: string): boolean {

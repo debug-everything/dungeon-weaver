@@ -275,7 +275,7 @@ export class NPCInteractionScene extends Phaser.Scene {
   private showNoQuestsMessage(): void {
     this.menuItems.forEach(c => c.setVisible(false));
 
-    const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '"I have no tasks for you right now. Check back later."', {
+    const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '"I\'m working on something... Come back shortly, adventurer."', {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#ffffff',

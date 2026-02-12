@@ -9,7 +9,8 @@ import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
 import { QuestSystem } from '../systems/QuestSystem';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
-import { saveGame, checkLLMEnabled, SaveGamePayload, SaveData } from '../services/ApiClient';
+import { saveGame, checkLLMEnabled, getArcStatus, SaveGamePayload, SaveData } from '../services/ApiClient';
+import { StoryArcInfo } from '../types';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private chestData: Map<string, ChestData> = new Map();
   private chestSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
   private lastIndicatorUpdate: number = 0;
+  private lastArcPoll: number = 0;
   private arcNextQuestNpcId: string | null = null;
 
   constructor() {
@@ -50,6 +52,7 @@ export class GameScene extends Phaser.Scene {
     this.chestData = new Map();
     this.chestSprites = new Map();
     this.arcNextQuestNpcId = null;
+    this.lastArcPoll = 0;
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -933,6 +936,19 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private pollArcStatus(): void {
+    getArcStatus().then(raw => {
+      if (!raw || typeof raw !== 'object') return;
+      const info = raw as StoryArcInfo;
+      if (info.status === 'active' && info.nextQuestReady && info.nextQuestNpcId) {
+        // Only set if no quest is locally registered for this NPC yet
+        if (!this.questSystem.hasAnyQuest(info.nextQuestNpcId)) {
+          this.arcNextQuestNpcId = info.nextQuestNpcId;
+        }
+      }
+    }).catch(() => {});
+  }
+
   getDungeon(): number[][] { return this.dungeon; }
   getRooms(): DungeonRoom[] { return this.rooms; }
   getPlayer(): Player { return this.player; }
@@ -1081,6 +1097,12 @@ export class GameScene extends Phaser.Scene {
     if (time - this.lastIndicatorUpdate > 500) {
       this.lastIndicatorUpdate = time;
       this.updateNPCIndicators();
+    }
+
+    // Poll arc status to discover when quests become ready (every 5s, only when no indicator is showing)
+    if (!this.arcNextQuestNpcId && time - this.lastArcPoll > 5000) {
+      this.lastArcPoll = time;
+      this.pollArcStatus();
     }
 
     // Update NPCs and check for interaction prompts
