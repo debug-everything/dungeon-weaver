@@ -27,12 +27,14 @@ export function registerMonsterVariant(variant: MonsterVariant): void {
     sprite: variant.baseSprite,
     health: Math.round(base.health * multiplier),
     damage: Math.round(base.damage * multiplier),
+    speed: Math.round(base.speed * multiplier),
     xpReward: Math.round(base.xpReward * multiplier),
     goldDrop: {
       min: Math.round(base.goldDrop.min * multiplier),
       max: Math.round(base.goldDrop.max * multiplier)
     },
-    lootTable: [...base.lootTable]
+    lootTable: [...base.lootTable],
+    nameColor: variant.nameColor
   };
 }
 

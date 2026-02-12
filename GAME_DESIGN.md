@@ -9,7 +9,7 @@
 - Room 0 is the **safe room** (NPCs, no monsters)
 - Last room is the **boss room** (always contains a Demon Lord)
 - Doors appear at room entrances (60% chance, 100% for boss room). Opened with E key. Door sprite swaps to `door_open` (stays visible, physics disabled).
-- 0-2 loot chests per non-safe room. Press E to open: gold (5-30) + random items (potions common, weapons rare). Sprites: `chest_closed` → `chest_open_full` → `chest_open_empty`. Quest system can spawn chests with specific items.
+- 0-2 loot chests per non-safe room, placed along walls and in corners (avoids blocking corridors/paths). Press E to open: gold (5-30) + random items (potions common, weapons rare). Sprites: `chest_closed` → `chest_open_full` → `chest_open_empty`. Quest system can spawn chests with specific items.
 
 ### Fog of War
 - Tile-based visibility with Bresenham line-of-sight
@@ -70,6 +70,9 @@
 - Each monster type has its own attack range and cooldown
 - Demon Lord is boss-only (never spawns from respawns)
 - **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
+
+### Boss Variants
+Story-arc boss quests spawn variant monsters with boosted stats (2.5x health/damage/speed multiplier) and a **colored name** displayed above them in red (`#ff4444`). This distinguishes arc bosses from regular Demon Lords.
 
 ### Spawning
 - Initial: 2-4 monsters per room (skip safe room), boss in last room
@@ -284,14 +287,42 @@ Each item has a fixed stock count per NPC. Stock does not replenish.
 
 ---
 
-## Planned Features
+## Story-arc Quests
 
-### Story-arc Quests (Phase 2e)
-- Coherent multi-quest narrative arcs (configurable count + boss finale)
-- Sequential: one arc active at a time, LLM picks best NPC per quest
-- Creative naming: evocative enemy/item/location names mapped to base types
-- Arc progress shown in quest log: "Chapter: [Title] — Quest N/M"
-- Config: `server/game.config.json` with `storyArc.questsPerArc` and `storyArc.bossQuestEnabled`
+### Overview
+LLM-generated quests are organized into coherent **story arcs** — multi-quest narrative sequences with a theme, escalating stakes, and a boss fight finale. One arc is active at a time. When an arc completes, a new one auto-generates.
+
+### Arc Structure
+| Element | Description |
+|---------|-------------|
+| Title | Evocative arc name (e.g. "The Heartforge Conspiracy") |
+| Theme | Thematic description guiding all quests in the arc |
+| Quest Count | Configurable via `server/game.config.json` (default: 3) |
+| Boss Quest | Final quest uses demon-type enemies with 2.5x stat boost and red colored name |
+| NPC Assignment | LLM picks the most fitting NPC per quest based on personality profiles |
+
+### Arc Flow
+1. Server generates arc outline (title, theme, quest summaries, NPC assignments)
+2. First quest is generated immediately for the assigned NPC
+3. Player interacts with assigned NPC → arc quest offered
+4. On quest turn-in → client notifies server → next quest generated in background
+5. Server responds with `nextQuestNpcId` → client shows "!" indicator on that NPC
+6. After all quests + boss quest complete → new arc auto-generates
+
+### Quest Log Display
+- Purple header: "Chapter: [Arc Title]"
+- Progress bar showing quest N of M
+- Individual quest entries below with normal quest log formatting
+
+### Configuration (`server/game.config.json`)
+```json
+{
+  "storyArc": {
+    "questsPerArc": 3,
+    "bossQuestEnabled": true
+  }
+}
+```
 
 ---
 

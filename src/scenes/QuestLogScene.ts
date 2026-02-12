@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
 import { QuestSystem } from '../systems/QuestSystem';
+import { StoryArcInfo } from '../types';
 import { NPCS } from '../data/npcs';
+import { getArcStatus } from '../services/ApiClient';
 
 interface QuestLogSceneData {
   questSystem: QuestSystem;
@@ -50,8 +52,8 @@ export class QuestLogScene extends Phaser.Scene {
     this.contentContainer = this.add.container(0, contentTop);
     this.contentContainer.setMask(mask);
 
-    // Build quest list
-    this.buildQuestList();
+    // Fetch arc status, then build quest list
+    this.fetchAndBuild();
 
     // Close hint
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, 'Press Q or ESC to close | Up/Down to scroll', {
@@ -69,13 +71,71 @@ export class QuestLogScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-DOWN', () => this.scroll(30));
   }
 
-  private buildQuestList(): void {
+  private async fetchAndBuild(): Promise<void> {
+    let arcInfo: StoryArcInfo | null = null;
+    try {
+      const raw = await getArcStatus();
+      if (raw && typeof raw === 'object' && 'id' in (raw as Record<string, unknown>)) {
+        arcInfo = raw as StoryArcInfo;
+      }
+    } catch {
+      // Backend unavailable — no arc info
+    }
+
+    this.buildQuestList(arcInfo);
+  }
+
+  private buildQuestList(arcInfo: StoryArcInfo | null): void {
     const activeQuests = this.questSystem.getActiveQuests();
     let yOffset = 0;
     const leftPadding = 30;
 
+    // Arc progress header
+    if (arcInfo && arcInfo.status === 'active') {
+      const arcHeader = this.add.text(GAME_WIDTH / 2, yOffset, `Chapter: ${arcInfo.title}`, {
+        fontSize: '13px',
+        fontFamily: 'monospace',
+        color: '#cc88ff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5, 0);
+      this.contentContainer.add(arcHeader);
+      yOffset += 18;
+
+      // Progress bar
+      const barWidth = 200;
+      const barHeight = 6;
+      const barX = GAME_WIDTH / 2 - barWidth / 2;
+
+      const progressBg = this.add.graphics();
+      progressBg.fillStyle(0x333333);
+      progressBg.fillRect(barX, yOffset, barWidth, barHeight);
+      this.contentContainer.add(progressBg);
+
+      const progress = arcInfo.currentQuestIndex / arcInfo.totalQuests;
+      const progressFill = this.add.graphics();
+      progressFill.fillStyle(0xcc88ff);
+      progressFill.fillRect(barX, yOffset, barWidth * progress, barHeight);
+      this.contentContainer.add(progressFill);
+
+      const progressLabel = this.add.text(GAME_WIDTH / 2, yOffset + barHeight + 4,
+        `Quest ${Math.min(arcInfo.currentQuestIndex + 1, arcInfo.totalQuests)} of ${arcInfo.totalQuests}`, {
+        fontSize: '9px',
+        fontFamily: 'monospace',
+        color: '#998899'
+      }).setOrigin(0.5, 0);
+      this.contentContainer.add(progressLabel);
+      yOffset += barHeight + 20;
+
+      // Separator
+      const sep = this.add.graphics();
+      sep.lineStyle(1, 0x444444, 0.5);
+      sep.lineBetween(leftPadding, yOffset, GAME_WIDTH - leftPadding, yOffset);
+      this.contentContainer.add(sep);
+      yOffset += 10;
+    }
+
     if (activeQuests.length === 0) {
-      const emptyText = this.add.text(GAME_WIDTH / 2, 80, 'No active quests.', {
+      const emptyText = this.add.text(GAME_WIDTH / 2, yOffset + 30, 'No active quests.', {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#888888'
@@ -161,6 +221,19 @@ export class QuestLogScene extends Phaser.Scene {
       });
       this.contentContainer.add(npcText);
       yOffset += 14;
+
+      // Quest description
+      if (definition.description) {
+        const descText = this.add.text(leftPadding + 10, yOffset, definition.description, {
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          color: '#aaaaaa',
+          fontStyle: 'italic',
+          wordWrap: { width: GAME_WIDTH - leftPadding * 2 - 20 }
+        });
+        this.contentContainer.add(descText);
+        yOffset += descText.height + 6;
+      }
 
       // Objectives
       for (const objProgress of state.objectiveProgress) {

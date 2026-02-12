@@ -207,6 +207,19 @@ export class QuestSystem {
     this.registerQuest(definition);
   }
 
+  /** Remove unaccepted LLM quests for an NPC so fresh ones from the server take priority. */
+  clearAvailableDynamicQuests(npcId: string): void {
+    for (const [questId, state] of this.questStates) {
+      if (questId.startsWith('quest_llm_') && state.status === 'available') {
+        const def = this.quests.get(questId);
+        if (def && def.npcId === npcId) {
+          this.quests.delete(questId);
+          this.questStates.delete(questId);
+        }
+      }
+    }
+  }
+
   private onMonsterKilled(monsterData: MonsterData): void {
     for (const [questId, state] of this.questStates) {
       if (state.status !== 'active') continue;

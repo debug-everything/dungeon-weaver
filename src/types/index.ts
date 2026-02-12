@@ -52,6 +52,7 @@ export interface MonsterData {
   xpReward: number;
   goldDrop: { min: number; max: number };
   lootTable: LootEntry[];
+  nameColor?: string;
 }
 
 export interface LootEntry {
@@ -156,6 +157,7 @@ export interface MonsterVariant {
   baseSprite: string;
   name: string;
   statMultiplier: number;
+  nameColor?: string;
 }
 
 export interface ItemVariant {
@@ -198,6 +200,16 @@ export interface QuestState {
   status: QuestStatus;
   objectiveProgress: QuestObjectiveProgress[];
   targetRoom?: { x: number; y: number; width: number; height: number };
+}
+
+export interface StoryArcInfo {
+  id: string;
+  title: string;
+  currentQuestIndex: number;
+  totalQuests: number;
+  status: 'active' | 'completed';
+  nextQuestNpcId: string | null;
+  nextQuestReady: boolean;
 }
 
 export interface QuestMapIndicator {

@@ -1,5 +1,6 @@
 import { generateQuestDefinition, GeneratedQuestDefinition, NPC_PROFILES } from './llmService.js';
 import { validateQuest } from './questValidator.js';
+import { storyArcService } from './storyArcService.js';
 import { config } from '../config.js';
 import { llmLogger } from '../logger.js';
 
@@ -18,26 +19,26 @@ class QuestPoolService {
       return;
     }
 
-    // Initialize empty pools for each NPC
+    // Initialize empty pools for each NPC (fallback for non-arc quests)
     for (const npcId of NPC_IDS) {
       this.pools.set(npcId, []);
       this.generating.set(npcId, false);
     }
 
     llmLogger.info('ENABLED - Model: %s, Base URL: %s', config.llm.model, config.llm.baseURL);
-    llmLogger.info('Generating initial quest pools (%d per NPC, %d NPCs)...', POOL_SIZE_PER_NPC, NPC_IDS.length);
-    const startTime = Date.now();
 
-    // Generate initial quests for each NPC
-    for (const npcId of NPC_IDS) {
-      for (let i = 0; i < POOL_SIZE_PER_NPC; i++) {
-        await this.generateOne(npcId);
+    // Initialize story arc system (primary quest source)
+    try {
+      await storyArcService.initialize();
+    } catch (err) {
+      llmLogger.error({ err }, 'Story arc initialization failed, falling back to per-NPC pools');
+      // Fall back: generate per-NPC quests
+      for (const npcId of NPC_IDS) {
+        for (let i = 0; i < POOL_SIZE_PER_NPC; i++) {
+          await this.generateOne(npcId);
+        }
       }
     }
-
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    const totalQuests = NPC_IDS.reduce((sum, id) => sum + (this.pools.get(id)?.length ?? 0), 0);
-    llmLogger.info('Quest pools initialized: %d total quests across %d NPCs in %ss', totalQuests, NPC_IDS.length, elapsed);
   }
 
   private async generateOne(npcId: string): Promise<boolean> {
@@ -96,6 +97,13 @@ class QuestPoolService {
   }
 
   async getOrGenerateForNPC(npcId: string): Promise<GeneratedQuestDefinition[]> {
+    // Check story arc first — arc quests take priority
+    const arcQuest = storyArcService.getCurrentQuestForNPC(npcId);
+    if (arcQuest) {
+      return [arcQuest];
+    }
+
+    // Fall back to per-NPC pool
     const pool = this.pools.get(npcId) ?? [];
     if (pool.length > 0) return [...pool];
 
@@ -106,6 +114,13 @@ class QuestPoolService {
   }
 
   acceptQuest(questId: string): boolean {
+    // Check if it's an arc quest
+    if (storyArcService.isArcQuest(questId)) {
+      storyArcService.onQuestAccepted(questId);
+      llmLogger.info('Arc quest accepted via pool service: "%s"', questId);
+      return true;
+    }
+
     // Find which NPC pool contains this quest
     for (const [npcId, pool] of this.pools.entries()) {
       const index = pool.findIndex(q => q.id === questId);
@@ -119,6 +134,10 @@ class QuestPoolService {
     }
     llmLogger.info('Accept failed - quest "%s" not found in any pool', questId);
     return false;
+  }
+
+  async completeQuest(questId: string): Promise<string | null> {
+    return storyArcService.onQuestCompleted(questId);
   }
 
   private async replenishNPC(npcId: string): Promise<void> {
@@ -137,7 +156,7 @@ class QuestPoolService {
     }
   }
 
-  getPoolStatus(): { pools: Record<string, { size: number; generating: boolean }>; totalSize: number; llmEnabled: boolean } {
+  getPoolStatus(): { pools: Record<string, { size: number; generating: boolean }>; totalSize: number; llmEnabled: boolean; arc: ReturnType<typeof storyArcService.getArcStatus> } {
     const pools: Record<string, { size: number; generating: boolean }> = {};
     let totalSize = 0;
     for (const npcId of NPC_IDS) {
@@ -145,7 +164,7 @@ class QuestPoolService {
       pools[npcId] = { size, generating: this.generating.get(npcId) ?? false };
       totalSize += size;
     }
-    return { pools, totalSize, llmEnabled: config.llm.enabled };
+    return { pools, totalSize, llmEnabled: config.llm.enabled, arc: storyArcService.getArcStatus() };
   }
 }
 

@@ -87,7 +87,7 @@ You can create VARIANT monsters and items — custom-named versions of existing 
   "description": string,     // 1-2 sentence quest summary
   "npcId": enum,             // ONE OF: "npc_merchant", "npc_merchant_2", "npc_sage"
   "level": number,           // 1-5
-  "intro": string[],         // (optional) 2-4 atmospheric lines the NPC says before offering the quest
+  "intro": string[],         // (optional) 2-4 atmospheric lines the NPC says BEFORE the offer dialog. The intro builds atmosphere; the offer text should NOT repeat it — just ask if they accept.
   "variants": {              // (optional) Define custom variants of existing monsters/items
     "monsters": [            // (optional) For kill quests — variant monsters
       {
@@ -164,6 +164,7 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
 ## DIALOG RULES
 - Each phase has EXACTLY 3 nodes: one with responses (first), two terminal (no responses).
 - Every nextNodeId MUST match an id of another node in the SAME phase. Never reference other phases.
+- IMPORTANT: If "intro" is provided, the player has ALREADY heard the full story pitch. The offer phase's first node text must NOT repeat the intro — just ask a brief question like "So, will you help?" or "What do you say, adventurer?" Keep it short.
 - Required actions per phase:
   - offer: one response has {"type":"accept_quest"}, one has {"type":"decline_quest"}
   - readyToTurnIn: one response has {"type":"turn_in_quest"}, one has {"type":"end_dialog"}
@@ -198,7 +199,7 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
   "rewards": {"xp": 50, "gold": 30, "items": [{"itemId": "flask_red", "quantity": 1}]},
   "dialog": {
     "offer": [
-      {"id": "offer_1", "speaker": "Marcus the Merchant", "text": "Those cursed goblins have been raiding my supplies! Will you help me deal with them?", "responses": [
+      {"id": "offer_1", "speaker": "Marcus the Merchant", "text": "So, what do you say? Will you help me deal with them?", "responses": [
         {"text": "I'll handle it.", "nextNodeId": "offer_accept", "action": {"type": "accept_quest"}},
         {"text": "Not right now.", "nextNodeId": "offer_decline", "action": {"type": "decline_quest"}}
       ]},
@@ -247,31 +248,75 @@ function getClient(): OpenAI {
   return client;
 }
 
-export async function generateQuestDefinition(context: QuestGenerationContext): Promise<GeneratedQuestDefinition> {
-  const openai = getClient();
+// ── Story Arc types ──
 
-  const npcProfile = NPC_PROFILES[context.targetNpcId];
-  const npcDirective = npcProfile
-    ? `Assign this quest to NPC "${context.targetNpcId}" ("${npcProfile.name}").\n\nNPC PERSONALITY:\n${npcProfile.personality}\n\nLet this personality shape the quest theme, dialog tone, objective choices, and reward types.`
-    : `Assign this quest to NPC "${context.targetNpcId}". Use the matching speaker name from NPC_NAMES.`;
-  const userPrompt = `Generate a unique quest. Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.
-${npcDirective} Create an interesting quest with varied dialog. Make the quest feel distinct and flavorful.`;
+export interface StoryArcOutline {
+  id: string;
+  title: string;
+  theme: string;
+  quests: { summary: string; npcId: string; questType: string }[];
+}
+
+export interface ArcQuestContext {
+  existingQuestIds: string[];
+  arc: StoryArcOutline;
+  questIndex: number;
+  previousSummaries: string[];
+  isBossQuest: boolean;
+}
+
+const ARC_SYSTEM_PROMPT = `You are a narrative designer for a dungeon crawler RPG. Generate a story arc outline as a JSON object.
+
+A story arc is a coherent multi-quest narrative with a title, theme, and sequential quest summaries. Each quest should build on the previous one, creating an escalating storyline.
+
+## SCHEMA
+{
+  "id": string,           // "arc_" prefix + snake_case, e.g. "arc_heartforge_conspiracy"
+  "title": string,        // 2-5 word evocative title, e.g. "The Heartforge Conspiracy"
+  "theme": string,        // 2-3 sentences describing the arc's overarching narrative
+  "quests": [             // Exactly N quests (count specified in user message)
+    {
+      "summary": string,  // 1-2 sentence quest objective summary
+      "npcId": enum,      // Which NPC gives this quest (pick best fit from personalities)
+      "questType": enum   // ONE OF: "rescue", "recover", "destroy", "investigate"
+    }
+  ]
+}
+
+## NPC PERSONALITIES (pick the most fitting NPC per quest)
+- "npc_merchant" (Marcus the Merchant): Practical trader. Business threats, stolen goods, trade routes. Favors "destroy" and "recover".
+- "npc_merchant_2" (Elena the Exotic): Adventurous collector. Relics, mysteries, rare finds. Favors "investigate" and "recover".
+- "npc_sage" (Aldric the Sage): Scholarly mystic. Supernatural phenomena, alchemy, undead. Favors "investigate" and "destroy".
+
+## RULES
+- Create an evocative, atmospheric storyline with creative naming
+- Each quest should logically build on the previous one
+- Vary the NPC assignments based on narrative fit — use at least 2 different NPCs
+- The LAST quest MUST be a climactic "destroy" quest against a powerful boss foe
+- Use imaginative names for enemies, items, and locations in the summaries
+- Keep summaries specific enough to guide individual quest generation later
+
+Respond with ONLY the JSON object.`;
+
+// ── Shared LLM call helper ──
+
+async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: number = 3000): Promise<string> {
+  const openai = getClient();
 
   llmLogger.info('API call starting - model: %s, baseURL: %s, json_mode: %s', config.llm.model, config.llm.baseURL, supportsJsonMode !== false);
 
   let response;
-  // Try with response_format: json_object first; fall back if provider doesn't support it
   if (supportsJsonMode !== false) {
     try {
       response = await openai.chat.completions.create({
         model: config.llm.model,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: 'json_object' },
         temperature: 0.7,
-        max_tokens: 3000
+        max_tokens: maxTokens
       });
       if (supportsJsonMode === null) {
         supportsJsonMode = true;
@@ -279,18 +324,17 @@ ${npcDirective} Create an interesting quest with varied dialog. Make the quest f
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      // Detect unsupported response_format and fall back
       if (message.includes('response_format') || message.includes('json_object') || message.includes('not supported')) {
         supportsJsonMode = false;
         llmLogger.info('JSON mode not supported by provider - falling back to prompt-based JSON');
         response = await openai.chat.completions.create({
           model: config.llm.model,
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ],
           temperature: 0.7,
-          max_tokens: 3000
+          max_tokens: maxTokens
         });
       } else {
         throw err;
@@ -300,11 +344,11 @@ ${npcDirective} Create an interesting quest with varied dialog. Make the quest f
     response = await openai.chat.completions.create({
       model: config.llm.model,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 3000
+      max_tokens: maxTokens
     });
   }
 
@@ -316,7 +360,70 @@ ${npcDirective} Create an interesting quest with varied dialog. Make the quest f
     throw new Error('LLM returned empty response');
   }
 
-  // Parse JSON, stripping any markdown code fences (needed when json_mode is unavailable)
-  const cleaned = content.replace(/```json\n?|\n?```/g, '').trim();
-  return JSON.parse(cleaned) as GeneratedQuestDefinition;
+  return content.replace(/```json\n?|\n?```/g, '').trim();
+}
+
+// ── Quest generation (standalone or arc) ──
+
+export async function generateQuestDefinition(context: QuestGenerationContext): Promise<GeneratedQuestDefinition> {
+  const npcProfile = NPC_PROFILES[context.targetNpcId];
+  const npcDirective = npcProfile
+    ? `Assign this quest to NPC "${context.targetNpcId}" ("${npcProfile.name}").\n\nNPC PERSONALITY:\n${npcProfile.personality}\n\nLet this personality shape the quest theme, dialog tone, objective choices, and reward types.`
+    : `Assign this quest to NPC "${context.targetNpcId}". Use the matching speaker name from NPC_NAMES.`;
+  const userPrompt = `Generate a unique quest. Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.
+${npcDirective} Create an interesting quest with varied dialog. Make the quest feel distinct and flavorful.`;
+
+  const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
+  return JSON.parse(raw) as GeneratedQuestDefinition;
+}
+
+// ── Story Arc generation ──
+
+export async function generateStoryArc(questCount: number, existingArcIds: string[]): Promise<StoryArcOutline> {
+  const userPrompt = `Generate a story arc with exactly ${questCount} quests.
+Avoid these existing arc IDs: ${existingArcIds.join(', ') || 'none'}.
+Create a compelling narrative arc that escalates toward a climactic final boss quest.`;
+
+  llmLogger.info('Generating story arc outline (%d quests)...', questCount);
+  const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500);
+  return JSON.parse(raw) as StoryArcOutline;
+}
+
+export async function generateArcQuest(context: ArcQuestContext): Promise<GeneratedQuestDefinition> {
+  const questInfo = context.arc.quests[context.questIndex];
+  const npcProfile = NPC_PROFILES[questInfo.npcId];
+  const npcName = npcProfile?.name ?? questInfo.npcId;
+
+  const previousSection = context.previousSummaries.length > 0
+    ? `\nPrevious quests in this arc (already completed by the player):\n${context.previousSummaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n`
+    : '';
+
+  const bossDirective = context.isBossQuest
+    ? `\nIMPORTANT: This is the FINAL BOSS QUEST of the arc. Create a powerful variant monster (use "demon" base type with statMultiplier 1.8-2.0). Escalate the narrative stakes. Provide higher rewards (xp: 150-200, gold: 80-100). Include dramatic intro lines (3-4 lines). The monster should have an imposing, evocative name.`
+    : '';
+
+  const userPrompt = `Generate a quest that is part of a story arc.
+
+ARC TITLE: "${context.arc.title}"
+ARC THEME: ${context.arc.theme}
+
+This is quest ${context.questIndex + 1} of ${context.arc.quests.length} in the arc.
+${previousSection}
+Current quest to generate:
+- Summary: ${questInfo.summary}
+- Assigned NPC: "${questInfo.npcId}" (${npcName})
+- Quest type: ${questInfo.questType}
+${bossDirective}
+Requirements:
+- Set npcId to "${questInfo.npcId}" and use "${npcName}" as speaker in all dialog
+- Reference events from previous quests for narrative continuity
+- Use the arc theme to guide dialog tone and quest flavor
+- Use creative, evocative names for variant monsters/items (not generic)
+- Include 2-4 intro lines for atmospheric storytelling
+
+Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.`;
+
+  llmLogger.info('Generating arc quest %d/%d for NPC "%s" (boss=%s)...', context.questIndex + 1, context.arc.quests.length, questInfo.npcId, context.isBossQuest);
+  const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
+  return JSON.parse(raw) as GeneratedQuestDefinition;
 }

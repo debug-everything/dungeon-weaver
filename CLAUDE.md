@@ -51,17 +51,19 @@ src/
     └── ShopScene.ts           # Shop interface
 
 server/
+├── game.config.json           # Story arc settings (questsPerArc, bossQuestEnabled)
 ├── src/
 │   ├── index.ts               # Express app entry point
-│   ├── config.ts              # Environment config (port, DB, LLM)
+│   ├── config.ts              # Environment + game config (port, DB, LLM, arc settings)
 │   ├── db/database.ts         # SQLite setup
 │   ├── routes/
 │   │   ├── gameState.ts       # /api/saves CRUD
-│   │   └── quests.ts          # /api/quests LLM quest endpoints
+│   │   └── quests.ts          # /api/quests LLM quest + arc endpoints
 │   ├── services/
 │   │   ├── gameStateService.ts
-│   │   ├── llmService.ts      # OpenAI-compatible LLM wrapper
-│   │   ├── questPoolService.ts # Per-NPC quest pools
+│   │   ├── llmService.ts      # OpenAI-compatible LLM wrapper (quests + story arcs)
+│   │   ├── storyArcService.ts # Story arc lifecycle (generate, advance, complete)
+│   │   ├── questPoolService.ts # Arc-driven quest serving + fallback per-NPC pools
 │   │   └── questValidator.ts  # Quest schema validation
 │   └── types/api.ts
 ├── .env.example
@@ -147,7 +149,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a + 2b + 2c + 2d)
+## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e)
 - ✅ Procedural dungeon generation
 - ✅ 5 monster types with AI
 - ✅ 3 NPC merchants
@@ -163,23 +165,23 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Charged attacks (hold SPACE for up to 2.5x damage + extra knockback)
 - ✅ Shop buy system
 - ✅ HUD (health, gold, weapon)
-- ✅ Quest system (hardcoded + LLM-generated dynamic quests with per-NPC pools)
+- ✅ Quest system (hardcoded + LLM-generated dynamic quests)
+- ✅ Story-arc quests (multi-quest narrative arcs with LLM, boss finale, arc progress in quest log)
 - ✅ NPC personality-driven quest generation (each NPC has distinct quest themes/tone)
 - ✅ Dynamic quest variants (LLM-generated custom monsters/items with base sprite reuse)
+- ✅ Boss monster colored names (red text above arc boss monsters)
 - ✅ Quest-aware monster respawns (bias toward active quest targets)
 - ✅ Fog of war with Bresenham line-of-sight
 - ✅ Save/load via backend API
 - ✅ Game controller support (A=attack, B=dodge, X=interact, Y=inventory)
-- ✅ Quest log overlay (Q key)
+- ✅ Quest log overlay (Q key) with arc progress header
 - ✅ Quest loot injection for LLM collect objectives
 - ✅ Open door sprites (doors show open sprite instead of disappearing)
-- ✅ NPC quest indicators (floating "!" and "?" above NPC heads)
-- ✅ Loot chests (0-2 per room, gold + items, quest-driven chest spawning)
+- ✅ NPC quest indicators (floating "!" and "?" above NPC heads, arc-aware)
+- ✅ Loot chests (0-2 per room, wall-adjacent placement, quest-driven chest spawning)
 - ✅ NPC extended quest intros (dramatic multi-line intro before quest offer)
 
 ## Planned Features (See PRD.md)
-- Phase 2d: Simplified armor system (5 outfits replacing 15 armor pieces, player sprite changes)
-- Phase 2e: Story-arc quests (multi-quest narrative arcs with LLM, configurable count + boss)
 - Phase 3: XP/leveling, skills, character classes
 - Phase 4: Multiple areas, crafting
 - Phase 5: Save system polish, audio, accessibility

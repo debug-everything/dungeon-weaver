@@ -82,3 +82,23 @@ export async function acceptDynamicQuest(questId: string): Promise<void> {
     body: JSON.stringify({ questId })
   });
 }
+
+export async function notifyQuestCompleted(questId: string): Promise<{ nextQuestNpcId: string | null }> {
+  return apiFetch('/quests/complete', {
+    method: 'POST',
+    body: JSON.stringify({ questId })
+  });
+}
+
+export async function getArcStatus(): Promise<unknown> {
+  return apiFetch('/quests/arc-status');
+}
+
+export async function checkLLMEnabled(): Promise<boolean> {
+  try {
+    const data = await apiFetch<{ llmEnabled: boolean }>('/health');
+    return data.llmEnabled;
+  } catch {
+    return false;
+  }
+}

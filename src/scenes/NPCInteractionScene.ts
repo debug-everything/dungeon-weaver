@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
 import { NPCData, QuestDefinition } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
-import { getAvailableQuests, acceptDynamicQuest } from '../services/ApiClient';
+import { getAvailableQuests } from '../services/ApiClient';
 import { registerMonsterVariant, registerItemVariant, injectQuestLoot } from '../systems/VariantRegistry';
 
 interface NPCInteractionData {
@@ -234,6 +234,10 @@ export class NPCInteractionScene extends Phaser.Scene {
     // Only fetch new LLM quests if the NPC has no active quest in progress
     if (!this.questSystem.hasActiveQuest(this.npcData.id)) try {
       const llmQuests = await getAvailableQuests(this.npcData.id) as QuestDefinition[];
+      if (llmQuests.length > 0) {
+        // Clear stale unaccepted LLM quests so fresh ones take priority
+        this.questSystem.clearAvailableDynamicQuests(this.npcData.id);
+      }
       for (const quest of llmQuests) {
         if (!this.questSystem.getQuestDefinition(quest.id)) {
           // Register any variant monsters/items before the quest itself
@@ -259,11 +263,6 @@ export class NPCInteractionScene extends Phaser.Scene {
     if (!quest) {
       this.showNoQuestsMessage();
       return;
-    }
-
-    // If it's a dynamic quest being accepted, notify the backend
-    if (quest.definition.id.startsWith('quest_llm_') && quest.state.status === 'available') {
-      acceptDynamicQuest(quest.definition.id).catch(() => {});
     }
 
     this.scene.stop();

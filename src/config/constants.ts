@@ -97,5 +97,6 @@ export const EVENTS = {
   OPEN_MAP: 'open-map',
   CLOSE_MAP: 'close-map',
   OPEN_QUEST_LOG: 'open-quest-log',
-  CLOSE_QUEST_LOG: 'close-quest-log'
+  CLOSE_QUEST_LOG: 'close-quest-log',
+  ARC_NEXT_QUEST_NPC: 'arc-next-quest-npc'
 } as const;

@@ -193,14 +193,18 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Outfits in NPC shops and monster loot tables
 - [x] Remove runtime-generated armor sprites, use NPC sprites for outfits + keep shield sprites
 
-### Phase 2e: Story-arc Quests
-- [ ] Coherent multi-quest story arcs (configurable quest count + boss fight finale)
-- [ ] Sequential arc progression — one arc active at a time
-- [ ] LLM generates arc outline (title, theme, quest summaries) then individual quests with narrative continuity
-- [ ] Creative naming (evocative enemy/item names mapped to base types)
-- [ ] LLM picks most fitting NPC per quest based on personality
-- [ ] Arc progress display in quest log
-- [ ] `server/game.config.json` for configurable settings
+### Phase 2e: Story-arc Quests ✅
+- [x] Coherent multi-quest story arcs (configurable quest count + boss fight finale)
+- [x] Sequential arc progression — one arc active at a time
+- [x] LLM generates arc outline (title, theme, quest summaries) then individual quests with narrative continuity
+- [x] Creative naming (evocative enemy/item names mapped to base types)
+- [x] LLM picks most fitting NPC per quest based on personality
+- [x] Arc progress display in quest log (chapter title, progress bar, "Quest N of M")
+- [x] `server/game.config.json` for configurable settings
+- [x] Boss quest finale with demon-type enemies, boosted stats (2.5x multiplier), colored name text
+- [x] Arc-aware NPC quest indicators (shows "!" on NPC assigned to next arc quest)
+- [x] Quest completion notification flow (client → server → auto-generate next arc quest)
+- [x] Improved chest placement (wall-adjacent, corner-weighted, door-avoidant)
 
 ### Dungeon Improvements
 - [ ] Multiple dungeon floors/levels
@@ -361,4 +365,4 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ---
 
-*Last Updated: Phase 2d Complete, Phase 2e planned*
+*Last Updated: Phase 2e Complete (Story-arc Quests)*

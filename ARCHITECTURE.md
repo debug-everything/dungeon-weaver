@@ -27,7 +27,8 @@
 │  Services                                        │
 │  ├── gameStateService  - SQLite CRUD for saves   │
 │  ├── llmService        - OpenAI API wrapper      │
-│  ├── questPoolService  - Pre-gen quest pool      │
+│  ├── storyArcService   - Story arc lifecycle     │
+│  ├── questPoolService  - Arc + fallback pools    │
 │  └── questValidator    - Schema validation       │
 │                                                  │
 │  Database: better-sqlite3 (./data/game.db)       │
@@ -44,18 +45,28 @@
 ## LLM Integration
 
 ### How It Works
-The LLM generates dynamic quest definitions that supplement hardcoded quests.
+The LLM generates dynamic quest definitions organized into coherent **story arcs** — multi-quest narrative sequences with a theme, escalating stakes, and a boss fight finale.
 
 **Activation:** Requires both `LLM_ENABLED=true` AND `LLM_API_KEY` to be set in `server/.env`. Either missing = LLM disabled.
 
-**Flow:**
-1. Server starts → checks if LLM is enabled
-2. If enabled: `questPoolService.initialize()` pre-generates 1 quest per NPC (3 total) via LLM
-3. Frontend calls `GET /api/quests/available/:npcId` when player interacts with NPC
-4. If LLM disabled: returns `[]`, game uses only hardcoded quests
-5. If LLM enabled: returns quests from NPC's pool; generates on-demand if empty; auto-replenishes in background
+**Story Arc Flow:**
+1. Server starts → `questPoolService.initialize()` → `storyArcService.initialize()`
+2. If LLM enabled: generates a story arc outline (title, theme, N quest summaries, NPC assignments)
+3. First quest in the arc is generated immediately for the assigned NPC
+4. Frontend calls `GET /api/quests/available/:npcId` when player interacts with NPC
+5. If NPC matches the current arc quest's assigned NPC, the arc quest is returned
+6. On quest completion (`POST /api/quests/complete`), next arc quest is generated in background
+7. When all arc quests complete, a new arc auto-generates
+8. If LLM disabled: returns `[]`, game uses only hardcoded quests
 
-**Per-NPC Pools:** Each NPC has its own independent quest pool (1 quest each, 3 total). When a quest is accepted, only that NPC's pool is replenished. This ensures every NPC always has quests available.
+**Fallback:** If arc generation fails, per-NPC random quest pools (legacy behavior) are used as a safety net.
+
+**Arc Configuration** (`server/game.config.json`):
+```json
+{ "storyArc": { "questsPerArc": 3, "bossQuestEnabled": true } }
+```
+
+**Boss Quests:** The final quest in each arc is a boss quest with demon-type enemies, stat multiplier of 2.5+, colored name text (red `#ff4444`), and higher rewards.
 
 **NPC Personality Profiles:** Quest generation includes NPC personality context (`NPC_PROFILES` in `llmService.ts`) that shapes quest themes, dialog tone, and reward types:
 - **Marcus** — practical, commerce-focused quests (protect trade, recover goods). Favors destroy/recover types.
@@ -71,6 +82,16 @@ LLM_API_KEY=your-key       # Required for LLM to work
 LLM_BASE_URL=https://...   # OpenAI-compatible endpoint (default: OpenAI)
 LLM_MODEL=gpt-4.1-mini     # Model name (default: gpt-4.1-mini)
 ```
+
+### API Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/quests/available` | GET | All available quests (all NPCs) |
+| `/api/quests/available/:npcId` | GET | Available quests for specific NPC |
+| `/api/quests/accept` | POST | Accept a quest (body: `{ questId }`) |
+| `/api/quests/complete` | POST | Notify quest completion, returns `{ nextQuestNpcId }` for arc progression |
+| `/api/quests/arc-status` | GET | Current story arc info (title, progress, next NPC) |
+| `/api/quests/pool-status` | GET | Debug: pool sizes + arc status |
 
 ### Quest Validation
 LLM-generated quests are validated against:

@@ -1,3 +1,21 @@
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load game config
+function loadGameConfig(): { storyArc: { questsPerArc: number; bossQuestEnabled: boolean } } {
+  try {
+    const raw = readFileSync(resolve(__dirname, '..', 'game.config.json'), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return { storyArc: { questsPerArc: 3, bossQuestEnabled: true } };
+  }
+}
+
+export const gameConfig = loadGameConfig();
+
 export const config = {
   port: parseInt(process.env.PORT || '4201', 10),
   databasePath: process.env.DATABASE_PATH || './data/game.db',

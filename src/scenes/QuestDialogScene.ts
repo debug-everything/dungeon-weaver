@@ -3,6 +3,7 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants
 import { NPCData, DialogNode, QuestDefinition, QuestState, DungeonRoom } from '../types';
 import { QuestSystem } from '../systems/QuestSystem';
 import { Player } from '../entities/Player';
+import { acceptDynamicQuest, notifyQuestCompleted } from '../services/ApiClient';
 
 interface QuestDialogData {
   npcData: NPCData;
@@ -347,6 +348,9 @@ export class QuestDialogScene extends Phaser.Scene {
       switch (action.type) {
         case 'accept_quest':
           this.questSystem.acceptQuest(this.questId, this.rooms);
+          if (this.questId.startsWith('quest_llm_')) {
+            acceptDynamicQuest(this.questId).catch(() => {});
+          }
           break;
 
         case 'decline_quest':
@@ -359,6 +363,14 @@ export class QuestDialogScene extends Phaser.Scene {
             const rewards = this.questSystem.turnInQuest(this.questId, this.player.inventory);
             if (rewards) {
               this.applyRewards(rewards);
+            }
+            // Notify server for arc tracking
+            if (this.questId.startsWith('quest_llm_')) {
+              notifyQuestCompleted(this.questId).then(result => {
+                if (result?.nextQuestNpcId) {
+                  this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.ARC_NEXT_QUEST_NPC, result.nextQuestNpcId);
+                }
+              }).catch(() => {});
             }
           }
           break;

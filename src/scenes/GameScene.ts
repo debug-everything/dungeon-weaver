@@ -9,7 +9,7 @@ import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
 import { QuestSystem } from '../systems/QuestSystem';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
-import { saveGame, SaveGamePayload, SaveData } from '../services/ApiClient';
+import { saveGame, checkLLMEnabled, SaveGamePayload, SaveData } from '../services/ApiClient';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -33,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private chestData: Map<string, ChestData> = new Map();
   private chestSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
   private lastIndicatorUpdate: number = 0;
+  private arcNextQuestNpcId: string | null = null;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.chests = this.physics.add.staticGroup();
     this.chestData = new Map();
     this.chestSprites = new Map();
+    this.arcNextQuestNpcId = null;
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -101,9 +103,20 @@ export class GameScene extends Phaser.Scene {
 
     // Initialize quest system
     this.questSystem = new QuestSystem(this);
-    for (const quest of Object.values(QUESTS)) {
-      this.questSystem.registerQuest(quest);
-    }
+
+    // Only register hardcoded quests if LLM is unavailable (fallback)
+    checkLLMEnabled().then(llmEnabled => {
+      if (!llmEnabled) {
+        for (const quest of Object.values(QUESTS)) {
+          this.questSystem.registerQuest(quest);
+        }
+      }
+    }).catch(() => {
+      // Backend unreachable — use hardcoded quests
+      for (const quest of Object.values(QUESTS)) {
+        this.questSystem.registerQuest(quest);
+      }
+    });
 
     // Setup event listeners
     this.setupEventListeners();
@@ -416,15 +429,15 @@ export class GameScene extends Phaser.Scene {
       const room = this.rooms[i];
       const count = Phaser.Math.Between(CHESTS_PER_ROOM.min, CHESTS_PER_ROOM.max);
 
-      for (let j = 0; j < count; j++) {
-        // Pick a random floor tile inside the room (1 tile inset from edges)
-        const tx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
-        const ty = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
+      // Collect wall-adjacent floor tiles (corners preferred)
+      const candidates = this.getWallAdjacentTiles(room);
+      if (candidates.length === 0) continue;
 
-        // Skip if tile is not a floor or already has a door/chest
-        if (this.dungeon[ty][tx] !== 0) continue;
-        const key = `${tx},${ty}`;
-        if (this.chestSprites.has(key) || this.doorSprites.has(key)) continue;
+      for (let j = 0; j < count; j++) {
+        if (candidates.length === 0) break;
+        const pickIdx = Math.floor(Math.random() * candidates.length);
+        const { tx, ty } = candidates[pickIdx];
+        candidates.splice(pickIdx, 1); // Don't pick same spot twice
 
         // Roll random loot
         const gold = Phaser.Math.Between(CHEST_GOLD.min, CHEST_GOLD.max);
@@ -435,6 +448,7 @@ export class GameScene extends Phaser.Scene {
           }
         }
 
+        const key = `${tx},${ty}`;
         const data: ChestData = { x: tx, y: ty, opened: false, gold, items };
         this.chestData.set(key, data);
 
@@ -447,6 +461,46 @@ export class GameScene extends Phaser.Scene {
         this.chestSprites.set(key, chest);
       }
     }
+  }
+
+  /** Returns floor tiles adjacent to walls, weighted toward corners. Avoids door-adjacent tiles. */
+  private getWallAdjacentTiles(room: DungeonRoom): { tx: number; ty: number }[] {
+    const results: { tx: number; ty: number; wallCount: number }[] = [];
+
+    for (let ty = room.y; ty < room.y + room.height; ty++) {
+      for (let tx = room.x; tx < room.x + room.width; tx++) {
+        if (this.dungeon[ty]?.[tx] !== 0) continue;
+        const key = `${tx},${ty}`;
+        if (this.chestSprites.has(key) || this.doorSprites.has(key)) continue;
+
+        // Count adjacent walls
+        let wallCount = 0;
+        if (this.dungeon[ty - 1]?.[tx] === 1) wallCount++;
+        if (this.dungeon[ty + 1]?.[tx] === 1) wallCount++;
+        if (this.dungeon[ty]?.[tx - 1] === 1) wallCount++;
+        if (this.dungeon[ty]?.[tx + 1] === 1) wallCount++;
+
+        if (wallCount === 0) continue; // Must be adjacent to at least 1 wall
+
+        // Skip tiles adjacent to doors (would block entrances)
+        let nearDoor = false;
+        for (const [dy, dx] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const tile = this.dungeon[ty + dy]?.[tx + dx];
+          if (tile === 2 || tile === 3) { nearDoor = true; break; }
+        }
+        if (nearDoor) continue;
+
+        results.push({ tx, ty, wallCount });
+      }
+    }
+
+    // Weight corners (2+ walls) higher by duplicating them
+    const weighted: { tx: number; ty: number }[] = [];
+    for (const t of results) {
+      weighted.push({ tx: t.tx, ty: t.ty });
+      if (t.wallCount >= 2) weighted.push({ tx: t.tx, ty: t.ty }); // double weight
+    }
+    return weighted;
   }
 
   private openChest(key: string): void {
@@ -518,31 +572,47 @@ export class GameScene extends Phaser.Scene {
     const room = this.rooms[roomIndex];
     const scaledTile = TILE_SIZE * SCALE;
 
-    // Find a free floor tile in the room
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const tx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
-      const ty = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
-      if (this.dungeon[ty][tx] !== 0) continue;
-      const key = `${tx},${ty}`;
-      if (this.chestSprites.has(key) || this.doorSprites.has(key)) continue;
+    // Prefer wall-adjacent tiles
+    const candidates = this.getWallAdjacentTiles(room);
+    const pick = candidates.length > 0
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : null;
 
-      const data: ChestData = {
-        x: tx, y: ty, opened: false,
-        gold: Phaser.Math.Between(CHEST_GOLD.min, CHEST_GOLD.max),
-        items: [{ itemId, quantity: 1 }],
-        questItemId: itemId
-      };
-      this.chestData.set(key, data);
-
-      const worldX = tx * scaledTile + scaledTile / 2;
-      const worldY = ty * scaledTile + scaledTile / 2;
-      const chest = this.physics.add.staticImage(worldX, worldY, 'chest_closed');
-      chest.setDepth(1);
-      chest.refreshBody();
-      this.chests.add(chest);
-      this.chestSprites.set(key, chest);
-      return;
+    // Fallback to any free floor tile
+    let tx: number, ty: number;
+    if (pick) {
+      tx = pick.tx;
+      ty = pick.ty;
+    } else {
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const cx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
+        const cy = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
+        if (this.dungeon[cy][cx] !== 0) continue;
+        const k = `${cx},${cy}`;
+        if (this.chestSprites.has(k) || this.doorSprites.has(k)) continue;
+        tx = cx;
+        ty = cy;
+        break;
+      }
+      if (tx! === undefined) return;
     }
+
+    const key = `${tx!},${ty!}`;
+    const data: ChestData = {
+      x: tx!, y: ty!, opened: false,
+      gold: Phaser.Math.Between(CHEST_GOLD.min, CHEST_GOLD.max),
+      items: [{ itemId, quantity: 1 }],
+      questItemId: itemId
+    };
+    this.chestData.set(key, data);
+
+    const worldX = tx! * scaledTile + scaledTile / 2;
+    const worldY = ty! * scaledTile + scaledTile / 2;
+    const chest = this.physics.add.staticImage(worldX, worldY, 'chest_closed');
+    chest.setDepth(1);
+    chest.refreshBody();
+    this.chests.add(chest);
+    this.chestSprites.set(key, chest);
   }
 
   private respawnMonsters(): void {
@@ -820,6 +890,16 @@ export class GameScene extends Phaser.Scene {
       this.resumeGame();
     });
 
+    // Arc next quest NPC indicator
+    this.events.on(EVENTS.ARC_NEXT_QUEST_NPC, (npcId: string) => {
+      this.arcNextQuestNpcId = npcId;
+    });
+
+    // Clear arc indicator when any quest is accepted
+    this.events.on(EVENTS.QUEST_ACCEPTED, () => {
+      this.arcNextQuestNpcId = null;
+    });
+
     // Quick save (F5)
     this.input.keyboard?.on('keydown-F5', () => {
       this.saveCurrentGame();
@@ -838,7 +918,11 @@ export class GameScene extends Phaser.Scene {
   private updateNPCIndicators(): void {
     this.npcs.getChildren().forEach((npc) => {
       const n = npc as NPC;
-      const status = this.questSystem.getNPCQuestStatus(n.npcData.id);
+      let status = this.questSystem.getNPCQuestStatus(n.npcData.id);
+      // Show "!" for NPC with pending arc quest (not yet registered locally)
+      if (!status && this.arcNextQuestNpcId === n.npcData.id) {
+        status = 'available';
+      }
       if (status === 'turn_in') {
         n.showQuestIndicator('turn_in');
       } else if (status === 'available') {

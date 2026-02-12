@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { questPoolService } from '../services/questPoolService.js';
+import { storyArcService } from '../services/storyArcService.js';
 import { config } from '../config.js';
 import { llmLogger } from '../logger.js';
 
@@ -48,6 +49,30 @@ questsRouter.post('/accept', (req, res) => {
     return;
   }
   res.json({ success: true });
+});
+
+// Notify quest completion (advances story arc)
+questsRouter.post('/complete', async (req, res) => {
+  const { questId } = req.body as { questId: string };
+  if (!questId) {
+    res.status(400).json({ error: 'Missing questId' });
+    return;
+  }
+
+  try {
+    const nextQuestNpcId = await questPoolService.completeQuest(questId);
+    llmLogger.info('Quest completed: "%s", next NPC: %s', questId, nextQuestNpcId ?? 'none');
+    res.json({ success: true, nextQuestNpcId });
+  } catch (err) {
+    llmLogger.error({ err }, 'Error completing quest "%s"', questId);
+    res.json({ success: true, nextQuestNpcId: null });
+  }
+});
+
+// Get current story arc status
+questsRouter.get('/arc-status', (_req, res) => {
+  const status = storyArcService.getArcStatus();
+  res.json(status);
 });
 
 // Debug: pool status

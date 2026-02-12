@@ -13,6 +13,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private lastAttackTime: number = 0;
   private healthBar: Phaser.GameObjects.Graphics | null = null;
   private isKnockedBack: boolean = false;
+  private nameText: Phaser.GameObjects.Text | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: MonsterData) {
     super(scene, x, y, data.sprite);
@@ -32,6 +33,17 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     body.setOffset(2, 4);
 
     this.createHealthBar();
+
+    // Show colored name for boss monsters
+    if (data.nameColor) {
+      this.nameText = scene.add.text(x, y - 28, data.name, {
+        fontSize: '9px',
+        fontFamily: 'monospace',
+        color: data.nameColor,
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(101);
+    }
   }
 
   private createHealthBar(): void {
@@ -82,6 +94,11 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     if (!this.active || this.monsterState === 'dead') return;
 
     this.updateHealthBar();
+
+    // Update boss name position
+    if (this.nameText) {
+      this.nameText.setPosition(this.x, this.y - 28);
+    }
 
     // Skip AI during knockback
     if (this.isKnockedBack) return;
@@ -193,6 +210,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => {
         this.dropLoot();
         this.healthBar?.destroy();
+        this.nameText?.destroy();
         this.destroy();
       }
     });
