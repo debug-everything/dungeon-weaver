@@ -196,147 +196,64 @@ export const ITEMS: Record<string, Item> = {
     maxStack: 10
   },
 
-  // Armor - Head
-  armor_head_leather: {
-    id: 'armor_head_leather',
-    name: 'Leather Cap',
+  // Armor - Outfits
+  armor_peasant: {
+    id: 'armor_peasant',
+    name: 'Peasant Garments',
     type: 'armor',
-    slot: 'head',
+    slot: 'armor',
     stats: { defense: 1 },
-    value: 20,
-    sprite: 'armor_head_leather',
-    description: 'A simple leather cap offering minimal protection.',
+    value: 15,
+    sprite: 'npc_elf',
+    description: 'Simple cloth garments. Barely any protection.',
     stackable: false
   },
-  armor_head_iron: {
-    id: 'armor_head_iron',
-    name: 'Iron Helm',
+  armor_spy: {
+    id: 'armor_spy',
+    name: 'Spy Vestments',
     type: 'armor',
-    slot: 'head',
+    slot: 'armor',
     stats: { defense: 3 },
     value: 80,
-    sprite: 'armor_head_iron',
-    description: 'A sturdy iron helmet with a nose guard.',
+    sprite: 'npc_trickster',
+    description: 'Dark, lightweight vestments favored by spies and rogues.',
     stackable: false
   },
-  armor_head_golden: {
-    id: 'armor_head_golden',
-    name: 'Golden Helm',
+  armor_wizard: {
+    id: 'armor_wizard',
+    name: 'Wizard Cloak',
     type: 'armor',
-    slot: 'head',
-    stats: { defense: 5 },
-    value: 250,
-    sprite: 'armor_head_golden',
-    description: 'A magnificent golden helm with a crown crest.',
-    stackable: false
-  },
-
-  // Armor - Chest
-  armor_chest_leather: {
-    id: 'armor_chest_leather',
-    name: 'Leather Vest',
-    type: 'armor',
-    slot: 'chest',
-    stats: { defense: 2 },
-    value: 30,
-    sprite: 'armor_chest_leather',
-    description: 'A basic leather vest. Better than nothing.',
-    stackable: false
-  },
-  armor_chest_chain: {
-    id: 'armor_chest_chain',
-    name: 'Chain Mail',
-    type: 'armor',
-    slot: 'chest',
+    slot: 'armor',
     stats: { defense: 4 },
-    value: 120,
-    sprite: 'armor_chest_chain',
-    description: 'Interlocking metal rings provide solid protection.',
+    value: 150,
+    sprite: 'npc_wizzard',
+    description: 'An enchanted cloak crackling with arcane energy.',
     stackable: false
   },
-  armor_chest_plate: {
-    id: 'armor_chest_plate',
-    name: 'Plate Armor',
+  armor_barbarian: {
+    id: 'armor_barbarian',
+    name: 'Barbarian Rawhide',
     type: 'armor',
-    slot: 'chest',
+    slot: 'armor',
+    stats: { defense: 5 },
+    value: 200,
+    sprite: 'npc_dwarf',
+    description: 'Tough rawhide armor worn by northern barbarians.',
+    stackable: false
+  },
+  armor_knight: {
+    id: 'armor_knight',
+    name: 'Knight Armor',
+    type: 'armor',
+    slot: 'armor',
     stats: { defense: 7 },
     value: 350,
-    sprite: 'armor_chest_plate',
-    description: 'Heavy plate armor with a golden emblem.',
+    sprite: 'npc_knight_blue',
+    description: 'Heavy plate armor of a royal knight. Maximum protection.',
     stackable: false
   },
 
-  // Armor - Legs
-  armor_legs_leather: {
-    id: 'armor_legs_leather',
-    name: 'Leather Pants',
-    type: 'armor',
-    slot: 'legs',
-    stats: { defense: 1 },
-    value: 25,
-    sprite: 'armor_legs_leather',
-    description: 'Tough leather leggings for dungeon delving.',
-    stackable: false
-  },
-  armor_legs_chain: {
-    id: 'armor_legs_chain',
-    name: 'Chain Leggings',
-    type: 'armor',
-    slot: 'legs',
-    stats: { defense: 3 },
-    value: 100,
-    sprite: 'armor_legs_chain',
-    description: 'Chain mail leggings that jingle as you walk.',
-    stackable: false
-  },
-  armor_legs_plate: {
-    id: 'armor_legs_plate',
-    name: 'Plate Greaves',
-    type: 'armor',
-    slot: 'legs',
-    stats: { defense: 5 },
-    value: 280,
-    sprite: 'armor_legs_plate',
-    description: 'Polished plate greaves that gleam in torchlight.',
-    stackable: false
-  },
-
-  // Armor - Boots
-  armor_boots_leather: {
-    id: 'armor_boots_leather',
-    name: 'Leather Boots',
-    type: 'armor',
-    slot: 'boots',
-    stats: { defense: 1 },
-    value: 20,
-    sprite: 'armor_boots_leather',
-    description: 'Comfortable leather boots for long treks.',
-    stackable: false
-  },
-  armor_boots_iron: {
-    id: 'armor_boots_iron',
-    name: 'Iron Boots',
-    type: 'armor',
-    slot: 'boots',
-    stats: { defense: 2 },
-    value: 70,
-    sprite: 'armor_boots_iron',
-    description: 'Heavy iron boots. Clunky but protective.',
-    stackable: false
-  },
-  armor_boots_steel: {
-    id: 'armor_boots_steel',
-    name: 'Steel Boots',
-    type: 'armor',
-    slot: 'boots',
-    stats: { defense: 3 },
-    value: 200,
-    sprite: 'armor_boots_steel',
-    description: 'Finely crafted steel boots with polished trim.',
-    stackable: false
-  },
-
-  // Armor - Shields
+  // Shields
   armor_shield_wooden: {
     id: 'armor_shield_wooden',
     name: 'Wooden Shield',

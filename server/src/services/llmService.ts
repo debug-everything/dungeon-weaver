@@ -31,6 +31,7 @@ export interface GeneratedQuestDefinition {
   description: string;
   npcId: string;
   level: number;
+  intro?: string[];
   dialog: {
     offer: DialogNode[];
     inProgress: DialogNode[];
@@ -86,6 +87,7 @@ You can create VARIANT monsters and items — custom-named versions of existing 
   "description": string,     // 1-2 sentence quest summary
   "npcId": enum,             // ONE OF: "npc_merchant", "npc_merchant_2", "npc_sage"
   "level": number,           // 1-5
+  "intro": string[],         // (optional) 2-4 atmospheric lines the NPC says before offering the quest
   "variants": {              // (optional) Define custom variants of existing monsters/items
     "monsters": [            // (optional) For kill quests — variant monsters
       {
@@ -157,7 +159,7 @@ NPC_NAMES (use as "speaker" based on npcId):
 - "npc_sage" → "Aldric the Sage"
 
 ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
-"weapon_sword_wooden", "weapon_sword_rusty", "weapon_sword_steel", "weapon_sword_silver", "weapon_sword_golden", "weapon_sword_ruby", "weapon_dagger_small", "weapon_dagger_steel", "weapon_dagger_golden", "weapon_katana_silver", "weapon_hammer", "weapon_sledgehammer", "flask_red", "flask_big_red", "flask_blue", "flask_green", "flask_yellow"
+"weapon_sword_wooden", "weapon_sword_rusty", "weapon_sword_steel", "weapon_sword_silver", "weapon_sword_golden", "weapon_sword_ruby", "weapon_dagger_small", "weapon_dagger_steel", "weapon_dagger_golden", "weapon_katana_silver", "weapon_hammer", "weapon_sledgehammer", "flask_red", "flask_big_red", "flask_blue", "flask_green", "flask_yellow", "armor_peasant", "armor_spy", "armor_wizard", "armor_barbarian", "armor_knight", "armor_shield_wooden", "armor_shield_iron", "armor_shield_golden"
 
 ## DIALOG RULES
 - Each phase has EXACTLY 3 nodes: one with responses (first), two terminal (no responses).
@@ -184,6 +186,7 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
   "description": "Hunchback goblins have been raiding the merchant stalls. Clear them out before they steal everything.",
   "npcId": "npc_merchant",
   "level": 1,
+  "intro": ["The trade routes have grown dangerous of late...", "Goblins. Twisted, hunched little beasts. They've been raiding my caravans nightly."],
   "variants": {
     "monsters": [
       {"variantId": "monster_hunchback_goblin", "baseType": "goblin", "baseSprite": "monster_goblin", "name": "Hunchback Goblin", "statMultiplier": 1.3}

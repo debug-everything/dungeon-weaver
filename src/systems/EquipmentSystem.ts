@@ -6,10 +6,7 @@ export class EquipmentSystem {
   constructor() {
     this.equipment = {
       weapon: null,
-      head: null,
-      chest: null,
-      legs: null,
-      boots: null,
+      armor: null,
       shield: null
     };
   }

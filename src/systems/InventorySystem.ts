@@ -12,10 +12,7 @@ export class InventorySystem {
     this.items = new Array(INVENTORY_SLOTS).fill(null);
     this.equipment = {
       weapon: null,
-      head: null,
-      chest: null,
-      legs: null,
-      boots: null,
+      armor: null,
       shield: null
     };
   }

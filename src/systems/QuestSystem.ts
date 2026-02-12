@@ -143,6 +143,21 @@ export class QuestSystem {
     );
   }
 
+  /** Returns the most prominent quest status for an NPC (for overhead indicators). */
+  getNPCQuestStatus(npcId: string): 'turn_in' | 'available' | 'active' | null {
+    const quests = this.getQuestsForNPC(npcId);
+    let hasActive = false;
+    let hasAvailable = false;
+    for (const q of quests) {
+      if (q.state.status === 'completed') return 'turn_in';
+      if (q.state.status === 'active') hasActive = true;
+      if (q.state.status === 'available') hasAvailable = true;
+    }
+    if (hasActive) return 'active';
+    if (hasAvailable) return 'available';
+    return null;
+  }
+
   getActiveQuests(): { definition: QuestDefinition; state: QuestState }[] {
     const results: { definition: QuestDefinition; state: QuestState }[] = [];
     for (const [questId, state] of this.questStates) {

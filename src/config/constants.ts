@@ -29,6 +29,19 @@ export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback
   unarmed: { arcWidth: 90,  knockback: 10 }
 };
 
+// Chests
+export const CHESTS_PER_ROOM = { min: 0, max: 2 };
+export const CHEST_GOLD = { min: 5, max: 30 };
+export const CHEST_LOOT_TABLE = [
+  { itemId: 'flask_red', chance: 0.35 },
+  { itemId: 'flask_green', chance: 0.15 },
+  { itemId: 'flask_blue', chance: 0.15 },
+  { itemId: 'flask_big_red', chance: 0.10 },
+  { itemId: 'weapon_dagger_small', chance: 0.05 },
+  { itemId: 'weapon_sword_rusty', chance: 0.04 },
+  { itemId: 'weapon_sword_steel', chance: 0.02 },
+];
+
 // I-frames
 export const PLAYER_IFRAMES_DURATION = 500;
 export const PLAYER_IFRAMES_FLASH_RATE = 80;

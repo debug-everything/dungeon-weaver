@@ -17,7 +17,7 @@ export const MONSTERS: Record<string, MonsterData> = {
     lootTable: [
       { itemId: 'flask_red', chance: 0.2 },
       { itemId: 'weapon_dagger_small', chance: 0.05 },
-      { itemId: 'armor_boots_leather', chance: 0.03 }
+      { itemId: 'armor_peasant', chance: 0.03 }
     ]
   },
   monster_skelet: {
@@ -36,7 +36,7 @@ export const MONSTERS: Record<string, MonsterData> = {
     lootTable: [
       { itemId: 'flask_red', chance: 0.15 },
       { itemId: 'weapon_sword_rusty', chance: 0.08 },
-      { itemId: 'armor_head_leather', chance: 0.05 }
+      { itemId: 'armor_peasant', chance: 0.05 }
     ]
   },
   monster_goblin: {
@@ -55,7 +55,7 @@ export const MONSTERS: Record<string, MonsterData> = {
     lootTable: [
       { itemId: 'flask_red', chance: 0.25 },
       { itemId: 'weapon_dagger_steel', chance: 0.1 },
-      { itemId: 'armor_shield_wooden', chance: 0.04 }
+      { itemId: 'armor_spy', chance: 0.04 }
     ]
   },
   monster_orc: {
@@ -75,8 +75,8 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'flask_big_red', chance: 0.15 },
       { itemId: 'weapon_sword_steel', chance: 0.08 },
       { itemId: 'weapon_hammer', chance: 0.05 },
-      { itemId: 'armor_chest_chain', chance: 0.05 },
-      { itemId: 'armor_head_iron', chance: 0.04 }
+      { itemId: 'armor_barbarian', chance: 0.05 },
+      { itemId: 'armor_shield_iron', chance: 0.04 }
     ]
   },
   monster_demon: {
@@ -96,7 +96,7 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'flask_big_red', chance: 0.5 },
       { itemId: 'weapon_sword_ruby', chance: 0.2 },
       { itemId: 'weapon_katana_silver', chance: 0.15 },
-      { itemId: 'armor_chest_plate', chance: 0.15 },
+      { itemId: 'armor_knight', chance: 0.15 },
       { itemId: 'armor_shield_golden', chance: 0.1 }
     ]
   }

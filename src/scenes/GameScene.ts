@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS } from '../config/constants';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE } from '../config/constants';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
-import { DungeonRoom, NPCData } from '../types';
+import { DungeonRoom, NPCData, ChestData } from '../types';
 import { MONSTERS } from '../data/monsters';
 import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
@@ -29,6 +29,10 @@ export class GameScene extends Phaser.Scene {
   private currentSaveId: string | null = null;
   private doors!: Phaser.Physics.Arcade.StaticGroup;
   private doorSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
+  private chests!: Phaser.Physics.Arcade.StaticGroup;
+  private chestData: Map<string, ChestData> = new Map();
+  private chestSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
+  private lastIndicatorUpdate: number = 0;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -41,6 +45,9 @@ export class GameScene extends Phaser.Scene {
     this.walls = this.physics.add.staticGroup();
     this.doors = this.physics.add.staticGroup();
     this.doorSprites = new Map();
+    this.chests = this.physics.add.staticGroup();
+    this.chestData = new Map();
+    this.chestSprites = new Map();
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -72,9 +79,14 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.monsters, this.walls);
     this.physics.add.collider(this.monsters, this.doors);
     this.physics.add.collider(this.monsters, this.monsters);
+    this.physics.add.collider(this.player, this.chests);
+    this.physics.add.collider(this.monsters, this.chests);
 
     // Spawn NPCs in safe room (first room)
     this.spawnNPCs();
+
+    // Spawn chests in dungeon rooms
+    this.spawnChests();
 
     // Spawn monsters in other rooms
     this.spawnMonsters();
@@ -396,6 +408,143 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private spawnChests(): void {
+    const scaledTile = TILE_SIZE * SCALE;
+
+    // Skip room 0 (safe room)
+    for (let i = 1; i < this.rooms.length; i++) {
+      const room = this.rooms[i];
+      const count = Phaser.Math.Between(CHESTS_PER_ROOM.min, CHESTS_PER_ROOM.max);
+
+      for (let j = 0; j < count; j++) {
+        // Pick a random floor tile inside the room (1 tile inset from edges)
+        const tx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
+        const ty = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
+
+        // Skip if tile is not a floor or already has a door/chest
+        if (this.dungeon[ty][tx] !== 0) continue;
+        const key = `${tx},${ty}`;
+        if (this.chestSprites.has(key) || this.doorSprites.has(key)) continue;
+
+        // Roll random loot
+        const gold = Phaser.Math.Between(CHEST_GOLD.min, CHEST_GOLD.max);
+        const items: { itemId: string; quantity: number }[] = [];
+        for (const entry of CHEST_LOOT_TABLE) {
+          if (Math.random() < entry.chance) {
+            items.push({ itemId: entry.itemId, quantity: 1 });
+          }
+        }
+
+        const data: ChestData = { x: tx, y: ty, opened: false, gold, items };
+        this.chestData.set(key, data);
+
+        const worldX = tx * scaledTile + scaledTile / 2;
+        const worldY = ty * scaledTile + scaledTile / 2;
+        const chest = this.physics.add.staticImage(worldX, worldY, 'chest_closed');
+        chest.setDepth(1);
+        chest.refreshBody();
+        this.chests.add(chest);
+        this.chestSprites.set(key, chest);
+      }
+    }
+  }
+
+  private openChest(key: string): void {
+    const data = this.chestData.get(key);
+    const sprite = this.chestSprites.get(key);
+    if (!data || !sprite || data.opened) return;
+
+    data.opened = true;
+
+    // Show full chest briefly, then empty
+    sprite.setTexture('chest_open_full');
+    this.time.delayedCall(500, () => {
+      sprite.setTexture('chest_open_empty');
+    });
+
+    // Disable physics body
+    const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
+    body.enable = false;
+
+    // Give gold
+    if (data.gold > 0) {
+      this.player.addGold(data.gold);
+      const goldText = this.add.text(sprite.x, sprite.y, `+${data.gold} gold`, {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#ffd700',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(1000);
+      this.tweens.add({
+        targets: goldText,
+        y: sprite.y - 30,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => goldText.destroy()
+      });
+    }
+
+    // Give items
+    let yOffset = 0;
+    for (const loot of data.items) {
+      for (let i = 0; i < loot.quantity; i++) {
+        const added = this.player.inventory.addItem(loot.itemId);
+        if (added) {
+          this.events.emit(EVENTS.ITEM_PICKED_UP, loot.itemId);
+          yOffset -= 16;
+          const itemName = loot.itemId.replace(/_/g, ' ');
+          const itemText = this.add.text(sprite.x, sprite.y + yOffset, `+${itemName}`, {
+            fontSize: '10px',
+            fontFamily: 'monospace',
+            color: '#88ff88',
+            stroke: '#000000',
+            strokeThickness: 2
+          }).setOrigin(0.5).setDepth(1000);
+          this.tweens.add({
+            targets: itemText,
+            y: sprite.y + yOffset - 30,
+            alpha: 0,
+            duration: 1200,
+            onComplete: () => itemText.destroy()
+          });
+        }
+      }
+    }
+  }
+
+  spawnQuestChest(roomIndex: number, itemId: string): void {
+    if (roomIndex < 1 || roomIndex >= this.rooms.length) return;
+    const room = this.rooms[roomIndex];
+    const scaledTile = TILE_SIZE * SCALE;
+
+    // Find a free floor tile in the room
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const tx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
+      const ty = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
+      if (this.dungeon[ty][tx] !== 0) continue;
+      const key = `${tx},${ty}`;
+      if (this.chestSprites.has(key) || this.doorSprites.has(key)) continue;
+
+      const data: ChestData = {
+        x: tx, y: ty, opened: false,
+        gold: Phaser.Math.Between(CHEST_GOLD.min, CHEST_GOLD.max),
+        items: [{ itemId, quantity: 1 }],
+        questItemId: itemId
+      };
+      this.chestData.set(key, data);
+
+      const worldX = tx * scaledTile + scaledTile / 2;
+      const worldY = ty * scaledTile + scaledTile / 2;
+      const chest = this.physics.add.staticImage(worldX, worldY, 'chest_closed');
+      chest.setDepth(1);
+      chest.refreshBody();
+      this.chests.add(chest);
+      this.chestSprites.set(key, chest);
+      return;
+    }
+  }
+
   private respawnMonsters(): void {
     // Count living monsters
     const livingMonsters = this.monsters.getChildren().filter(m => m.active).length;
@@ -547,13 +696,25 @@ export class GameScene extends Phaser.Scene {
         }
       });
 
-      // Check door interaction
-      const scaledTile = TILE_SIZE * SCALE;
+      // Check door interaction (skip already-opened doors)
       for (const [key, door] of this.doorSprites) {
+        const doorBody = door.body as Phaser.Physics.Arcade.StaticBody;
+        if (!doorBody.enable) continue;
         const dist = Phaser.Math.Distance.Between(interactPoint.x, interactPoint.y, door.x, door.y);
         if (dist <= INTERACTION_DISTANCE) {
           const [tx, ty] = key.split(',').map(Number);
           this.openDoor(tx, ty);
+          break;
+        }
+      }
+
+      // Check chest interaction
+      for (const [key, chest] of this.chestSprites) {
+        const data = this.chestData.get(key);
+        if (!data || data.opened) continue;
+        const dist = Phaser.Math.Distance.Between(interactPoint.x, interactPoint.y, chest.x, chest.y);
+        if (dist <= INTERACTION_DISTANCE) {
+          this.openChest(key);
           break;
         }
       }
@@ -674,6 +835,20 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private updateNPCIndicators(): void {
+    this.npcs.getChildren().forEach((npc) => {
+      const n = npc as NPC;
+      const status = this.questSystem.getNPCQuestStatus(n.npcData.id);
+      if (status === 'turn_in') {
+        n.showQuestIndicator('turn_in');
+      } else if (status === 'available') {
+        n.showQuestIndicator('available');
+      } else {
+        n.hideQuestIndicator();
+      }
+    });
+  }
+
   getDungeon(): number[][] { return this.dungeon; }
   getRooms(): DungeonRoom[] { return this.rooms; }
   getPlayer(): Player { return this.player; }
@@ -685,12 +860,16 @@ export class GameScene extends Phaser.Scene {
     const door = this.doorSprites.get(key);
     if (!door) return;
 
+    // Skip already-opened doors
+    const body = door.body as Phaser.Physics.Arcade.StaticBody;
+    if (!body.enable) return;
+
     // Update dungeon grid
     this.dungeon[tileY][tileX] = 3; // 3 = open door
 
-    // Remove door sprite and physics body
-    this.doors.remove(door, true, true);
-    this.doorSprites.delete(key);
+    // Swap to open sprite and disable physics (keep visible)
+    door.setTexture('door_open');
+    body.enable = false;
 
     // Force fog of war recalculation to reveal behind the door
     this.fogSystem.forceRecalculate();
@@ -813,6 +992,12 @@ export class GameScene extends Phaser.Scene {
     this.monsters.getChildren().forEach((monster) => {
       (monster as Monster).update(time);
     });
+
+    // Update NPC quest indicators (throttled to every 500ms)
+    if (time - this.lastIndicatorUpdate > 500) {
+      this.lastIndicatorUpdate = time;
+      this.updateNPCIndicators();
+    }
 
     // Update NPCs and check for interaction prompts
     this.npcs.getChildren().forEach((npc) => {

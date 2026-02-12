@@ -118,12 +118,9 @@ export class InventoryScene extends Phaser.Scene {
 
   private createEquipmentSlots(startX: number, startY: number): void {
     const slots: { slot: EquipmentSlot; label: string; x: number; y: number }[] = [
-      { slot: 'head', label: 'Head', x: 0, y: 0 },
-      { slot: 'chest', label: 'Chest', x: 0, y: 60 },
-      { slot: 'weapon', label: 'Weapon', x: -60, y: 60 },
-      { slot: 'shield', label: 'Shield', x: 60, y: 60 },
-      { slot: 'legs', label: 'Legs', x: 0, y: 120 },
-      { slot: 'boots', label: 'Boots', x: 0, y: 180 }
+      { slot: 'weapon', label: 'Weapon', x: -60, y: 30 },
+      { slot: 'armor', label: 'Armor', x: 0, y: 30 },
+      { slot: 'shield', label: 'Shield', x: 60, y: 30 }
     ];
 
     // Label
@@ -331,9 +328,9 @@ export class InventoryScene extends Phaser.Scene {
     });
     this.tooltipContainer.add(name);
 
-    // Item type (show slot for armor)
-    const typeLabel = item.type === 'armor' && item.slot
-      ? `ARMOR - ${item.slot.toUpperCase()}`
+    // Item type
+    const typeLabel = item.type === 'armor'
+      ? (item.slot === 'shield' ? 'SHIELD' : 'ARMOR')
       : item.type.toUpperCase();
     const type = this.add.text(10, -28, typeLabel, {
       fontSize: '8px',

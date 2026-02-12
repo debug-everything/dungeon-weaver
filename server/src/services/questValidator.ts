@@ -9,10 +9,7 @@ const VALID_ITEM_IDS = [
   'weapon_dagger_steel', 'weapon_dagger_golden', 'weapon_katana_silver',
   'weapon_hammer', 'weapon_sledgehammer',
   'flask_red', 'flask_big_red', 'flask_blue', 'flask_green', 'flask_yellow',
-  'armor_head_leather', 'armor_head_iron', 'armor_head_golden',
-  'armor_chest_leather', 'armor_chest_chain', 'armor_chest_plate',
-  'armor_legs_leather', 'armor_legs_chain', 'armor_legs_plate',
-  'armor_boots_leather', 'armor_boots_iron', 'armor_boots_steel',
+  'armor_peasant', 'armor_spy', 'armor_wizard', 'armor_barbarian', 'armor_knight',
   'armor_shield_wooden', 'armor_shield_iron', 'armor_shield_golden'
 ];
 const VALID_MONSTER_SPRITES = ['monster_zombie', 'monster_skelet', 'monster_orc', 'monster_goblin', 'monster_demon'];
@@ -38,6 +35,21 @@ export function validateQuest(quest: unknown): ValidationResult {
   if (!q.description || typeof q.description !== 'string') errors.push('Missing description');
   if (!q.npcId || !VALID_NPC_IDS.includes(q.npcId)) errors.push(`Invalid npcId: ${q.npcId}`);
   if (typeof q.level !== 'number' || q.level < 1) errors.push('Invalid level');
+
+  // Intro (optional)
+  if (q.intro !== undefined) {
+    if (!Array.isArray(q.intro)) {
+      errors.push('intro must be an array of strings');
+    } else {
+      if (q.intro.length > 6) errors.push('intro has too many entries (max 6)');
+      for (const line of q.intro) {
+        if (typeof line !== 'string' || line.trim().length === 0) {
+          errors.push('intro entries must be non-empty strings');
+          break;
+        }
+      }
+    }
+  }
 
   // Variants (optional)
   const variantItemIds = new Set<string>();

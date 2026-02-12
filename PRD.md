@@ -170,24 +170,44 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [ ] Monster spawners/nests
 
 ### Armor System ✅
-- [x] Head armor items (3 tiers: leather, iron, golden)
-- [x] Chest armor items (3 tiers: leather, chain, plate)
-- [x] Leg armor items (3 tiers: leather, chain, plate)
-- [x] Boot items (3 tiers: leather, iron, steel)
+- [x] 5 outfit armors (Peasant, Spy, Wizard, Barbarian, Knight) with single "armor" equipment slot
+- [x] 3 shield items (wooden, iron, golden) in separate "shield" slot
+- [x] Equipping armor changes player sprite appearance
 - [x] Shield items (3 tiers: wooden, iron, golden)
 - [x] Armor defense calculations (reduction = defense * 0.5)
-- [x] Runtime-generated 16x16 pixel art sprites
 - [x] Defense stat in inventory tooltips and shop panel
-- [x] Armor in NPC shops (Marcus: leather set, Elena: endgame)
+- [x] Armor in NPC shops (Marcus: peasant + spy, Elena: knight + wizard + barbarian)
 - [x] Armor in monster loot tables
-- [ ] Visual equipment on player sprite
+- [x] Visual equipment on player sprite (outfit sprites from NPC tileset)
+
+### Phase 2c: Quick Gameplay Enhancements ✅
+- [x] **Open Door Enhancement** — show `door_open` sprite when doors are opened (keep sprite visible, disable physics)
+- [x] **NPC Quest Indicator** — floating "!" (gold, quest available) and "?" (green, ready to turn in) above NPCs, updated every 500ms
+- [x] **Chest Loot** — 0-2 random loot chests per room (gold + items), E to open, quest-driven chest spawning via `spawnQuestChest()`
+- [x] **NPC Extended Quest Intro** — dramatic multi-line NPC intro before quest offer dialog, with "Continue listening..." / "Leave" options; LLM generates `intro` field
+
+### Phase 2d: Simplified Armor System ✅
+- [x] Replace 5 armor slots (head/chest/legs/boots) with single "armor" slot
+- [x] 5 outfit types that change player sprite appearance (Knight, Wizard, Spy, Peasant, Barbarian)
+- [x] Keep shield as separate stats-only slot (3 slots total: weapon, armor, shield)
+- [x] Outfits in NPC shops and monster loot tables
+- [x] Remove runtime-generated armor sprites, use NPC sprites for outfits + keep shield sprites
+
+### Phase 2e: Story-arc Quests
+- [ ] Coherent multi-quest story arcs (configurable quest count + boss fight finale)
+- [ ] Sequential arc progression — one arc active at a time
+- [ ] LLM generates arc outline (title, theme, quest summaries) then individual quests with narrative continuity
+- [ ] Creative naming (evocative enemy/item names mapped to base types)
+- [ ] LLM picks most fitting NPC per quest based on personality
+- [ ] Arc progress display in quest log
+- [ ] `server/game.config.json` for configurable settings
 
 ### Dungeon Improvements
 - [ ] Multiple dungeon floors/levels
 - [ ] Stairs/ladders between floors
 - [ ] Locked doors requiring keys
 - [ ] Secret rooms
-- [ ] Treasure chests with loot
+- [x] Treasure chests with loot
 - [ ] Environmental hazards (traps, spikes, lava)
 
 ### Items Expansion
@@ -316,7 +336,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ### Future Needs
 - [ ] Additional monster sprites
-- [x] Armor sprites (runtime-generated canvas textures)
+- [x] Outfit sprites (reuse NPC tileset PNGs) + shield sprites (runtime canvas)
 - [ ] Effect animations (spells, explosions)
 - [ ] UI elements (buttons, frames)
 - [ ] Tileset variations for different dungeon themes
@@ -341,4 +361,4 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ---
 
-*Last Updated: Phase 1 Complete*
+*Last Updated: Phase 2d Complete, Phase 2e planned*

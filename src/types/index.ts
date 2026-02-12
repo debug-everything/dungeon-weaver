@@ -1,6 +1,5 @@
 export type ItemType = 'weapon' | 'armor' | 'consumable' | 'misc';
-export type EquipmentSlot = 'weapon' | 'head' | 'chest' | 'legs' | 'boots' | 'shield';
-export type ArmorType = 'head' | 'chest' | 'legs' | 'boots' | 'shield';
+export type EquipmentSlot = 'weapon' | 'armor' | 'shield';
 export type WeaponClass = 'sword' | 'dagger' | 'hammer' | 'katana' | 'unarmed';
 
 export interface ItemStats {
@@ -32,10 +31,7 @@ export interface InventoryItem {
 
 export interface Equipment {
   weapon: Item | null;
-  head: Item | null;
-  chest: Item | null;
-  legs: Item | null;
-  boots: Item | null;
+  armor: Item | null;
   shield: Item | null;
 }
 
@@ -106,6 +102,16 @@ export interface DungeonTile {
   walkable: boolean;
 }
 
+// Chest data
+export interface ChestData {
+  x: number;
+  y: number;
+  opened: boolean;
+  gold: number;
+  items: { itemId: string; quantity: number }[];
+  questItemId?: string;
+}
+
 // Quest system types (JSON-serializable for future LLM generation)
 export type QuestType = 'rescue' | 'recover' | 'destroy' | 'investigate';
 export type QuestStatus = 'available' | 'active' | 'completed' | 'turned_in';
@@ -166,6 +172,7 @@ export interface QuestDefinition {
   description: string;
   npcId: string;
   level: number;
+  intro?: string[];
   dialog: {
     offer: DialogNode[];
     inProgress: DialogNode[];

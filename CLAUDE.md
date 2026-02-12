@@ -147,13 +147,13 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a + 2b)
+## Current Features (Phase 1 + 2a + 2b + 2c + 2d)
 - ✅ Procedural dungeon generation
 - ✅ 5 monster types with AI
 - ✅ 3 NPC merchants
-- ✅ 12 weapons, 15 armor pieces, 5 consumables
-- ✅ Inventory & equipment system
-- ✅ Armor system (15 pieces across 5 slots, 3 tiers, defense stat with damage reduction)
+- ✅ 12 weapons, 5 outfits, 3 shields, 5 consumables
+- ✅ Inventory & equipment system (3 slots: weapon, armor, shield)
+- ✅ Armor system (5 outfits that change player sprite + 3 shields, defense stat with damage reduction)
 - ✅ Combat with arc-based attack hitbox (per-weapon-class arc width and reach)
 - ✅ Weapon classes: sword, dagger, hammer, katana, unarmed (arc width + knockback per class)
 - ✅ Knockback on hit (weapon-class-specific force, monsters stop at walls)
@@ -172,9 +172,14 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Game controller support (A=attack, B=dodge, X=interact, Y=inventory)
 - ✅ Quest log overlay (Q key)
 - ✅ Quest loot injection for LLM collect objectives
+- ✅ Open door sprites (doors show open sprite instead of disappearing)
+- ✅ NPC quest indicators (floating "!" and "?" above NPC heads)
+- ✅ Loot chests (0-2 per room, gold + items, quest-driven chest spawning)
+- ✅ NPC extended quest intros (dramatic multi-line intro before quest offer)
 
 ## Planned Features (See PRD.md)
-- Phase 2 (remaining): Armor, more monsters, dungeon floors
+- Phase 2d: Simplified armor system (5 outfits replacing 15 armor pieces, player sprite changes)
+- Phase 2e: Story-arc quests (multi-quest narrative arcs with LLM, configurable count + boss)
 - Phase 3: XP/leveling, skills, character classes
 - Phase 4: Multiple areas, crafting
 - Phase 5: Save system polish, audio, accessibility

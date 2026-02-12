@@ -8,7 +8,8 @@
 - Up to 8 rooms connected by 3-tile-wide corridors
 - Room 0 is the **safe room** (NPCs, no monsters)
 - Last room is the **boss room** (always contains a Demon Lord)
-- Doors appear at room entrances (60% chance, 100% for boss room). Opened with E key.
+- Doors appear at room entrances (60% chance, 100% for boss room). Opened with E key. Door sprite swaps to `door_open` (stays visible, physics disabled).
+- 0-2 loot chests per non-safe room. Press E to open: gold (5-30) + random items (potions common, weapons rare). Sprites: `chest_closed` → `chest_open_full` → `chest_open_empty`. Quest system can spawn chests with specific items.
 
 ### Fog of War
 - Tile-based visibility with Bresenham line-of-sight
@@ -80,11 +81,11 @@
 
 | Monster | Drops |
 |---------|-------|
-| Zombie | Health Potion (20%), Small Dagger (5%), Leather Boots (3%) |
-| Skeleton | Health Potion (15%), Rusty Sword (8%), Leather Cap (5%) |
-| Goblin | Health Potion (25%), Steel Dagger (10%), Wooden Shield (4%) |
-| Orc | Large Health Potion (15%), Steel Sword (8%), War Hammer (5%), Chain Mail (5%), Iron Helm (4%) |
-| Demon Lord | Large Health Potion (50%), Ruby Sword (20%), Silver Katana (15%), Plate Armor (15%), Golden Shield (10%) |
+| Zombie | Health Potion (20%), Small Dagger (5%), Peasant Garments (3%) |
+| Skeleton | Health Potion (15%), Rusty Sword (8%), Peasant Garments (5%) |
+| Goblin | Health Potion (25%), Steel Dagger (10%), Spy Vestments (4%) |
+| Orc | Large Health Potion (15%), Steel Sword (8%), War Hammer (5%), Barbarian Rawhide (5%), Iron Shield (4%) |
+| Demon Lord | Large Health Potion (50%), Ruby Sword (20%), Silver Katana (15%), Knight Armor (15%), Golden Shield (10%) |
 
 ---
 
@@ -127,39 +128,19 @@
 | Antidote | `flask_green` | (unused) | 30 | 10 |
 | Speed Potion | `flask_yellow` | (unused) | 40 | 10 |
 
-### Armor - Head
+### Armor - Outfits
 
-| Item | ID | Defense | Value |
-|------|----|---------|-------|
-| Leather Cap | `armor_head_leather` | 1 | 20 |
-| Iron Helm | `armor_head_iron` | 3 | 80 |
-| Golden Helm | `armor_head_golden` | 5 | 250 |
+Equipping an outfit changes the player's sprite appearance.
 
-### Armor - Chest
+| Item | ID | Sprite | Defense | Value |
+|------|----|--------|---------|-------|
+| Peasant Garments | `armor_peasant` | `npc_elf` | 1 | 15 |
+| Spy Vestments | `armor_spy` | `npc_trickster` | 3 | 80 |
+| Wizard Cloak | `armor_wizard` | `npc_wizzard` | 4 | 150 |
+| Barbarian Rawhide | `armor_barbarian` | `npc_dwarf` | 5 | 200 |
+| Knight Armor | `armor_knight` | `npc_knight_blue` | 7 | 350 |
 
-| Item | ID | Defense | Value |
-|------|----|---------|-------|
-| Leather Vest | `armor_chest_leather` | 2 | 30 |
-| Chain Mail | `armor_chest_chain` | 4 | 120 |
-| Plate Armor | `armor_chest_plate` | 7 | 350 |
-
-### Armor - Legs
-
-| Item | ID | Defense | Value |
-|------|----|---------|-------|
-| Leather Pants | `armor_legs_leather` | 1 | 25 |
-| Chain Leggings | `armor_legs_chain` | 3 | 100 |
-| Plate Greaves | `armor_legs_plate` | 5 | 280 |
-
-### Armor - Boots
-
-| Item | ID | Defense | Value |
-|------|----|---------|-------|
-| Leather Boots | `armor_boots_leather` | 1 | 20 |
-| Iron Boots | `armor_boots_iron` | 2 | 70 |
-| Steel Boots | `armor_boots_steel` | 3 | 200 |
-
-### Armor - Shields
+### Shields
 
 | Item | ID | Defense | Value |
 |------|----|---------|-------|
@@ -170,14 +151,14 @@
 ### Defense Formula
 `damage_reduction = total_defense * 0.5` (minimum 1 damage always applies)
 
-| Tier | Full Set Defense | Reduction | vs Demon Lord (10 DMG) |
-|------|-----------------|-----------|------------------------|
-| Leather/Wood | 7 | 3.5 | ~6.5 damage |
-| Iron/Chain | 16 | 8.0 | ~2 damage |
-| Steel/Gold/Plate | 26 | 13.0 | 1 damage (minimum) |
+| Setup | Armor + Shield Defense | Reduction | vs Demon Lord (10 DMG) |
+|-------|----------------------|-----------|------------------------|
+| Peasant + Wooden Shield | 3 | 1.5 | ~8.5 damage |
+| Spy + Iron Shield | 7 | 3.5 | ~6.5 damage |
+| Knight + Golden Shield | 13 | 6.5 | ~3.5 damage |
 
 ### Equipment Slots
-Weapon, Head, Chest, Legs, Boots, Shield
+Weapon, Armor, Shield (3 slots total)
 
 ---
 
@@ -185,11 +166,17 @@ Weapon, Head, Chest, Legs, Boots, Shield
 
 | NPC | ID | Role | Specialty |
 |-----|----|------|-----------|
-| Marcus the Merchant | `npc_merchant` | Shop | Basic weapons, potions & leather armor |
-| Elena the Exotic | `npc_merchant_2` | Shop | Rare weapons & endgame armor |
+| Marcus the Merchant | `npc_merchant` | Shop | Basic weapons, potions & starter outfits |
+| Elena the Exotic | `npc_merchant_2` | Shop | Rare weapons & high-tier outfits |
 | Aldric the Sage | `npc_sage` | Shop | Consumables & potions |
 
 All NPCs are located in the safe room (room 0), spread to separate corners to avoid label overlap.
+
+### NPC Quest Indicators
+- Floating **"!"** (gold `#ffdd44`) above NPC = quest available to accept
+- Floating **"?"** (green `#88ff88`) above NPC = completed quest ready to turn in
+- No indicator when NPC has only active (in-progress) quests or no quests
+- Updates every 500ms in GameScene
 
 ---
 
@@ -213,6 +200,13 @@ Each quest is assigned a target room (non-safe) when accepted. Quest map indicat
 **NPC quest priority:** When a player interacts with an NPC, the most actionable quest is shown: `completed (ready to turn in)` > `active (in progress)` > `available`. An NPC will not offer a new quest while it has an active quest in progress. Declined quests remain `available` and will be re-offered on next interaction.
 
 **Quest option** is always visible in the NPC menu (even when all hardcoded quests are done) so LLM-generated quests can be discovered. If no quests are available, the NPC says so.
+
+### Extended Quest Intro
+Quests can have an optional `intro: string[]` field (2-4 atmospheric lines). When present:
+- Before showing the quest offer dialog, NPC delivers intro lines one at a time
+- Player can "Continue listening..." or "Leave conversation" at each step
+- After the last intro line, the normal quest offer dialog appears
+- LLM-generated quests include intro lines; hardcoded quests can too
 
 ### Quest Log (Q key)
 Overlay scene showing all active and completed quests grouped by status:
@@ -275,8 +269,8 @@ When a quest has **collect** objectives, `injectQuestLoot()` adds the target ite
 **Monsters (5 sprites):**
 `monster_zombie`, `monster_skelet`, `monster_goblin`, `monster_orc`, `monster_demon`
 
-**Items (32 sprites):**
-`weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`, `armor_head_leather`, `armor_head_iron`, `armor_head_golden`, `armor_chest_leather`, `armor_chest_chain`, `armor_chest_plate`, `armor_legs_leather`, `armor_legs_chain`, `armor_legs_plate`, `armor_boots_leather`, `armor_boots_iron`, `armor_boots_steel`, `armor_shield_wooden`, `armor_shield_iron`, `armor_shield_golden`
+**Items (25 sprites):**
+`weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`, `armor_peasant`, `armor_spy`, `armor_wizard`, `armor_barbarian`, `armor_knight`, `armor_shield_wooden`, `armor_shield_iron`, `armor_shield_golden`
 
 ---
 
@@ -287,6 +281,17 @@ Each NPC has fixed buy/sell prices per item. Sell price is roughly 40% of buy pr
 
 ### Stock
 Each item has a fixed stock count per NPC. Stock does not replenish.
+
+---
+
+## Planned Features
+
+### Story-arc Quests (Phase 2e)
+- Coherent multi-quest narrative arcs (configurable count + boss finale)
+- Sequential: one arc active at a time, LLM picks best NPC per quest
+- Creative naming: evocative enemy/item/location names mapped to base types
+- Arc progress shown in quest log: "Chapter: [Title] — Quest N/M"
+- Config: `server/game.config.json` with `storyArc.questsPerArc` and `storyArc.bossQuestEnabled`
 
 ---
 

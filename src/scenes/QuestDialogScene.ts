@@ -36,6 +36,11 @@ export class QuestDialogScene extends Phaser.Scene {
   private isTerminalNode: boolean = false;
   private prevGamepadButtons: boolean[] = [];
 
+  // Intro phase
+  private introLines: string[] = [];
+  private introIndex: number = 0;
+  private inIntroMode: boolean = false;
+
   constructor() {
     super({ key: SCENE_KEYS.QUEST_DIALOG });
   }
@@ -123,8 +128,16 @@ export class QuestDialogScene extends Phaser.Scene {
     // Content container (will be rebuilt when navigating dialog nodes)
     this.contentContainer = this.add.container(0, 0);
 
-    // Show first node
-    this.showNode(this.dialogNodes[0].id);
+    // If quest is available and has intro lines, show intro first
+    if (state.status === 'available' && def.intro && def.intro.length > 0) {
+      this.introLines = [...def.intro];
+      this.introIndex = 0;
+      this.inIntroMode = true;
+      this.showIntroLine();
+    } else {
+      this.inIntroMode = false;
+      this.showNode(this.dialogNodes[0].id);
+    }
 
     // Keyboard navigation
     this.input.keyboard?.on('keydown-UP', () => this.moveSelection(-1));
@@ -173,6 +186,79 @@ export class QuestDialogScene extends Phaser.Scene {
         opt.text.setColor('#aaaaff');
       }
     });
+  }
+
+  private showIntroLine(): void {
+    this.contentContainer.removeAll(true);
+    this.responseOptions = [];
+    this.selectedIndex = 0;
+    this.isTerminalNode = false;
+
+    const panelWidth = 500;
+    const panelHeight = 320;
+    const panelX = GAME_WIDTH / 2;
+    const panelY = GAME_HEIGHT / 2;
+    const contentX = panelX - panelWidth / 2 + 20;
+    const contentTop = panelY - panelHeight / 2 + 50;
+
+    const line = this.introLines[this.introIndex];
+    const dialogText = this.add.text(contentX, contentTop, `"${line}"`, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#dddddd',
+      wordWrap: { width: panelWidth - 40 },
+      lineSpacing: 4
+    });
+    this.contentContainer.add(dialogText);
+
+    const textHeight = dialogText.height;
+    let responseY = contentTop + textHeight + 24;
+    const isLastLine = this.introIndex >= this.introLines.length - 1;
+
+    // "Continue listening..." option
+    const continueLabel = isLastLine ? 'Hear the offer...' : 'Continue listening...';
+    const continueText = this.add.text(contentX + 10, responseY, `> ${continueLabel}`, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#aaaaff',
+      wordWrap: { width: panelWidth - 60 },
+      lineSpacing: 2
+    }).setInteractive({ useHandCursor: true });
+
+    const continueCallback = () => {
+      if (isLastLine) {
+        // Transition to normal quest dialog
+        this.inIntroMode = false;
+        this.showNode(this.dialogNodes[0].id);
+      } else {
+        this.introIndex++;
+        this.showIntroLine();
+      }
+    };
+    this.responseOptions.push({ text: continueText, callback: continueCallback });
+    continueText.on('pointerover', () => { this.selectedIndex = 0; this.updateSelection(); });
+    continueText.on('pointerout', () => continueText.setColor('#aaaaff'));
+    continueText.on('pointerdown', continueCallback);
+    this.contentContainer.add(continueText);
+    responseY += continueText.height + 10;
+
+    // "Leave conversation" option
+    const leaveText = this.add.text(contentX + 10, responseY, '> Leave conversation', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#aaaaff',
+      wordWrap: { width: panelWidth - 60 },
+      lineSpacing: 2
+    }).setInteractive({ useHandCursor: true });
+
+    const leaveCallback = () => this.closeDialog();
+    this.responseOptions.push({ text: leaveText, callback: leaveCallback });
+    leaveText.on('pointerover', () => { this.selectedIndex = 1; this.updateSelection(); });
+    leaveText.on('pointerout', () => leaveText.setColor('#aaaaff'));
+    leaveText.on('pointerdown', leaveCallback);
+    this.contentContainer.add(leaveText);
+
+    this.updateSelection();
   }
 
   private showNode(nodeId: string): void {

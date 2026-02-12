@@ -6,6 +6,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   public npcData: NPCData;
   private interactionIndicator: Phaser.GameObjects.Text | null = null;
   private nameText: Phaser.GameObjects.Text | null = null;
+  private questIndicator: Phaser.GameObjects.Text | null = null;
+  private questIndicatorTween: Phaser.Tweens.Tween | null = null;
+  private currentIndicatorType: 'available' | 'turn_in' | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: NPCData) {
     super(scene, x, y, data.sprite);
@@ -41,6 +44,49 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     if (this.nameText) {
       this.nameText.setPosition(this.x, this.y - 24);
     }
+    // Update quest indicator position
+    if (this.questIndicator) {
+      this.questIndicator.setPosition(this.x, this.questIndicator.y);
+    }
+  }
+
+  showQuestIndicator(type: 'available' | 'turn_in'): void {
+    if (this.currentIndicatorType === type) return;
+    this.hideQuestIndicator();
+    this.currentIndicatorType = type;
+
+    const symbol = type === 'available' ? '!' : '?';
+    const color = type === 'available' ? '#ffdd44' : '#88ff88';
+
+    this.questIndicator = this.scene.add.text(this.x, this.y - 38, symbol, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(101);
+
+    this.questIndicatorTween = this.scene.tweens.add({
+      targets: this.questIndicator,
+      y: this.y - 42,
+      duration: 600,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1
+    });
+  }
+
+  hideQuestIndicator(): void {
+    if (this.questIndicatorTween) {
+      this.questIndicatorTween.destroy();
+      this.questIndicatorTween = null;
+    }
+    if (this.questIndicator) {
+      this.questIndicator.destroy();
+      this.questIndicator = null;
+    }
+    this.currentIndicatorType = null;
   }
 
   showInteractionPrompt(): void {
@@ -84,6 +130,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   destroy(fromScene?: boolean): void {
     this.nameText?.destroy();
     this.interactionIndicator?.destroy();
+    this.hideQuestIndicator();
     super.destroy(fromScene);
   }
 }

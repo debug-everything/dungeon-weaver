@@ -80,6 +80,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Give some starting potions
     this.inventory.addItem('flask_red', 3);
 
+    // Listen for equipment changes to update appearance
+    scene.events.on(EVENTS.PLAYER_EQUIPMENT_CHANGED, () => this.updateAppearance());
+
     // Setup input
     this.setupInput();
   }
@@ -723,6 +726,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const pad = this.getGamepad();
     if (!pad) return;
     this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
+  }
+
+  private updateAppearance(): void {
+    const equipment = this.inventory.getEquipment();
+    if (equipment.armor) {
+      this.setTexture(equipment.armor.sprite);
+    } else {
+      this.setTexture('hero_basic');
+    }
   }
 
   getInteractionPoint(): { x: number; y: number } {

@@ -18,12 +18,9 @@ export const NPCS: Record<string, NPCData> = {
       { itemId: 'weapon_dagger_steel', stock: 3, buyPrice: 60, sellPrice: 25 },
       { itemId: 'flask_red', stock: 10, buyPrice: 25, sellPrice: 10 },
       { itemId: 'flask_big_red', stock: 5, buyPrice: 55, sellPrice: 22 },
-      { itemId: 'armor_head_leather', stock: 3, buyPrice: 25, sellPrice: 10 },
-      { itemId: 'armor_chest_leather', stock: 3, buyPrice: 35, sellPrice: 14 },
-      { itemId: 'armor_legs_leather', stock: 3, buyPrice: 30, sellPrice: 12 },
-      { itemId: 'armor_boots_leather', stock: 3, buyPrice: 25, sellPrice: 10 },
-      { itemId: 'armor_shield_wooden', stock: 3, buyPrice: 30, sellPrice: 12 },
-      { itemId: 'armor_chest_chain', stock: 1, buyPrice: 140, sellPrice: 56 }
+      { itemId: 'armor_peasant', stock: 3, buyPrice: 20, sellPrice: 8 },
+      { itemId: 'armor_spy', stock: 2, buyPrice: 95, sellPrice: 38 },
+      { itemId: 'armor_shield_wooden', stock: 3, buyPrice: 30, sellPrice: 12 }
     ]
   },
   npc_merchant_2: {
@@ -43,11 +40,10 @@ export const NPCS: Record<string, NPCData> = {
       { itemId: 'weapon_katana_silver', stock: 1, buyPrice: 550, sellPrice: 225 },
       { itemId: 'weapon_sledgehammer', stock: 1, buyPrice: 420, sellPrice: 175 },
       { itemId: 'weapon_dagger_golden', stock: 2, buyPrice: 180, sellPrice: 75 },
-      { itemId: 'armor_chest_plate', stock: 1, buyPrice: 420, sellPrice: 168 },
-      { itemId: 'armor_head_golden', stock: 1, buyPrice: 300, sellPrice: 120 },
-      { itemId: 'armor_boots_steel', stock: 1, buyPrice: 240, sellPrice: 96 },
+      { itemId: 'armor_knight', stock: 1, buyPrice: 420, sellPrice: 168 },
+      { itemId: 'armor_wizard', stock: 1, buyPrice: 180, sellPrice: 72 },
+      { itemId: 'armor_barbarian', stock: 1, buyPrice: 240, sellPrice: 96 },
       { itemId: 'armor_shield_golden', stock: 1, buyPrice: 480, sellPrice: 192 },
-      { itemId: 'armor_legs_plate', stock: 1, buyPrice: 340, sellPrice: 136 },
       { itemId: 'armor_shield_iron', stock: 2, buyPrice: 155, sellPrice: 62 }
     ]
   },
