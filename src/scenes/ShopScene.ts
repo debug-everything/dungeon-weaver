@@ -386,7 +386,9 @@ export class ShopScene extends Phaser.Scene {
       const shopItem = this.displayedItems[this.selectedIndex];
       if (shopItem) {
         const canBuy = this.shopSystem.canBuy(shopItem);
-        const btnLabel = canBuy.canBuy ? `[ BUY - ${shopItem.buyPrice}g ]` : canBuy.reason || 'Unavailable';
+        const btnLabel = canBuy.canBuy
+          ? `[ BUY - ${shopItem.buyPrice}g ]`
+          : `${shopItem.buyPrice}g - ${canBuy.reason || 'Unavailable'}`;
         const btnColor = canBuy.canBuy ? '#00ff00' : '#ff0000';
 
         // Stock info

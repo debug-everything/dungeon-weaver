@@ -82,6 +82,10 @@ export class MapScene extends Phaser.Scene {
           // Closed door — brown
           const color = visibility === 'visible' ? 0x8B4513 : 0x5a3010;
           graphics.fillStyle(color);
+        } else if (tile === 4) {
+          // Locked door — red-brown
+          const color = visibility === 'visible' ? 0x8B0000 : 0x4a0000;
+          graphics.fillStyle(color);
         } else {
           // Wall
           const color = visibility === 'visible' ? 0x777788 : 0x4a4a5a;
@@ -145,9 +149,10 @@ export class MapScene extends Phaser.Scene {
       { color: 0x00ff00, label: 'You' },
       { color: 0xc9a227, label: 'NPC' },
       { color: 0xff4444, label: 'Enemy' },
-      { color: 0x8B4513, label: 'Door' }
+      { color: 0x8B4513, label: 'Door' },
+      { color: 0x8B0000, label: 'Sealed' }
     ];
-    const legendStartX = GAME_WIDTH / 2 - 140;
+    const legendStartX = GAME_WIDTH / 2 - 175;
 
     legendItems.forEach((item, i) => {
       const lx = legendStartX + i * 80;

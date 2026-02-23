@@ -87,6 +87,8 @@ export interface PlayerState {
   position: { x: number; y: number };
 }
 
+export type RoomType = 'start' | 'challenge' | 'boss';
+
 export interface DungeonRoom {
   x: number;
   y: number;
@@ -94,6 +96,11 @@ export interface DungeonRoom {
   height: number;
   centerX: number;
   centerY: number;
+  roomType?: RoomType;
+  connectedTo?: number[];
+  isCleared?: boolean;
+  isBossRoom?: boolean;
+  isLocked?: boolean;
 }
 
 export interface DungeonTile {

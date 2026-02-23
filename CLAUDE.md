@@ -14,6 +14,7 @@ npm run dev
 - **Framework**: Phaser 3.80+
 - **Language**: TypeScript
 - **Build Tool**: Vite
+- **Dungeon Generation**: rot.js (BSP Digger)
 - **Assets**: 0x72 DungeonTileset (16x16 pixel art)
 
 ## Project Structure
@@ -39,6 +40,7 @@ src/
 │   ├── QuestSystem.ts         # Quest state machine & tracking
 │   ├── FogOfWarSystem.ts      # Tile-based visibility
 │   ├── ShopSystem.ts          # Buy/sell logic
+│   ├── DungeonGenerator.ts   # BSP dungeon generation (rot.js) + mission graph
 │   └── VariantRegistry.ts    # Runtime registration of LLM variant monsters/items
 └── scenes/
     ├── BootScene.ts           # Asset loading
@@ -145,12 +147,12 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `TILE_SIZE`: 16 (base tile size)
 - `SCALE`: 2 (sprite scaling)
 - `PLAYER_SPEED`: 120
-- `DUNGEON_WIDTH/HEIGHT`: 40x30 tiles
+- `DUNGEON_WIDTH/HEIGHT`: 60x45 tiles
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
 ## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e)
-- ✅ Procedural dungeon generation
+- ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
 - ✅ 5 monster types with AI
 - ✅ 3 NPC merchants
 - ✅ 12 weapons, 5 outfits, 3 shields, 5 consumables
@@ -249,7 +251,7 @@ physics: {
 - Assets folder is gitignored (obtain 0x72 DungeonTileset separately)
 - Game uses Arcade Physics (no rotation on bodies)
 - All sprites are scaled 2x from 16px originals
-- Dungeon generates 8 rooms max, first room is safe (NPCs), last has boss
+- Dungeon generates 8-10 rooms via BSP, first room is safe (NPCs), last has boss (locked door unlocks after clearing 4 rooms)
 
 ## Working Conventions
 

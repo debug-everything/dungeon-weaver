@@ -134,7 +134,7 @@ export class FogOfWarSystem {
   private isWall(x: number, y: number): boolean {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return true;
     const tile = this.dungeon[y][x];
-    return tile === 1 || tile === 2; // walls and closed doors block vision
+    return tile === 1 || tile === 2 || tile === 4; // walls, closed doors, and locked doors block vision
   }
 
   forceRecalculate(): void {
@@ -159,5 +159,52 @@ export class FogOfWarSystem {
 
   getVisibilityGrid(): TileVisibility[][] {
     return this.grid;
+  }
+
+  /**
+   * Bresenham line-of-sight check between two tile coordinates.
+   * Returns true if no wall/closed-door tile blocks the path.
+   * Endpoints are not checked (so standing on a door tile is fine).
+   */
+  hasLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
+    let dx = Math.abs(x1 - x0);
+    let dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    let cx = x0;
+    let cy = y0;
+
+    while (cx !== x1 || cy !== y1) {
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        cx += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        cy += sy;
+      }
+
+      // Don't check the final endpoint
+      if (cx === x1 && cy === y1) break;
+
+      if (this.isWall(cx, cy)) return false;
+    }
+    return true;
+  }
+
+  /** World-space line-of-sight: converts pixel coords to tiles, then checks */
+  hasLineOfSightWorld(
+    x0: number, y0: number,
+    x1: number, y1: number,
+    scaledTile: number
+  ): boolean {
+    const tx0 = Math.floor(x0 / scaledTile);
+    const ty0 = Math.floor(y0 / scaledTile);
+    const tx1 = Math.floor(x1 / scaledTile);
+    const ty1 = Math.floor(y1 / scaledTile);
+    return this.hasLineOfSight(tx0, ty0, tx1, ty1);
   }
 }

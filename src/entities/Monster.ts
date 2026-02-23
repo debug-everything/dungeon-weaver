@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MonsterData, MonsterState } from '../types';
-import { SCALE, EVENTS } from '../config/constants';
+import { SCALE, TILE_SIZE, EVENTS } from '../config/constants';
+import { FogOfWarSystem } from '../systems/FogOfWarSystem';
 import { getItem } from '../data/items';
 
 export class Monster extends Phaser.Physics.Arcade.Sprite {
@@ -14,6 +15,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private healthBar: Phaser.GameObjects.Graphics | null = null;
   private isKnockedBack: boolean = false;
   private nameText: Phaser.GameObjects.Text | null = null;
+  private fogSystem: FogOfWarSystem | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: MonsterData) {
     super(scene, x, y, data.sprite);
@@ -77,6 +79,16 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     this.target = target;
   }
 
+  setFogSystem(fog: FogOfWarSystem): void {
+    this.fogSystem = fog;
+  }
+
+  private hasLOSToTarget(): boolean {
+    if (!this.target || !this.fogSystem) return true; // fallback: no fog = always visible
+    const scaledTile = TILE_SIZE * SCALE;
+    return this.fogSystem.hasLineOfSightWorld(this.x, this.y, this.target.x, this.target.y, scaledTile);
+  }
+
   applyKnockback(fromX: number, fromY: number, force: number): void {
     if (this.isKnockedBack) return;
 
@@ -92,6 +104,17 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
   update(time: number): void {
     if (!this.active || this.monsterState === 'dead') return;
+
+    // Hide sprite, health bar, and name when on a non-visible tile
+    if (this.fogSystem) {
+      const scaledTile = TILE_SIZE * SCALE;
+      const tileX = Math.floor(this.x / scaledTile);
+      const tileY = Math.floor(this.y / scaledTile);
+      const onVisibleTile = this.fogSystem.isVisible(tileX, tileY);
+      this.setVisible(onVisibleTile);
+      if (this.healthBar) this.healthBar.setVisible(onVisibleTile);
+      if (this.nameText) this.nameText.setVisible(onVisibleTile);
+    }
 
     this.updateHealthBar();
 
@@ -113,11 +136,14 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.target.x, this.target.y
     );
 
+    // Require line-of-sight for detection — monsters can't see through walls/doors
+    const hasLOS = this.hasLOSToTarget();
+
     // State machine
-    if (distanceToTarget <= this.monsterData.attackRange) {
+    if (hasLOS && distanceToTarget <= this.monsterData.attackRange) {
       this.setMonsterState('attacking');
       this.performAttack(time);
-    } else if (distanceToTarget <= this.monsterData.detectRange) {
+    } else if (hasLOS && distanceToTarget <= this.monsterData.detectRange) {
       this.setMonsterState('chasing');
       this.chaseTarget();
     } else {
@@ -215,7 +241,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    this.scene.events.emit(EVENTS.MONSTER_KILLED, this.monsterData);
+    this.scene.events.emit(EVENTS.MONSTER_KILLED, this.monsterData, this.x, this.y);
   }
 
   private dropLoot(): void {

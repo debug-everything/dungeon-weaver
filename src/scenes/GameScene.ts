@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE } from '../config/constants';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS } from '../config/constants';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
@@ -10,6 +10,7 @@ import { QUESTS } from '../data/quests';
 import { QuestSystem } from '../systems/QuestSystem';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
 import { clearShopSubsets, rotateShopSubset } from '../systems/ShopSystem';
+import { generateDungeon as generateBSPDungeon } from '../systems/DungeonGenerator';
 import { saveGame, checkLLMEnabled, getArcStatus, SaveGamePayload, SaveData } from '../services/ApiClient';
 import { StoryArcInfo } from '../types';
 
@@ -37,6 +38,8 @@ export class GameScene extends Phaser.Scene {
   private lastIndicatorUpdate: number = 0;
   private lastArcPoll: number = 0;
   private arcNextQuestNpcId: string | null = null;
+  private roomClearState: Map<number, { total: number; killed: number }> = new Map();
+  private bossUnlocked: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -54,6 +57,8 @@ export class GameScene extends Phaser.Scene {
     this.chestSprites = new Map();
     this.arcNextQuestNpcId = null;
     this.lastArcPoll = 0;
+    this.roomClearState = new Map();
+    this.bossUnlocked = false;
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -141,192 +146,12 @@ export class GameScene extends Phaser.Scene {
     // Clear shop display subsets on new dungeon
     clearShopSubsets();
 
-    // Initialize dungeon with walls
-    this.dungeon = [];
-    for (let y = 0; y < DUNGEON_HEIGHT; y++) {
-      this.dungeon[y] = [];
-      for (let x = 0; x < DUNGEON_WIDTH; x++) {
-        this.dungeon[y][x] = 1; // 1 = wall
-      }
-    }
-
-    // Generate rooms
-    this.rooms = [];
-    const maxAttempts = 50;
-
-    for (let i = 0; i < maxAttempts && this.rooms.length < 8; i++) {
-      const roomWidth = Phaser.Math.Between(5, 10);
-      const roomHeight = Phaser.Math.Between(5, 8);
-      const roomX = Phaser.Math.Between(1, DUNGEON_WIDTH - roomWidth - 1);
-      const roomY = Phaser.Math.Between(1, DUNGEON_HEIGHT - roomHeight - 1);
-
-      const newRoom: DungeonRoom = {
-        x: roomX,
-        y: roomY,
-        width: roomWidth,
-        height: roomHeight,
-        centerX: Math.floor(roomX + roomWidth / 2),
-        centerY: Math.floor(roomY + roomHeight / 2)
-      };
-
-      // Check for overlap with existing rooms
-      let overlaps = false;
-      for (const room of this.rooms) {
-        if (this.roomsOverlap(newRoom, room)) {
-          overlaps = true;
-          break;
-        }
-      }
-
-      if (!overlaps) {
-        this.carveRoom(newRoom);
-        this.rooms.push(newRoom);
-      }
-    }
-
-    // Connect rooms with corridors
-    for (let i = 1; i < this.rooms.length; i++) {
-      this.connectRooms(this.rooms[i - 1], this.rooms[i]);
-    }
-
-    // Place doors at some room entrances
-    this.placeDoors();
-  }
-
-  private roomsOverlap(a: DungeonRoom, b: DungeonRoom): boolean {
-    return !(a.x + a.width + 1 < b.x ||
-             b.x + b.width + 1 < a.x ||
-             a.y + a.height + 1 < b.y ||
-             b.y + b.height + 1 < a.y);
-  }
-
-  private carveRoom(room: DungeonRoom): void {
-    for (let y = room.y; y < room.y + room.height; y++) {
-      for (let x = room.x; x < room.x + room.width; x++) {
-        if (y >= 0 && y < DUNGEON_HEIGHT && x >= 0 && x < DUNGEON_WIDTH) {
-          this.dungeon[y][x] = 0; // 0 = floor
-        }
-      }
-    }
-  }
-
-  private connectRooms(roomA: DungeonRoom, roomB: DungeonRoom): void {
-    let x = roomA.centerX;
-    let y = roomA.centerY;
-
-    // Horizontal corridor (3 tiles tall for clearance)
-    while (x !== roomB.centerX) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const cy = y + dy;
-        if (cy >= 0 && cy < DUNGEON_HEIGHT && x >= 0 && x < DUNGEON_WIDTH) {
-          this.dungeon[cy][x] = 0;
-        }
-      }
-      x += x < roomB.centerX ? 1 : -1;
-    }
-
-    // Vertical corridor (3 tiles wide for clearance)
-    while (y !== roomB.centerY) {
-      for (let dx = -1; dx <= 1; dx++) {
-        const cx = x + dx;
-        if (y >= 0 && y < DUNGEON_HEIGHT && cx >= 0 && cx < DUNGEON_WIDTH) {
-          this.dungeon[y][cx] = 0;
-        }
-      }
-      y += y < roomB.centerY ? 1 : -1;
-    }
-  }
-
-  private placeDoors(): void {
-    // Skip room 0 (safe room with NPCs)
-    for (let i = 1; i < this.rooms.length; i++) {
-      const room = this.rooms[i];
-      const isBossRoom = i === this.rooms.length - 1;
-      const doorChance = isBossRoom ? 1.0 : 0.6;
-
-      // Scan one tile OUTSIDE the room boundary to find corridor entries.
-      // Group consecutive floor tiles into runs. Each run is a corridor
-      // connecting to this room.
-      const findEntryRuns = (
-        length: number,
-        outsideFn: (idx: number) => { x: number; y: number },
-        insideFn: (idx: number) => { x: number; y: number }
-      ): { x: number; y: number }[][] => {
-        const runs: { x: number; y: number }[][] = [];
-        let run: { x: number; y: number }[] = [];
-
-        for (let idx = 0; idx < length; idx++) {
-          const out = outsideFn(idx);
-          const inn = insideFn(idx);
-          if (out.x >= 0 && out.x < DUNGEON_WIDTH && out.y >= 0 && out.y < DUNGEON_HEIGHT &&
-              this.dungeon[out.y][out.x] === 0 && this.dungeon[inn.y][inn.x] === 0) {
-            run.push(out);
-          } else {
-            if (run.length > 0) { runs.push(run); run = []; }
-          }
-        }
-        if (run.length > 0) runs.push(run);
-        return runs;
-      };
-
-      const allRuns: { x: number; y: number }[][] = [];
-
-      // Top edge — outside is y = room.y - 1
-      allRuns.push(...findEntryRuns(room.width,
-        (dx) => ({ x: room.x + dx, y: room.y - 1 }),
-        (dx) => ({ x: room.x + dx, y: room.y })
-      ));
-      // Bottom edge — outside is y = room.y + room.height
-      allRuns.push(...findEntryRuns(room.width,
-        (dx) => ({ x: room.x + dx, y: room.y + room.height }),
-        (dx) => ({ x: room.x + dx, y: room.y + room.height - 1 })
-      ));
-      // Left edge — outside is x = room.x - 1
-      allRuns.push(...findEntryRuns(room.height,
-        (dy) => ({ x: room.x - 1, y: room.y + dy }),
-        (dy) => ({ x: room.x, y: room.y + dy })
-      ));
-      // Right edge — outside is x = room.x + room.width
-      allRuns.push(...findEntryRuns(room.height,
-        (dy) => ({ x: room.x + room.width, y: room.y + dy }),
-        (dy) => ({ x: room.x + room.width - 1, y: room.y + dy })
-      ));
-
-      for (const run of allRuns) {
-        // Only handle normal corridor widths (1-3 tiles).
-        // Wider openings are room overlaps or merged corridors — skip.
-        if (run.length === 0 || run.length > 3) continue;
-        if (Math.random() > doorChance) continue;
-
-        const midIdx = Math.floor(run.length / 2);
-        const doorPos = run[midIdx];
-
-        // Don't place a door if there's already one nearby (prevents clusters)
-        let nearbyDoor = false;
-        for (let dy = -3; dy <= 3 && !nearbyDoor; dy++) {
-          for (let dx = -3; dx <= 3 && !nearbyDoor; dx++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = doorPos.x + dx;
-            const ny = doorPos.y + dy;
-            if (nx >= 0 && nx < DUNGEON_WIDTH && ny >= 0 && ny < DUNGEON_HEIGHT &&
-                this.dungeon[ny][nx] === 2) {
-              nearbyDoor = true;
-            }
-          }
-        }
-        if (nearbyDoor) continue;
-
-        // Place door at center of the run (in the corridor, outside the room)
-        this.dungeon[doorPos.y][doorPos.x] = 2;
-
-        // Convert flanking tiles to walls to create a doorframe
-        // (narrows the corridor to 1 tile at this point)
-        for (let j = 0; j < run.length; j++) {
-          if (j === midIdx) continue;
-          this.dungeon[run[j].y][run[j].x] = 1;
-        }
-      }
-    }
+    // Use BSP dungeon generator
+    const result = generateBSPDungeon(DUNGEON_WIDTH, DUNGEON_HEIGHT);
+    this.dungeon = result.dungeon;
+    this.rooms = result.rooms;
+    this.roomClearState = new Map();
+    this.bossUnlocked = false;
   }
 
   private renderDungeon(): void {
@@ -347,8 +172,8 @@ export class GameScene extends Phaser.Scene {
           floor.setOrigin(0);
           floor.setDepth(0);
           this.floors.add(floor);
-        } else if (tile === 2) {
-          // Closed door — floor underneath + door sprite
+        } else if (tile === 2 || tile === 4) {
+          // Closed door (2) or locked door (4) — floor underneath + door sprite
           const floor = this.add.image(worldX, worldY, 'floor_plain');
           floor.setScale(SCALE);
           floor.setOrigin(0);
@@ -358,6 +183,9 @@ export class GameScene extends Phaser.Scene {
           // Door sprite is 32x32 (already matches scaled tile size) — no setScale needed
           const door = this.physics.add.staticImage(worldX + scaledTile / 2, worldY + scaledTile / 2, 'door_closed');
           door.setDepth(1);
+          if (tile === 4) {
+            door.setTint(0xff4444); // Red tint for locked doors
+          }
           door.refreshBody();
           this.doors.add(door);
           this.doorSprites.set(`${x},${y}`, door);
@@ -407,14 +235,17 @@ export class GameScene extends Phaser.Scene {
   private spawnMonsters(): void {
     const monsterTypes = Object.keys(MONSTERS);
 
-    // Skip first room (safe room with NPCs)
-    for (let i = 1; i < this.rooms.length; i++) {
+    for (let i = 0; i < this.rooms.length; i++) {
       const room = this.rooms[i];
+      // Skip start room
+      if (room.roomType === 'start' || i === 0) continue;
+
+      const isBoss = room.isBossRoom || i === this.rooms.length - 1;
       const monsterCount = Phaser.Math.Between(2, 4);
 
       for (let j = 0; j < monsterCount; j++) {
-        const monsterType = i === this.rooms.length - 1 && j === 0
-          ? 'monster_demon' // Boss in last room
+        const monsterType = isBoss && j === 0
+          ? 'monster_demon' // Boss in boss room
           : Phaser.Utils.Array.GetRandom(monsterTypes.filter(t => t !== 'monster_demon'));
 
         const monsterData = MONSTERS[monsterType];
@@ -423,8 +254,12 @@ export class GameScene extends Phaser.Scene {
 
         const monster = new Monster(this, spawnX, spawnY, monsterData);
         monster.setTarget(this.player);
+        monster.setFogSystem(this.fogSystem);
         this.monsters.add(monster);
       }
+
+      // Track room clear state
+      this.roomClearState.set(i, { total: monsterCount, killed: 0 });
     }
   }
 
@@ -493,7 +328,7 @@ export class GameScene extends Phaser.Scene {
         let nearDoor = false;
         for (const [dy, dx] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
           const tile = this.dungeon[ty + dy]?.[tx + dx];
-          if (tile === 2 || tile === 3) { nearDoor = true; break; }
+          if (tile === 2 || tile === 3 || tile === 4) { nearDoor = true; break; }
         }
         if (nearDoor) continue;
 
@@ -656,6 +491,7 @@ export class GameScene extends Phaser.Scene {
           const spawnY = Phaser.Math.Between(targetRoom.y + 1, targetRoom.y + targetRoom.height - 2) * TILE_SIZE * SCALE;
           const monster = new Monster(this, spawnX, spawnY, monsterData);
           monster.setTarget(this.player);
+          monster.setFogSystem(this.fogSystem);
           this.monsters.add(monster);
         }
       } else if (obj.type === 'collect') {
@@ -730,12 +566,14 @@ export class GameScene extends Phaser.Scene {
 
       const monster = new Monster(this, spawnX, spawnY, monsterData);
       monster.setTarget(this.player);
+      monster.setFogSystem(this.fogSystem);
       this.monsters.add(monster);
     }
   }
 
   private setupEventListeners(): void {
     // Player attack (arc-based hitbox)
+    const scaledTileForLOS = TILE_SIZE * SCALE;
     this.events.on('player-attack', (attackData: {
       originX: number; originY: number;
       direction: number; radius: number; arcWidth: number;
@@ -754,6 +592,11 @@ export class GameScene extends Phaser.Scene {
           attackData.direction, attackData.radius, attackData.arcWidth,
           targetRadius
         )) {
+          // Block attacks through walls/doors
+          if (!this.fogSystem.hasLineOfSightWorld(
+            attackData.originX, attackData.originY, m.x, m.y, scaledTileForLOS
+          )) return;
+
           m.takeDamage(attackData.damage.damage, attackData.damage.isCritical);
           m.applyKnockback(attackData.originX, attackData.originY, attackData.knockback);
           this.player.combat.createHitEffect(m.x, m.y);
@@ -769,12 +612,22 @@ export class GameScene extends Phaser.Scene {
       );
 
       if (distance <= data.monster.monsterData.attackRange + 10) {
+        // Block attacks through walls/doors
+        if (!this.fogSystem.hasLineOfSightWorld(
+          data.monster.x, data.monster.y, this.player.x, this.player.y, scaledTileForLOS
+        )) return;
+
         const result = this.player.combat.calculateMonsterDamage(
           data.damage,
           this.player.inventory.getTotalDefense()
         );
         this.player.takeDamage(result.damage);
       }
+    });
+
+    // Track monster kills for room clearing
+    this.events.on(EVENTS.MONSTER_KILLED, (_monsterData: unknown, worldX: number, worldY: number) => {
+      this.onMonsterKilled(worldX, worldY);
     });
 
     // Loot dropped
@@ -1025,11 +878,18 @@ export class GameScene extends Phaser.Scene {
     const body = door.body as Phaser.Physics.Arcade.StaticBody;
     if (!body.enable) return;
 
+    // Check for locked door (tile 4)
+    if (this.dungeon[tileY][tileX] === 4) {
+      this.showNotification('This door is sealed. Clear more rooms to unlock it.');
+      return;
+    }
+
     // Update dungeon grid
     this.dungeon[tileY][tileX] = 3; // 3 = open door
 
     // Swap to open sprite and disable physics (keep visible)
     door.setTexture('door_open');
+    door.clearTint();
     body.enable = false;
 
     // Force fog of war recalculation to reveal behind the door
@@ -1039,6 +899,82 @@ export class GameScene extends Phaser.Scene {
     const playerTileY = Math.floor(this.player.y / scaledTile);
     this.fogSystem.update(playerTileX, playerTileY);
     this.updateFogRendering();
+  }
+
+  private showNotification(message: string): void {
+    const text = this.add.text(this.cameras.main.scrollX + 400, this.cameras.main.scrollY + 80, message, {
+      fontSize: '13px',
+      fontFamily: 'monospace',
+      color: '#ff8888',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(1000);
+
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      y: text.y - 20,
+      duration: 2500,
+      onComplete: () => text.destroy()
+    });
+  }
+
+  private unlockBossDoors(): void {
+    if (this.bossUnlocked) return;
+    this.bossUnlocked = true;
+
+    // Convert all tile-4 (locked) doors to tile-2 (closed) and clear red tint
+    for (let y = 0; y < DUNGEON_HEIGHT; y++) {
+      for (let x = 0; x < DUNGEON_WIDTH; x++) {
+        if (this.dungeon[y][x] === 4) {
+          this.dungeon[y][x] = 2;
+          const door = this.doorSprites.get(`${x},${y}`);
+          if (door) {
+            door.clearTint();
+          }
+        }
+      }
+    }
+
+    this.showNotification('The sealed doors have been unlocked!');
+  }
+
+  /** Find which room a world-space position is in, returns room index or -1 */
+  private findRoomAtWorldPos(worldX: number, worldY: number): number {
+    const scaledTile = TILE_SIZE * SCALE;
+    const tileX = Math.floor(worldX / scaledTile);
+    const tileY = Math.floor(worldY / scaledTile);
+
+    for (let i = 0; i < this.rooms.length; i++) {
+      const r = this.rooms[i];
+      if (tileX >= r.x && tileX < r.x + r.width &&
+          tileY >= r.y && tileY < r.y + r.height) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private onMonsterKilled(worldX: number, worldY: number): void {
+    const roomIdx = this.findRoomAtWorldPos(worldX, worldY);
+    if (roomIdx < 0) return;
+
+    const state = this.roomClearState.get(roomIdx);
+    if (!state) return;
+
+    state.killed++;
+    if (state.killed >= state.total) {
+      this.rooms[roomIdx].isCleared = true;
+
+      // Count cleared challenge rooms
+      const clearedCount = this.rooms.filter(r =>
+        r.roomType === 'challenge' && r.isCleared
+      ).length;
+
+      if (clearedCount >= ROOMS_TO_CLEAR_FOR_BOSS && !this.bossUnlocked) {
+        this.unlockBossDoors();
+      }
+    }
   }
 
   serializeGameState(): SaveGamePayload {
