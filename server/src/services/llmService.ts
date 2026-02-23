@@ -290,6 +290,7 @@ A story arc is a coherent multi-quest narrative with a title, theme, and sequent
 
 ## RULES
 - Create an evocative, atmospheric storyline with creative naming
+- IMPORTANT: Vary title themes widely! Draw from diverse genres: heists, plagues, betrayals, ancient machines, forgotten gods, elemental storms, political intrigue, cursed bloodlines, merchant wars, alchemical disasters, etc. Avoid defaulting to shadow/darkness/void themes.
 - Each quest should logically build on the previous one
 - Vary the NPC assignments based on narrative fit — use at least 2 different NPCs
 - The LAST quest MUST be a climactic "destroy" quest against a powerful boss foe
@@ -300,7 +301,7 @@ Respond with ONLY the JSON object.`;
 
 // ── Shared LLM call helper ──
 
-async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: number = 3000): Promise<string> {
+async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: number = 3000, temperature: number = 0.7): Promise<string> {
   const openai = getClient();
 
   llmLogger.info('API call starting - model: %s, baseURL: %s, json_mode: %s', config.llm.model, config.llm.baseURL, supportsJsonMode !== false);
@@ -315,7 +316,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
+        temperature,
         max_tokens: maxTokens
       });
       if (supportsJsonMode === null) {
@@ -333,7 +334,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ],
-          temperature: 0.7,
+          temperature,
           max_tokens: maxTokens
         });
       } else {
@@ -379,13 +380,32 @@ ${npcDirective} Create an interesting quest with varied dialog. Make the quest f
 
 // ── Story Arc generation ──
 
-export async function generateStoryArc(questCount: number, existingArcIds: string[]): Promise<StoryArcOutline> {
+/** Extract significant words from previous titles so the LLM can avoid them */
+function extractKeywords(titles: string[]): string[] {
+  const stopWords = new Set(['the', 'of', 'a', 'an', 'and', 'in', 'on', 'at', 'to', 'for', 'is', 'by']);
+  const words = new Set<string>();
+  for (const title of titles) {
+    for (const word of title.toLowerCase().split(/\s+/)) {
+      if (word.length > 3 && !stopWords.has(word)) {
+        words.add(word);
+      }
+    }
+  }
+  return [...words];
+}
+
+export async function generateStoryArc(questCount: number, existingArcIds: string[], previousTitles: string[] = []): Promise<StoryArcOutline> {
+  const avoidSection = previousTitles.length > 0
+    ? `\nPrevious arc titles used (DO NOT reuse these or similar names): ${previousTitles.map(t => `"${t}"`).join(', ')}.
+Pick a COMPLETELY DIFFERENT theme and naming style. Avoid words like: ${extractKeywords(previousTitles).join(', ')}.`
+    : '';
+
   const userPrompt = `Generate a story arc with exactly ${questCount} quests.
-Avoid these existing arc IDs: ${existingArcIds.join(', ') || 'none'}.
+Avoid these existing arc IDs: ${existingArcIds.join(', ') || 'none'}.${avoidSection}
 Create a compelling narrative arc that escalates toward a climactic final boss quest.`;
 
   llmLogger.info('Generating story arc outline (%d quests)...', questCount);
-  const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500);
+  const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500, 0.9);
   return JSON.parse(raw) as StoryArcOutline;
 }
 

@@ -34,6 +34,7 @@ class StoryArcService {
   private currentArc: StoryArc | null = null;
   private currentQuest: GeneratedQuestDefinition | null = null;
   private existingArcIds: string[] = [];
+  private existingArcTitles: string[] = [];
   private existingQuestIds: string[] = [];
   private generating: boolean = false;
 
@@ -52,7 +53,7 @@ class StoryArcService {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const outline = await generateStoryArc(totalQuests, this.existingArcIds);
+        const outline = await generateStoryArc(totalQuests, this.existingArcIds, this.existingArcTitles);
 
         // Validate outline
         if (!outline.id || !outline.title || !outline.theme || !Array.isArray(outline.quests)) {
@@ -99,6 +100,7 @@ class StoryArcService {
         };
 
         this.existingArcIds.push(outline.id);
+        this.existingArcTitles.push(outline.title);
         llmLogger.info('Story arc generated: "%s" (%d quests)', outline.title, totalQuests);
         return true;
       } catch (err) {
