@@ -14,10 +14,12 @@ export class InventoryScene extends Phaser.Scene {
   private player!: Player;
 
   private slotContainers: Phaser.GameObjects.Container[] = [];
+  private slotBgs: Phaser.GameObjects.Rectangle[] = [];
   private equipmentSlots: Map<EquipmentSlot, Phaser.GameObjects.Container> = new Map();
-  private _selectedSlot: number = -1;
+  private _selectedSlot: number = 0;
   private tooltipContainer: Phaser.GameObjects.Container | null = null;
   private statsText!: Phaser.GameObjects.Text;
+  private flashText: Phaser.GameObjects.Text | null = null;
   private prevGamepadButtons: boolean[] = [];
 
   private readonly SLOT_SIZE = 48;
@@ -35,9 +37,11 @@ export class InventoryScene extends Phaser.Scene {
   create(): void {
     // Reset state from previous launches (scene instance is reused)
     this.slotContainers = [];
+    this.slotBgs = [];
     this.equipmentSlots.clear();
-    this._selectedSlot = -1;
+    this._selectedSlot = 0;
     this.tooltipContainer = null;
+    this.flashText = null;
     this.prevGamepadButtons = [];
 
     // Semi-transparent background
@@ -80,14 +84,36 @@ export class InventoryScene extends Phaser.Scene {
     // Create stats display
     this.createStatsDisplay(panelX + 150, panelY + 80);
 
+    // Hint text
+    this.add.text(panelX, panelY + panelHeight / 2 - 12, '[D] Drop  [ENTER] Use/Equip  [ESC] Close', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#666666'
+    }).setOrigin(0.5);
+
     // ESC or I to close
     this.input.keyboard?.on('keydown-ESC', () => this.closeInventory());
     this.input.keyboard?.on('keydown-I', () => this.closeInventory());
+
+    // Arrow key / WASD grid navigation
+    this.input.keyboard?.on('keydown-LEFT', () => this.moveSelection(-1, 0));
+    this.input.keyboard?.on('keydown-RIGHT', () => this.moveSelection(1, 0));
+    this.input.keyboard?.on('keydown-UP', () => this.moveSelection(0, -1));
+    this.input.keyboard?.on('keydown-DOWN', () => this.moveSelection(0, 1));
+    this.input.keyboard?.on('keydown-A', () => this.moveSelection(-1, 0));
+    this.input.keyboard?.on('keydown-D', () => this.handleDKey());
+    this.input.keyboard?.on('keydown-W', () => this.moveSelection(0, -1));
+    this.input.keyboard?.on('keydown-S', () => this.moveSelection(0, 1));
+
+    // Use/equip selected item
+    this.input.keyboard?.on('keydown-ENTER', () => this.activateSelected());
+    this.input.keyboard?.on('keydown-SPACE', () => this.activateSelected());
 
     // Update display
     this.updateInventoryDisplay();
     this.updateEquipmentDisplay();
     this.updateStats();
+    this.updateSelectionHighlight();
   }
 
   update(): void {
@@ -97,8 +123,102 @@ export class InventoryScene extends Phaser.Scene {
     const justDown = (i: number) => (pad.buttons[i]?.pressed ?? false) && !(prev[i] ?? false);
 
     if (justDown(1) || justDown(3)) this.closeInventory(); // B or Y button
+    if (justDown(14)) this.moveSelection(-1, 0);  // D-pad left
+    if (justDown(15)) this.moveSelection(1, 0);   // D-pad right
+    if (justDown(12)) this.moveSelection(0, -1);  // D-pad up
+    if (justDown(13)) this.moveSelection(0, 1);   // D-pad down
+    if (justDown(0)) this.activateSelected();      // A button
+    if (justDown(2)) this.dropSelected();          // X button
 
     this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
+  }
+
+  private handleDKey(): void {
+    // D key is both "move right" in some layouts, but primarily "drop" here
+    this.dropSelected();
+  }
+
+  private moveSelection(dx: number, dy: number): void {
+    const cols = INVENTORY_COLS;
+    const col = this._selectedSlot % cols;
+    const row = Math.floor(this._selectedSlot / cols);
+    const rows = Math.ceil(INVENTORY_SLOTS / cols);
+
+    let newCol = col + dx;
+    let newRow = row + dy;
+
+    // Wrap
+    if (newCol < 0) newCol = cols - 1;
+    if (newCol >= cols) newCol = 0;
+    if (newRow < 0) newRow = rows - 1;
+    if (newRow >= rows) newRow = 0;
+
+    let newIndex = newRow * cols + newCol;
+    if (newIndex >= INVENTORY_SLOTS) newIndex = INVENTORY_SLOTS - 1;
+
+    this._selectedSlot = newIndex;
+    this.updateSelectionHighlight();
+  }
+
+  private updateSelectionHighlight(): void {
+    this.slotBgs.forEach((bg, i) => {
+      if (i === this._selectedSlot) {
+        bg.setStrokeStyle(2, 0xffdd55);
+        bg.setFillStyle(0x5a5a7a);
+      } else {
+        bg.setStrokeStyle(1, 0x5a5a7a);
+        bg.setFillStyle(0x3a3a5a);
+      }
+    });
+
+    // Update tooltip for keyboard nav
+    this.hideTooltip();
+    const invItem = this.inventory.getItem(this._selectedSlot);
+    if (invItem) {
+      const container = this.slotContainers[this._selectedSlot];
+      if (container) {
+        this.showTooltip(container.x, container.y, invItem.item);
+      }
+    }
+  }
+
+  private activateSelected(): void {
+    this.onInventorySlotClick(this._selectedSlot);
+  }
+
+  private dropSelected(): void {
+    const invItem = this.inventory.getItem(this._selectedSlot);
+    if (!invItem) return;
+
+    const itemName = invItem.item.name;
+    this.inventory.removeItem(this._selectedSlot);
+    this.updateInventoryDisplay();
+    this.updateSelectionHighlight();
+    this.showFlash(`Dropped ${itemName}`, '#ff8888');
+  }
+
+  private showFlash(message: string, color: string): void {
+    if (this.flashText) this.flashText.destroy();
+
+    this.flashText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 140, message, {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(2000);
+
+    this.tweens.add({
+      targets: this.flashText,
+      alpha: 0,
+      y: this.flashText.y - 25,
+      duration: 1200,
+      ease: 'Power2',
+      onComplete: () => {
+        this.flashText?.destroy();
+        this.flashText = null;
+      }
+    });
   }
 
   private createInventoryGrid(startX: number, startY: number): void {
@@ -156,30 +276,36 @@ export class InventoryScene extends Phaser.Scene {
 
     container.add(slotBg);
 
+    if (type === 'inventory') {
+      this.slotBgs.push(slotBg);
+    }
+
     // Interaction handlers
     slotBg.on('pointerover', () => {
-      slotBg.setFillStyle(0x5a5a7a);
-
       if (type === 'inventory') {
-        const invItem = this.inventory.getItem(index);
-        if (invItem) {
-          this.showTooltip(x, y, invItem.item);
-        }
-      } else if (equipSlot) {
-        const item = this.inventory.getEquipment()[equipSlot];
-        if (item) {
-          this.showTooltip(x, y, item);
+        this._selectedSlot = index;
+        this.updateSelectionHighlight();
+      } else {
+        slotBg.setFillStyle(0x5a5a7a);
+        if (equipSlot) {
+          const item = this.inventory.getEquipment()[equipSlot];
+          if (item) {
+            this.showTooltip(x, y, item);
+          }
         }
       }
     });
 
     slotBg.on('pointerout', () => {
-      slotBg.setFillStyle(0x3a3a5a);
-      this.hideTooltip();
+      if (type !== 'inventory') {
+        slotBg.setFillStyle(0x3a3a5a);
+        this.hideTooltip();
+      }
     });
 
     slotBg.on('pointerdown', () => {
       if (type === 'inventory') {
+        this._selectedSlot = index;
         this.onInventorySlotClick(index);
       } else if (equipSlot) {
         this.onEquipmentSlotClick(equipSlot);
@@ -223,7 +349,6 @@ export class InventoryScene extends Phaser.Scene {
     const invItem = this.inventory.getItem(index);
 
     if (!invItem) {
-      this._selectedSlot = -1;
       return;
     }
 
@@ -233,6 +358,7 @@ export class InventoryScene extends Phaser.Scene {
       this.updateInventoryDisplay();
       this.updateEquipmentDisplay();
       this.updateStats();
+      this.updateSelectionHighlight();
 
       // Emit event to update UI
       this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.inventory.getEquipment());
@@ -241,6 +367,7 @@ export class InventoryScene extends Phaser.Scene {
     else if (invItem.item.type === 'consumable') {
       this.player.useConsumable(index);
       this.updateInventoryDisplay();
+      this.updateSelectionHighlight();
     }
   }
 
@@ -252,6 +379,7 @@ export class InventoryScene extends Phaser.Scene {
       this.updateInventoryDisplay();
       this.updateEquipmentDisplay();
       this.updateStats();
+      this.updateSelectionHighlight();
 
       // Emit event to update UI
       this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.inventory.getEquipment());

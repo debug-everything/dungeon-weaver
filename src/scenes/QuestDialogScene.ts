@@ -41,6 +41,7 @@ export class QuestDialogScene extends Phaser.Scene {
   private introLines: string[] = [];
   private introIndex: number = 0;
   private inIntroMode: boolean = false;
+  private introWasShown: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.QUEST_DIALOG });
@@ -134,9 +135,11 @@ export class QuestDialogScene extends Phaser.Scene {
       this.introLines = [...def.intro];
       this.introIndex = 0;
       this.inIntroMode = true;
+      this.introWasShown = false;
       this.showIntroLine();
     } else {
       this.inIntroMode = false;
+      this.introWasShown = false;
       this.showNode(this.dialogNodes[0].id);
     }
 
@@ -228,8 +231,9 @@ export class QuestDialogScene extends Phaser.Scene {
 
     const continueCallback = () => {
       if (isLastLine) {
-        // Transition to normal quest dialog
+        // Transition to normal quest dialog — skip repeating offer text
         this.inIntroMode = false;
+        this.introWasShown = true;
         this.showNode(this.dialogNodes[0].id);
       } else {
         this.introIndex++;
@@ -282,19 +286,29 @@ export class QuestDialogScene extends Phaser.Scene {
     const contentX = panelX - panelWidth / 2 + 20;
     const contentTop = panelY - panelHeight / 2 + 50;
 
-    // NPC dialog text
-    const dialogText = this.add.text(contentX, contentTop, `"${node.text}"`, {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#dddddd',
-      wordWrap: { width: panelWidth - 40 },
-      lineSpacing: 4
-    });
-    this.contentContainer.add(dialogText);
+    // When intro was already shown, skip the first offer node's text to avoid duplication
+    const skipNpcText = this.introWasShown && node.id === this.dialogNodes[0].id && node.responses && node.responses.length > 0;
+    // Clear the flag after using it so subsequent nodes display normally
+    if (skipNpcText) {
+      this.introWasShown = false;
+    }
 
-    // Measure text height for response positioning
-    const textHeight = dialogText.height;
-    let responseY = contentTop + textHeight + 24;
+    let responseY = contentTop;
+    if (!skipNpcText) {
+      // NPC dialog text
+      const dialogText = this.add.text(contentX, contentTop, `"${node.text}"`, {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#dddddd',
+        wordWrap: { width: panelWidth - 40 },
+        lineSpacing: 4
+      });
+      this.contentContainer.add(dialogText);
+
+      // Measure text height for response positioning
+      const textHeight = dialogText.height;
+      responseY = contentTop + textHeight + 24;
+    }
 
     if (node.responses && node.responses.length > 0) {
       // Show player response options

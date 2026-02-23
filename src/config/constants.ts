@@ -7,11 +7,12 @@ export const PLAYER_SPEED = 120;
 export const PLAYER_MAX_HEALTH = 100;
 export const PLAYER_START_GOLD = 50;
 
-export const DUNGEON_WIDTH = 40;
-export const DUNGEON_HEIGHT = 30;
+export const DUNGEON_WIDTH = 60;
+export const DUNGEON_HEIGHT = 45;
 export const ROOM_MIN_SIZE = 5;
 export const ROOM_MAX_SIZE = 10;
-export const MAX_ROOMS = 8;
+export const MAX_ROOMS = 10;
+export const ROOMS_TO_CLEAR_FOR_BOSS = 4;
 
 export const INTERACTION_DISTANCE = 32;
 export const ATTACK_COOLDOWN = 400;
@@ -19,6 +20,7 @@ export const VISIBILITY_RADIUS = 6;
 
 export const INVENTORY_SLOTS = 20;
 export const INVENTORY_COLS = 5;
+export const SHOP_DISPLAY_LIMIT = 10;
 
 // Weapon class defaults: arcWidth (degrees), knockback (force)
 export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback: number }> = {

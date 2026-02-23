@@ -9,6 +9,7 @@ import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
 import { QuestSystem } from '../systems/QuestSystem';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
+import { clearShopSubsets, rotateShopSubset } from '../systems/ShopSystem';
 import { saveGame, checkLLMEnabled, getArcStatus, SaveGamePayload, SaveData } from '../services/ApiClient';
 import { StoryArcInfo } from '../types';
 
@@ -137,6 +138,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private generateDungeon(): void {
+    // Clear shop display subsets on new dungeon
+    clearShopSubsets();
+
     // Initialize dungeon with walls
     this.dungeon = [];
     for (let y = 0; y < DUNGEON_HEIGHT; y++) {
@@ -618,6 +622,52 @@ export class GameScene extends Phaser.Scene {
     this.chestSprites.set(key, chest);
   }
 
+  /**
+   * Spawn guaranteed monsters and chests for a newly accepted quest.
+   * Ensures kill targets and collect items exist in the dungeon immediately.
+   */
+  private spawnQuestTargets(questId: string): void {
+    const def = this.questSystem.getQuestDefinition(questId);
+    const state = this.questSystem.getQuestState(questId);
+    if (!def || !state) return;
+
+    // Determine target room (assigned by acceptQuest) or pick a random non-safe room
+    let targetRoom: DungeonRoom | null = null;
+    if (state.targetRoom) {
+      targetRoom = this.rooms.find(r =>
+        r.x === state.targetRoom!.x && r.y === state.targetRoom!.y
+      ) || null;
+    }
+    if (!targetRoom && this.rooms.length > 1) {
+      const nonSafeRooms = this.rooms.slice(1);
+      targetRoom = nonSafeRooms[Math.floor(Math.random() * nonSafeRooms.length)];
+    }
+    if (!targetRoom) return;
+
+    for (const obj of def.objectives) {
+      if (obj.type === 'kill') {
+        // Spawn required number of target monsters in the target room
+        const monsterKey = `monster_${obj.target}`;
+        const monsterData = MONSTERS[monsterKey];
+        if (!monsterData) continue;
+
+        for (let i = 0; i < obj.requiredCount; i++) {
+          const spawnX = Phaser.Math.Between(targetRoom.x + 1, targetRoom.x + targetRoom.width - 2) * TILE_SIZE * SCALE;
+          const spawnY = Phaser.Math.Between(targetRoom.y + 1, targetRoom.y + targetRoom.height - 2) * TILE_SIZE * SCALE;
+          const monster = new Monster(this, spawnX, spawnY, monsterData);
+          monster.setTarget(this.player);
+          this.monsters.add(monster);
+        }
+      } else if (obj.type === 'collect') {
+        // Spawn chests containing the required items in the target room
+        const roomIndex = this.rooms.indexOf(targetRoom);
+        for (let i = 0; i < obj.requiredCount; i++) {
+          this.spawnQuestChest(roomIndex, obj.target);
+        }
+      }
+    }
+  }
+
   private respawnMonsters(): void {
     // Count living monsters
     const livingMonsters = this.monsters.getChildren().filter(m => m.active).length;
@@ -822,13 +872,14 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Open shop (can come from NPC interaction menu)
-    this.events.on(EVENTS.OPEN_SHOP, (npcData: NPCData) => {
+    this.events.on(EVENTS.OPEN_SHOP, (npcData: NPCData, mode: 'buy' | 'sell') => {
       this.pauseGame();
       this.scene.launch(SCENE_KEYS.SHOP, {
         npcData,
         inventory: this.player.inventory,
         playerGold: { current: this.player.gold },
-        player: this.player
+        player: this.player,
+        mode: mode || 'buy'
       });
     });
 
@@ -852,6 +903,15 @@ export class GameScene extends Phaser.Scene {
     // Close quest dialog
     this.events.on(EVENTS.CLOSE_QUEST_DIALOG, () => {
       this.resumeGame();
+    });
+
+    // Rotate shop inventory when a quest is turned in
+    this.events.on(EVENTS.QUEST_TURNED_IN, () => {
+      // Rotate items for all NPCs
+      for (const npcGO of this.npcs.getChildren()) {
+        const npc = npcGO as NPC;
+        rotateShopSubset(npc.npcData.id);
+      }
     });
 
     // Open map
@@ -898,9 +958,10 @@ export class GameScene extends Phaser.Scene {
       this.arcNextQuestNpcId = npcId;
     });
 
-    // Clear arc indicator when any quest is accepted
-    this.events.on(EVENTS.QUEST_ACCEPTED, () => {
+    // Clear arc indicator and spawn quest targets when any quest is accepted
+    this.events.on(EVENTS.QUEST_ACCEPTED, (questId: string) => {
       this.arcNextQuestNpcId = null;
+      this.spawnQuestTargets(questId);
     });
 
     // Quick save (F5)

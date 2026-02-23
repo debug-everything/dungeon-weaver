@@ -55,11 +55,15 @@ export class NPCInteractionScene extends Phaser.Scene {
       callback: () => this.handleTalk()
     });
 
-    // Shop option - visible if NPC has shop inventory
+    // Buy/Sell options - visible if NPC has shop inventory
     if (this.npcData.shopInventory && this.npcData.shopInventory.length > 0) {
       optionDefs.push({
-        label: 'Shop',
-        callback: () => this.handleShop()
+        label: 'Buy',
+        callback: () => this.handleShop('buy')
+      });
+      optionDefs.push({
+        label: 'Sell',
+        callback: () => this.handleShop('sell')
       });
     }
 
@@ -225,9 +229,9 @@ export class NPCInteractionScene extends Phaser.Scene {
     talkText.on('pointerdown', () => this.closeMenu());
   }
 
-  private handleShop(): void {
+  private handleShop(mode: 'buy' | 'sell'): void {
     this.scene.stop();
-    this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.OPEN_SHOP, this.npcData);
+    this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.OPEN_SHOP, this.npcData, mode);
   }
 
   private async handleQuest(): Promise<void> {

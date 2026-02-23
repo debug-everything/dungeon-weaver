@@ -1,6 +1,43 @@
+import Phaser from 'phaser';
 import { NPCData, ShopItem } from '../types';
 import { InventorySystem } from './InventorySystem';
+import { SHOP_DISPLAY_LIMIT } from '../config/constants';
 import { getItem } from '../data/items';
+
+/** Per-NPC displayed shop subset, stored on GameScene lifetime */
+const displayedSubsets = new Map<string, ShopItem[]>();
+
+export function clearShopSubsets(): void {
+  displayedSubsets.clear();
+}
+
+export function rotateShopSubset(npcId: string): void {
+  const subset = displayedSubsets.get(npcId);
+  if (!subset) return;
+  // Will be regenerated on next getDisplayedShopItems call
+  displayedSubsets.delete(npcId);
+}
+
+export function getDisplayedShopItems(npcData: NPCData): ShopItem[] {
+  const all = npcData.shopInventory;
+  if (all.length <= SHOP_DISPLAY_LIMIT) return all;
+
+  const existing = displayedSubsets.get(npcData.id);
+  if (existing) return existing;
+
+  // Pick a random subset of 6-10 items, prioritizing in-stock
+  const count = Math.min(all.length, Phaser.Math.Between(6, SHOP_DISPLAY_LIMIT));
+  const inStock = all.filter(i => i.stock > 0);
+  const outOfStock = all.filter(i => i.stock <= 0);
+
+  // Shuffle in-stock first
+  Phaser.Utils.Array.Shuffle(inStock);
+  Phaser.Utils.Array.Shuffle(outOfStock);
+
+  const result = [...inStock, ...outOfStock].slice(0, count);
+  displayedSubsets.set(npcData.id, result);
+  return result;
+}
 
 export class ShopSystem {
   private inventory: InventorySystem;
@@ -17,6 +54,10 @@ export class ShopSystem {
     }
     if (shopItem.stock <= 0) {
       return { canBuy: false, reason: 'Out of stock' };
+    }
+    // Check inventory capacity
+    if (!this.hasInventorySpace(shopItem.itemId)) {
+      return { canBuy: false, reason: 'Inventory full' };
     }
     return { canBuy: true };
   }
@@ -59,5 +100,23 @@ export class ShopSystem {
       ...shopItem,
       item: getItem(shopItem.itemId)
     }));
+  }
+
+  private hasInventorySpace(itemId: string): boolean {
+    const item = getItem(itemId);
+    if (!item) return false;
+
+    const allItems = this.inventory.getAllItems();
+
+    if (item.stackable) {
+      // Check if existing stack has room
+      const existingStack = allItems.find(
+        inv => inv?.item.id === itemId && inv.quantity < (item.maxStack || 99)
+      );
+      if (existingStack) return true;
+    }
+
+    // Check for empty slot
+    return allItems.some(slot => slot === null);
   }
 }
