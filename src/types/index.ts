@@ -183,6 +183,12 @@ export interface ItemVariant {
   description: string;
 }
 
+export interface QuestNarration {
+  onComplete?: string[];       // 1-3 lines when all objectives done (3rd-person narrator voice)
+  onBossEncounter?: string[];  // 1-3 lines when player enters boss room (ominous)
+  onBossDefeat?: string[];     // 1-3 lines when boss dies (cathartic)
+}
+
 export interface QuestDefinition {
   id: string;
   name: string;
@@ -203,6 +209,7 @@ export interface QuestDefinition {
     monsters?: MonsterVariant[];
     items?: ItemVariant[];
   };
+  narration?: QuestNarration;
 }
 
 export interface QuestObjectiveProgress {

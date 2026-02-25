@@ -72,7 +72,8 @@ export const SCENE_KEYS = {
   NPC_INTERACTION: 'NPCInteractionScene',
   QUEST_DIALOG: 'QuestDialogScene',
   MAP: 'MapScene',
-  QUEST_LOG: 'QuestLogScene'
+  QUEST_LOG: 'QuestLogScene',
+  NARRATOR: 'NarratorScene'
 } as const;
 
 // Monster tier system
@@ -110,5 +111,8 @@ export const EVENTS = {
   CLOSE_MAP: 'close-map',
   OPEN_QUEST_LOG: 'open-quest-log',
   CLOSE_QUEST_LOG: 'close-quest-log',
-  ARC_NEXT_QUEST_NPC: 'arc-next-quest-npc'
+  ARC_NEXT_QUEST_NPC: 'arc-next-quest-npc',
+  BOSS_ROOM_ENTERED: 'boss-room-entered',
+  BOSS_DEFEATED: 'boss-defeated',
+  CLOSE_NARRATOR: 'close-narrator'
 } as const;

@@ -50,6 +50,7 @@ src/
     ├── InventoryScene.ts      # Inventory modal
     ├── NPCInteractionScene.ts # NPC dialog & quest UI
     ├── QuestLogScene.ts       # Quest log overlay (Q key)
+    ├── NarratorScene.ts       # Cinematic narrator/boss dialog overlay
     └── ShopScene.ts           # Shop interface
 
 server/
@@ -185,6 +186,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ NPC quest indicators (floating "!" and "?" above NPC heads, arc-aware)
 - ✅ Loot chests (0-2 per room, wall-adjacent placement, quest-driven chest spawning)
 - ✅ NPC extended quest intros (dramatic multi-line intro before quest offer)
+- ✅ Narrator comments & boss dialog (LLM-generated cinematic overlay on quest complete, boss encounter, boss defeat)
 
 ## Planned Features (See PRD.md)
 - Phase 3: XP/leveling, skills, character classes

@@ -3,7 +3,8 @@ import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, IN
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
-import { DungeonRoom, NPCData, ChestData, MonsterFamily } from '../types';
+import { DungeonRoom, NPCData, ChestData, MonsterFamily, MonsterData } from '../types';
+import type { NarratorStyle } from './NarratorScene';
 import { MONSTERS, getNonBossMonstersByFamily, getBossMonsters } from '../data/monsters';
 import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
@@ -41,6 +42,8 @@ export class GameScene extends Phaser.Scene {
   private roomClearState: Map<number, { total: number; killed: number }> = new Map();
   private bossUnlocked: boolean = false;
   private currentTier: MonsterTier = 1;
+  private bossRoomEntered: boolean = false;
+  private narratorActive: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -61,6 +64,8 @@ export class GameScene extends Phaser.Scene {
     this.roomClearState = new Map();
     this.bossUnlocked = false;
     this.currentTier = 1;
+    this.bossRoomEntered = false;
+    this.narratorActive = false;
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -655,9 +660,12 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Track monster kills for room clearing
-    this.events.on(EVENTS.MONSTER_KILLED, (_monsterData: unknown, worldX: number, worldY: number) => {
+    // Track monster kills for room clearing + boss defeated
+    this.events.on(EVENTS.MONSTER_KILLED, (monsterData: MonsterData, worldX: number, worldY: number) => {
       this.onMonsterKilled(worldX, worldY);
+      if (monsterData?.bossOnly) {
+        this.events.emit(EVENTS.BOSS_DEFEATED);
+      }
     });
 
     // Loot dropped
@@ -852,6 +860,32 @@ export class GameScene extends Phaser.Scene {
       this.saveCurrentGame();
     });
 
+    // Narrator: quest objectives completed
+    this.events.on(EVENTS.QUEST_READY_TO_TURN_IN, (questId: string) => {
+      const def = this.questSystem.getQuestDefinition(questId);
+      const lines = def?.narration?.onComplete;
+      if (lines?.length) {
+        this.launchNarrator(lines, 'narrator');
+      }
+    });
+
+    // Narrator: boss room entered
+    this.events.on(EVENTS.BOSS_ROOM_ENTERED, () => {
+      const lines = this.findActiveNarrationLines('onBossEncounter');
+      if (lines) this.launchNarrator(lines, 'boss');
+    });
+
+    // Narrator: boss defeated
+    this.events.on(EVENTS.BOSS_DEFEATED, () => {
+      const lines = this.findActiveNarrationLines('onBossDefeat');
+      if (lines) this.launchNarrator(lines, 'boss');
+    });
+
+    // Narrator closed
+    this.events.on(EVENTS.CLOSE_NARRATOR, () => {
+      this.narratorActive = false;
+    });
+
     // Player died
     this.events.on('player-died', () => {
       this.cameras.main.fade(1000, 0, 0, 0);
@@ -895,6 +929,20 @@ export class GameScene extends Phaser.Scene {
         this.currentTier = info.tier as MonsterTier;
       }
     }).catch(() => {});
+  }
+
+  private launchNarrator(lines: string[], style: NarratorStyle): void {
+    if (this.isPaused || this.narratorActive) return;
+    this.narratorActive = true;
+    this.scene.launch(SCENE_KEYS.NARRATOR, { lines, style });
+  }
+
+  private findActiveNarrationLines(field: 'onBossEncounter' | 'onBossDefeat'): string[] | null {
+    for (const { definition } of this.questSystem.getActiveQuests()) {
+      const lines = definition.narration?.[field];
+      if (lines?.length) return lines;
+    }
+    return null;
   }
 
   getDungeon(): number[][] { return this.dungeon; }
@@ -1128,6 +1176,20 @@ export class GameScene extends Phaser.Scene {
     if (time - this.lastIndicatorUpdate > 500) {
       this.lastIndicatorUpdate = time;
       this.updateNPCIndicators();
+    }
+
+    // Boss room detection
+    if (!this.bossRoomEntered) {
+      const bossRoom = this.rooms[this.rooms.length - 1];
+      if (bossRoom && (bossRoom.isBossRoom || bossRoom.roomType === 'boss')) {
+        const pTileX = Math.floor(this.player.x / scaledTile);
+        const pTileY = Math.floor(this.player.y / scaledTile);
+        if (pTileX >= bossRoom.x && pTileX < bossRoom.x + bossRoom.width &&
+            pTileY >= bossRoom.y && pTileY < bossRoom.y + bossRoom.height) {
+          this.bossRoomEntered = true;
+          this.events.emit(EVENTS.BOSS_ROOM_ENTERED);
+        }
+      }
     }
 
     // Poll arc status to discover when quests become ready (every 5s, only when no indicator is showing)

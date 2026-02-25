@@ -45,6 +45,11 @@ export interface GeneratedQuestDefinition {
     monsters?: { variantId: string; baseType: string; baseSprite: string; name: string; statMultiplier: number }[];
     items?: { variantId: string; baseItem: string; name: string; description: string }[];
   };
+  narration?: {
+    onComplete?: string[];
+    onBossEncounter?: string[];
+    onBossDefeat?: string[];
+  };
 }
 
 interface DialogNode {
@@ -162,6 +167,11 @@ You can create VARIANT monsters and items — custom-named versions of existing 
       }
     ]
   },
+  "narration": {               // (optional) Cinematic narrator/boss lines shown as overlay text
+    "onComplete": string[],    // 1-3 lines in 3rd-person narrator voice when objectives are done
+    "onBossEncounter": string[], // 1-3 ominous lines when player enters boss room (boss quests only)
+    "onBossDefeat": string[]   // 1-3 cathartic lines when boss dies (boss quests only)
+  },
   "dialog": {
     "offer": DialogNode[],         // 3 nodes. First node MUST have responses with accept_quest and decline_quest actions.
     "inProgress": DialogNode[],    // 3 nodes. First node MUST have responses. Remind player of objective.
@@ -219,6 +229,14 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
 - You don't HAVE to use variants — simple quests without them are fine too
 - ONLY use monster types and sprites from the lists above. Do NOT use types or sprites not listed.
 
+## NARRATION RULES
+- narration is optional but adds cinematic flavor
+- Narrator voice is 3rd-person omniscient, atmospheric, and terse. No exclamation marks.
+- onComplete: 1-3 lines reflecting on the quest's completion ("The dungeon grew quiet once more.")
+- onBossEncounter: 1-3 ominous lines as the player enters the boss chamber (boss quests only)
+- onBossDefeat: 1-3 cathartic lines after the boss falls (boss quests only)
+- Keep each line under 120 characters
+
 ## COMPLETE EXAMPLE
 
 {
@@ -233,6 +251,9 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
     "monsters": [
       {"variantId": "monster_hunchback_goblin", "baseType": "goblin", "baseSprite": "monster_goblin", "name": "Hunchback Goblin", "statMultiplier": 1.3}
     ]
+  },
+  "narration": {
+    "onComplete": ["The last of the twisted goblins fell, and the trade road breathed easier."]
   },
   "objectives": [
     {"id": "kill_goblins", "type": "kill", "description": "Kill 3 hunchback goblins", "target": "goblin", "requiredCount": 3, "consumeOnTurnIn": false}
@@ -464,8 +485,8 @@ export async function generateArcQuest(context: ArcQuestContext): Promise<Genera
 
   const bossTypes = BOSS_TYPES.map(t => `"${t}"`).join(', ');
   const bossDirective = context.isBossQuest
-    ? `\nIMPORTANT: This is the FINAL BOSS QUEST of the arc. Create a powerful variant monster using one of these boss base types: ${bossTypes} (with statMultiplier 1.8-2.0). Escalate the narrative stakes. Provide higher rewards (xp: 150-200, gold: 80-100). Include dramatic intro lines (3-4 lines). The monster should have an imposing, evocative name.`
-    : '';
+    ? `\nIMPORTANT: This is the FINAL BOSS QUEST of the arc. Create a powerful variant monster using one of these boss base types: ${bossTypes} (with statMultiplier 1.8-2.0). Escalate the narrative stakes. Provide higher rewards (xp: 150-200, gold: 80-100). Include dramatic intro lines (3-4 lines). The monster should have an imposing, evocative name. Include ALL THREE narration fields (onComplete, onBossEncounter, onBossDefeat) with 2-3 atmospheric lines each.`
+    : `\nInclude narration.onComplete with 1-2 atmospheric lines reflecting on quest completion.`;
 
   const userPrompt = `Generate a quest that is part of a story arc.
 

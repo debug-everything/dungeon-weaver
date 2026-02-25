@@ -10,6 +10,7 @@ import { NPCInteractionScene } from './scenes/NPCInteractionScene';
 import { QuestDialogScene } from './scenes/QuestDialogScene';
 import { MapScene } from './scenes/MapScene';
 import { QuestLogScene } from './scenes/QuestLogScene';
+import { NarratorScene } from './scenes/NarratorScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -27,7 +28,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene, MapScene, QuestLogScene],
+  scene: [BootScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene, MapScene, QuestLogScene, NarratorScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

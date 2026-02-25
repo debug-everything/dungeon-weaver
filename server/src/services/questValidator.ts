@@ -72,6 +72,31 @@ export function validateQuest(quest: unknown): ValidationResult {
     }
   }
 
+  // Narration (optional)
+  if (q.narration !== undefined) {
+    const narration = q.narration;
+    if (typeof narration !== 'object' || narration === null) {
+      errors.push('narration must be an object');
+    } else {
+      for (const field of ['onComplete', 'onBossEncounter', 'onBossDefeat'] as const) {
+        const val = narration[field];
+        if (val !== undefined) {
+          if (!Array.isArray(val)) {
+            errors.push(`narration.${field} must be an array of strings`);
+          } else {
+            if (val.length > 3) errors.push(`narration.${field} has too many entries (max 3)`);
+            for (const line of val) {
+              if (typeof line !== 'string' || line.trim().length === 0) {
+                errors.push(`narration.${field} entries must be non-empty strings`);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Variants (optional)
   const variantItemIds = new Set<string>();
   if (q.variants) {

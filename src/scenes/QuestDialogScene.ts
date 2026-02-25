@@ -18,6 +18,8 @@ interface ResponseOption {
   callback: () => void;
 }
 
+const TYPEWRITER_CHAR_DELAY = 30; // ms per character (~33 chars/sec)
+
 export class QuestDialogScene extends Phaser.Scene {
   private npcData!: NPCData;
   private questId!: string;
@@ -43,6 +45,14 @@ export class QuestDialogScene extends Phaser.Scene {
   private inIntroMode: boolean = false;
   private introWasShown: boolean = false;
 
+  // Typewriter effect
+  private typewriterTimer: Phaser.Time.TimerEvent | null = null;
+  private typewriterFullText: string = '';
+  private typewriterTarget: Phaser.GameObjects.Text | null = null;
+  private typewriterCharIndex: number = 0;
+  private typewriterDone: boolean = true;
+  private typewriterOnComplete: (() => void) | null = null;
+
   constructor() {
     super({ key: SCENE_KEYS.QUEST_DIALOG });
   }
@@ -57,6 +67,17 @@ export class QuestDialogScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset typewriter state (Phaser reuses scene instances)
+    if (this.typewriterTimer) {
+      this.typewriterTimer.destroy();
+      this.typewriterTimer = null;
+    }
+    this.typewriterFullText = '';
+    this.typewriterTarget = null;
+    this.typewriterCharIndex = 0;
+    this.typewriterDone = true;
+    this.typewriterOnComplete = null;
+
     const def = this.questSystem.getQuestDefinition(this.questId);
     const state = this.questSystem.getQuestState(this.questId);
     if (!def || !state) {
@@ -87,6 +108,11 @@ export class QuestDialogScene extends Phaser.Scene {
     // Semi-transparent background
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     bg.setInteractive();
+    bg.on('pointerdown', () => {
+      if (!this.typewriterDone) {
+        this.skipTypewriter();
+      }
+    });
 
     // Dialog panel
     const panelWidth = 500;
@@ -174,6 +200,10 @@ export class QuestDialogScene extends Phaser.Scene {
   }
 
   private activateSelection(): void {
+    if (!this.typewriterDone) {
+      this.skipTypewriter();
+      return;
+    }
     if (this.isTerminalNode) {
       this.closeDialog();
       return;
@@ -192,6 +222,44 @@ export class QuestDialogScene extends Phaser.Scene {
     });
   }
 
+  private startTypewriter(textObj: Phaser.GameObjects.Text, fullText: string, onComplete: () => void): void {
+    this.typewriterTarget = textObj;
+    this.typewriterFullText = fullText;
+    this.typewriterCharIndex = 0;
+    this.typewriterDone = false;
+    this.typewriterOnComplete = onComplete;
+    textObj.setText('');
+
+    this.typewriterTimer = this.time.addEvent({
+      delay: TYPEWRITER_CHAR_DELAY,
+      repeat: fullText.length - 1,
+      callback: () => {
+        this.typewriterCharIndex++;
+        textObj.setText(fullText.substring(0, this.typewriterCharIndex));
+        if (this.typewriterCharIndex >= fullText.length) {
+          this.typewriterDone = true;
+          this.typewriterTimer = null;
+          onComplete();
+        }
+      }
+    });
+  }
+
+  private skipTypewriter(): void {
+    if (!this.typewriterDone && this.typewriterTarget) {
+      if (this.typewriterTimer) {
+        this.typewriterTimer.destroy();
+        this.typewriterTimer = null;
+      }
+      this.typewriterTarget.setText(this.typewriterFullText);
+      this.typewriterDone = true;
+      if (this.typewriterOnComplete) {
+        this.typewriterOnComplete();
+        this.typewriterOnComplete = null;
+      }
+    }
+  }
+
   private showIntroLine(): void {
     this.contentContainer.removeAll(true);
     this.responseOptions = [];
@@ -206,7 +274,8 @@ export class QuestDialogScene extends Phaser.Scene {
     const contentTop = panelY - panelHeight / 2 + 50;
 
     const line = this.introLines[this.introIndex];
-    const dialogText = this.add.text(contentX, contentTop, `"${line}"`, {
+    const fullQuotedText = `"${line}"`;
+    const dialogText = this.add.text(contentX, contentTop, '', {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#dddddd',
@@ -215,55 +284,59 @@ export class QuestDialogScene extends Phaser.Scene {
     });
     this.contentContainer.add(dialogText);
 
-    const textHeight = dialogText.height;
-    let responseY = contentTop + textHeight + 24;
     const isLastLine = this.introIndex >= this.introLines.length - 1;
 
-    // "Continue listening..." option
-    const continueLabel = isLastLine ? 'Hear the offer...' : 'Continue listening...';
-    const continueText = this.add.text(contentX + 10, responseY, `> ${continueLabel}`, {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: '#aaaaff',
-      wordWrap: { width: panelWidth - 60 },
-      lineSpacing: 2
-    }).setInteractive({ useHandCursor: true });
+    const showResponses = () => {
+      const textHeight = dialogText.height;
+      let responseY = contentTop + textHeight + 24;
 
-    const continueCallback = () => {
-      if (isLastLine) {
-        // Transition to normal quest dialog — skip repeating offer text
-        this.inIntroMode = false;
-        this.introWasShown = true;
-        this.showNode(this.dialogNodes[0].id);
-      } else {
-        this.introIndex++;
-        this.showIntroLine();
-      }
+      // "Continue listening..." option
+      const continueLabel = isLastLine ? 'Hear the offer...' : 'Continue listening...';
+      const continueText = this.add.text(contentX + 10, responseY, `> ${continueLabel}`, {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#aaaaff',
+        wordWrap: { width: panelWidth - 60 },
+        lineSpacing: 2
+      }).setInteractive({ useHandCursor: true });
+
+      const continueCallback = () => {
+        if (isLastLine) {
+          this.inIntroMode = false;
+          this.introWasShown = true;
+          this.showNode(this.dialogNodes[0].id);
+        } else {
+          this.introIndex++;
+          this.showIntroLine();
+        }
+      };
+      this.responseOptions.push({ text: continueText, callback: continueCallback });
+      continueText.on('pointerover', () => { this.selectedIndex = 0; this.updateSelection(); });
+      continueText.on('pointerout', () => continueText.setColor('#aaaaff'));
+      continueText.on('pointerdown', continueCallback);
+      this.contentContainer.add(continueText);
+      responseY += continueText.height + 10;
+
+      // "Leave conversation" option
+      const leaveText = this.add.text(contentX + 10, responseY, '> Leave conversation', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#aaaaff',
+        wordWrap: { width: panelWidth - 60 },
+        lineSpacing: 2
+      }).setInteractive({ useHandCursor: true });
+
+      const leaveCallback = () => this.closeDialog();
+      this.responseOptions.push({ text: leaveText, callback: leaveCallback });
+      leaveText.on('pointerover', () => { this.selectedIndex = 1; this.updateSelection(); });
+      leaveText.on('pointerout', () => leaveText.setColor('#aaaaff'));
+      leaveText.on('pointerdown', leaveCallback);
+      this.contentContainer.add(leaveText);
+
+      this.updateSelection();
     };
-    this.responseOptions.push({ text: continueText, callback: continueCallback });
-    continueText.on('pointerover', () => { this.selectedIndex = 0; this.updateSelection(); });
-    continueText.on('pointerout', () => continueText.setColor('#aaaaff'));
-    continueText.on('pointerdown', continueCallback);
-    this.contentContainer.add(continueText);
-    responseY += continueText.height + 10;
 
-    // "Leave conversation" option
-    const leaveText = this.add.text(contentX + 10, responseY, '> Leave conversation', {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: '#aaaaff',
-      wordWrap: { width: panelWidth - 60 },
-      lineSpacing: 2
-    }).setInteractive({ useHandCursor: true });
-
-    const leaveCallback = () => this.closeDialog();
-    this.responseOptions.push({ text: leaveText, callback: leaveCallback });
-    leaveText.on('pointerover', () => { this.selectedIndex = 1; this.updateSelection(); });
-    leaveText.on('pointerout', () => leaveText.setColor('#aaaaff'));
-    leaveText.on('pointerdown', leaveCallback);
-    this.contentContainer.add(leaveText);
-
-    this.updateSelection();
+    this.startTypewriter(dialogText, fullQuotedText, showResponses);
   }
 
   private showNode(nodeId: string): void {
@@ -293,10 +366,13 @@ export class QuestDialogScene extends Phaser.Scene {
       this.introWasShown = false;
     }
 
-    let responseY = contentTop;
-    if (!skipNpcText) {
-      // NPC dialog text
-      const dialogText = this.add.text(contentX, contentTop, `"${node.text}"`, {
+    if (skipNpcText) {
+      // No NPC text — show responses immediately
+      this.showNodeResponses(node, contentX, contentTop, panelX, panelY, panelWidth, panelHeight);
+    } else {
+      // NPC dialog text with typewriter effect
+      const fullQuotedText = `"${node.text}"`;
+      const dialogText = this.add.text(contentX, contentTop, '', {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#dddddd',
@@ -305,13 +381,21 @@ export class QuestDialogScene extends Phaser.Scene {
       });
       this.contentContainer.add(dialogText);
 
-      // Measure text height for response positioning
-      const textHeight = dialogText.height;
-      responseY = contentTop + textHeight + 24;
+      this.startTypewriter(dialogText, fullQuotedText, () => {
+        const textHeight = dialogText.height;
+        const responseY = contentTop + textHeight + 24;
+        this.showNodeResponses(node, contentX, responseY, panelX, panelY, panelWidth, panelHeight);
+      });
     }
+  }
+
+  private showNodeResponses(
+    node: DialogNode, contentX: number, startY: number,
+    panelX: number, panelY: number, panelWidth: number, panelHeight: number
+  ): void {
+    let responseY = startY;
 
     if (node.responses && node.responses.length > 0) {
-      // Show player response options
       node.responses.forEach((response, index) => {
         const respText = this.add.text(contentX + 10, responseY, `> ${response.text}`, {
           fontSize: '11px',
@@ -335,10 +419,8 @@ export class QuestDialogScene extends Phaser.Scene {
         responseY += respText.height + 10;
       });
 
-      // Highlight initial selection
       this.updateSelection();
     } else {
-      // Terminal node - show [Continue] button
       this.isTerminalNode = true;
       const continueBtn = this.add.text(panelX, panelY + panelHeight / 2 - 30, '[ Continue ]', {
         fontSize: '14px',
