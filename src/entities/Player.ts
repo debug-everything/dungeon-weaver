@@ -3,8 +3,10 @@ import {
   PLAYER_SPEED, PLAYER_MAX_HEALTH, PLAYER_START_GOLD, SCALE, EVENTS,
   WEAPON_CLASS_DEFAULTS, PLAYER_IFRAMES_DURATION, PLAYER_IFRAMES_FLASH_RATE,
   DODGE_SPEED, DODGE_DURATION, DODGE_COOLDOWN, DODGE_IFRAMES,
-  CHARGE_TIME, CHARGE_MIN_TIME
+  CHARGE_TIME, CHARGE_MIN_TIME,
+  MAX_LEVEL, STAT_POINTS_PER_LEVEL, BASE_STATS, BASE_MAX_HEALTH, XP_PER_LEVEL
 } from '../config/constants';
+import { PlayerStats } from '../types';
 import { InventorySystem } from '../systems/InventorySystem';
 import { CombatSystem } from '../systems/CombatSystem';
 
@@ -19,12 +21,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private mapKey!: Phaser.Input.Keyboard.Key;
   private questLogKey!: Phaser.Input.Keyboard.Key;
   private dodgeKey!: Phaser.Input.Keyboard.Key;
+  private levelUpKey!: Phaser.Input.Keyboard.Key;
+  private tabKey!: Phaser.Input.Keyboard.Key;
 
   public health: number;
   public maxHealth: number;
   public gold: number;
   public inventory: InventorySystem;
   public combat: CombatSystem;
+
+  // Progression
+  public level: number = 1;
+  public xp: number = 0;
+  public stats: PlayerStats = { ...BASE_STATS };
+  public statPoints: number = 0;
 
   private isAttacking: boolean = false;
   private lastAttackTime: number = 0;
@@ -72,6 +82,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Initialize systems
     this.inventory = new InventorySystem(scene);
     this.combat = new CombatSystem(scene, this.inventory);
+    this.combat.setStatsGetter(() => this.stats);
 
     // Give starting weapon
     this.inventory.addItem('weapon_sword_wooden');
@@ -103,6 +114,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.mapKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
     this.questLogKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.dodgeKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.levelUpKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+    this.tabKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
   }
 
   update(time: number): void {
@@ -121,6 +134,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleInteractKey();
     this.handleMapKey();
     this.handleQuestLogKey();
+    this.handleLevelUpKey();
+    this.handleTabKey();
     this.updateGamepadState();
   }
 
@@ -735,6 +750,77 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.setTexture('hero_basic');
     }
+  }
+
+  private handleLevelUpKey(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.levelUpKey)) {
+      this.scene.events.emit(EVENTS.OPEN_LEVEL_UP);
+    }
+  }
+
+  private handleTabKey(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+      // TAB from game world opens first overlay tab (Inventory)
+      this.scene.events.emit(EVENTS.OPEN_INVENTORY);
+    }
+  }
+
+  // --- Progression ---
+
+  addXP(amount: number): void {
+    if (this.level >= MAX_LEVEL) return;
+
+    this.xp += amount;
+
+    // Check for level-ups (handle multi-level jumps)
+    while (this.level < MAX_LEVEL && this.xp >= XP_PER_LEVEL[this.level]) {
+      this.level++;
+      this.statPoints += STAT_POINTS_PER_LEVEL;
+
+      // Full HP restore on level up
+      this.health = this.maxHealth;
+      this.scene.events.emit(EVENTS.PLAYER_HEALTH_CHANGED, this.health, this.maxHealth);
+      this.scene.events.emit(EVENTS.LEVEL_UP, this.level, this.statPoints);
+    }
+
+    // Emit XP gained for UI bar update
+    const xpToNext = this.level < MAX_LEVEL ? XP_PER_LEVEL[this.level] : this.xp;
+    this.scene.events.emit(EVENTS.XP_GAINED, this.xp, xpToNext, this.level);
+  }
+
+  allocateStat(stat: keyof PlayerStats): boolean {
+    if (this.statPoints <= 0) return false;
+    this.statPoints--;
+    this.stats[stat]++;
+    this.recalculateDerivedStats();
+    this.scene.events.emit(EVENTS.STATS_CHANGED, this.stats, this.statPoints);
+    return true;
+  }
+
+  recalculateDerivedStats(): void {
+    const newMax = BASE_MAX_HEALTH + (this.stats.constitution - 1) * 5;
+    if (newMax !== this.maxHealth) {
+      const healthDiff = newMax - this.maxHealth;
+      this.maxHealth = newMax;
+      // If max increased, add the extra HP
+      if (healthDiff > 0) this.health += healthDiff;
+      this.health = Math.min(this.health, this.maxHealth);
+      this.scene.events.emit(EVENTS.PLAYER_HEALTH_CHANGED, this.health, this.maxHealth);
+    }
+  }
+
+  getXPToNextLevel(): number {
+    if (this.level >= MAX_LEVEL) return this.xp;
+    return XP_PER_LEVEL[this.level];
+  }
+
+  getXPProgress(): number {
+    if (this.level >= MAX_LEVEL) return 1;
+    const prevThreshold = this.level > 1 ? XP_PER_LEVEL[this.level - 1] : 0;
+    const nextThreshold = XP_PER_LEVEL[this.level];
+    const range = nextThreshold - prevThreshold;
+    if (range <= 0) return 1;
+    return (this.xp - prevThreshold) / range;
   }
 
   getInteractionPoint(): { x: number; y: number } {

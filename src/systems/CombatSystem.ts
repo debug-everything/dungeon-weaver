@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { InventorySystem } from './InventorySystem';
 import { COMBO_WINDOW, COMBO_DAMAGE_MULTIPLIERS } from '../config/constants';
+import type { PlayerStats } from '../types';
 
 export interface DamageResult {
   damage: number;
@@ -10,6 +11,7 @@ export interface DamageResult {
 export class CombatSystem {
   private scene: Phaser.Scene;
   private inventory: InventorySystem;
+  private statsGetter: (() => PlayerStats) | null = null;
 
   // Combo state
   private comboCount: number = 0;
@@ -18,6 +20,10 @@ export class CombatSystem {
   constructor(scene: Phaser.Scene, inventory: InventorySystem) {
     this.scene = scene;
     this.inventory = inventory;
+  }
+
+  setStatsGetter(getter: () => PlayerStats): void {
+    this.statsGetter = getter;
   }
 
   isInAttackArc(
@@ -49,10 +55,14 @@ export class CombatSystem {
 
   calculatePlayerDamage(comboMultiplier: number = 1.0, chargeMultiplier: number = 1.0): DamageResult {
     const baseDamage = this.inventory.getWeaponDamage();
-    const variance = Math.random() * 0.3 + 0.85; // 85% to 115% damage
-    const isCritical = Math.random() < 0.1; // 10% crit chance
+    const stats = this.statsGetter?.();
+    const strengthBonus = stats ? (stats.strength - 1) * 0.5 : 0;
+    const critChance = stats ? 0.10 + (stats.dexterity - 1) * 0.005 : 0.10;
 
-    let damage = Math.floor(baseDamage * variance * comboMultiplier * chargeMultiplier);
+    const variance = Math.random() * 0.3 + 0.85; // 85% to 115% damage
+    const isCritical = Math.random() < critChance;
+
+    let damage = Math.floor((baseDamage + strengthBonus) * variance * comboMultiplier * chargeMultiplier);
     if (isCritical) {
       damage = Math.floor(damage * 1.5);
     }

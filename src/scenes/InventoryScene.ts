@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, INVENTORY_SLOTS, INVENTORY_COLS, EVENTS } from '../config/constants';
+import { launchOverlayTab, getNextTab, createTabBar, bindTabShortcuts } from '../systems/TabNavigation';
 import { InventorySystem } from '../systems/InventorySystem';
 import { EquipmentSlot, Item } from '../types';
 import { Player } from '../entities/Player';
@@ -48,6 +49,9 @@ export class InventoryScene extends Phaser.Scene {
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     bg.setInteractive();
 
+    // Tab bar
+    this.createTabBar();
+
     // Main panel
     const panelWidth = 550;
     const panelHeight = 400;
@@ -91,9 +95,13 @@ export class InventoryScene extends Phaser.Scene {
       color: '#666666'
     }).setOrigin(0.5);
 
-    // ESC or I to close
+    // ESC to close, I/Q/M/L to switch tabs
     this.input.keyboard?.on('keydown-ESC', () => this.closeInventory());
-    this.input.keyboard?.on('keydown-I', () => this.closeInventory());
+    this.input.keyboard?.on('keydown-TAB', (e: KeyboardEvent) => {
+      e.preventDefault();
+      this.switchToNextTab();
+    });
+    bindTabShortcuts(this, 'INVENTORY', () => this.closeInventory());
 
     // Arrow key / WASD grid navigation
     this.input.keyboard?.on('keydown-LEFT', () => this.moveSelection(-1, 0));
@@ -522,6 +530,14 @@ export class InventoryScene extends Phaser.Scene {
       this.tooltipContainer.destroy();
       this.tooltipContainer = null;
     }
+  }
+
+  private createTabBar(): void {
+    createTabBar(this, 'INVENTORY', (tabKey) => launchOverlayTab(this, tabKey));
+  }
+
+  private switchToNextTab(): void {
+    launchOverlayTab(this, getNextTab('INVENTORY'));
   }
 
   private closeInventory(): void {

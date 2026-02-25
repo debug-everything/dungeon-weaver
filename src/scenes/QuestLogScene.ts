@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
+import { launchOverlayTab, getNextTab, createTabBar, bindTabShortcuts } from '../systems/TabNavigation';
 import { QuestSystem } from '../systems/QuestSystem';
 import { StoryArcInfo } from '../types';
 import { NPCS } from '../data/npcs';
@@ -30,15 +31,18 @@ export class QuestLogScene extends Phaser.Scene {
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.85);
     bg.setInteractive();
 
+    // Tab bar
+    this.createTabBar();
+
     // Title
-    this.add.text(GAME_WIDTH / 2, 25, 'QUEST LOG', {
+    this.add.text(GAME_WIDTH / 2, 38, 'QUEST LOG', {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#c9a227'
     }).setOrigin(0.5);
 
     // Content area bounds
-    const contentTop = 50;
+    const contentTop = 60;
     const contentBottom = GAME_HEIGHT - 35;
     const contentAreaHeight = contentBottom - contentTop;
 
@@ -62,9 +66,14 @@ export class QuestLogScene extends Phaser.Scene {
       color: '#666666'
     }).setOrigin(0.5);
 
-    // Close with Q or ESC
-    this.input.keyboard?.on('keydown-Q', () => this.closeQuestLog());
+    // ESC to close, Q/I/M/L to switch tabs
     this.input.keyboard?.on('keydown-ESC', () => this.closeQuestLog());
+    this.input.keyboard?.on('keydown-TAB', (e: KeyboardEvent) => {
+      e.preventDefault();
+      this.switchToNextTab();
+    });
+
+    bindTabShortcuts(this, 'QUEST_LOG', () => this.closeQuestLog());
 
     // Scroll with arrow keys
     this.input.keyboard?.on('keydown-UP', () => this.scroll(-30));
@@ -287,6 +296,14 @@ export class QuestLogScene extends Phaser.Scene {
     if (pad.buttons[13]?.pressed) this.scroll(3);  // D-pad down
 
     this.prevGamepadButtons = pad.buttons.map(b => b.pressed);
+  }
+
+  private createTabBar(): void {
+    createTabBar(this, 'QUEST_LOG', (tabKey) => launchOverlayTab(this, tabKey));
+  }
+
+  private switchToNextTab(): void {
+    launchOverlayTab(this, getNextTab('QUEST_LOG'));
   }
 
   private closeQuestLog(): void {

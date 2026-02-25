@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, SCALE, EVENTS } from '../config/constants';
+import { launchOverlayTab, getNextTab, createTabBar, bindTabShortcuts } from '../systems/TabNavigation';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
 import { QuestSystem } from '../systems/QuestSystem';
 import { QuestMapIndicator } from '../types';
@@ -47,8 +48,11 @@ export class MapScene extends Phaser.Scene {
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.85);
     bg.setInteractive();
 
+    // Tab bar
+    this.createTabBar();
+
     // Title
-    this.add.text(GAME_WIDTH / 2, 25, 'DUNGEON MAP', {
+    this.add.text(GAME_WIDTH / 2, 38, 'DUNGEON MAP', {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#c9a227'
@@ -173,8 +177,12 @@ export class MapScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Close with M or ESC
-    this.input.keyboard?.on('keydown-M', () => this.closeMap());
     this.input.keyboard?.on('keydown-ESC', () => this.closeMap());
+    bindTabShortcuts(this, 'MAP', () => this.closeMap());
+    this.input.keyboard?.on('keydown-TAB', (e: KeyboardEvent) => {
+      e.preventDefault();
+      this.switchToNextTab();
+    });
   }
 
   update(): void {
@@ -230,6 +238,14 @@ export class MapScene extends Phaser.Scene {
       }
       // hidden → no indicator shown
     }
+  }
+
+  private createTabBar(): void {
+    createTabBar(this, 'MAP', (tabKey) => launchOverlayTab(this, tabKey));
+  }
+
+  private switchToNextTab(): void {
+    launchOverlayTab(this, getNextTab('MAP'));
   }
 
   private closeMap(): void {

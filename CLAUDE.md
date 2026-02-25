@@ -51,6 +51,7 @@ src/
     ├── NPCInteractionScene.ts # NPC dialog & quest UI
     ├── QuestLogScene.ts       # Quest log overlay (Q key)
     ├── NarratorScene.ts       # Cinematic narrator/boss dialog overlay
+    ├── LevelUpScene.ts        # Stat allocation overlay (L key / TAB)
     └── ShopScene.ts           # Shop interface
 
 server/
@@ -77,10 +78,12 @@ server/
 - **WASD / Arrow Keys**: Move player
 - **SPACE**: Attack (tap for normal, hold to charge)
 - **SHIFT**: Dodge/roll in facing direction
+- **TAB**: Open player menu (cycles: Inventory → Quests → Map → Stats)
 - **I**: Open/close inventory
 - **E**: Interact with NPCs
 - **Q**: Open/close quest log
 - **M**: Open/close dungeon map
+- **L**: Open/close stats/level-up screen
 - **ESC**: Close modals
 
 ## Key Patterns
@@ -152,7 +155,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e + 2f)
+## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e + 2f + 3a)
 - ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
 - ✅ 28 monster types with AI across 6 families (undead, beast, orc, demon, elemental, dark_knight)
 - ✅ 3 NPC merchants
@@ -187,9 +190,16 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Loot chests (0-2 per room, wall-adjacent placement, quest-driven chest spawning)
 - ✅ NPC extended quest intros (dramatic multi-line intro before quest offer)
 - ✅ Narrator comments & boss dialog (LLM-generated cinematic overlay on quest complete, boss encounter, boss defeat)
+- ✅ XP & leveling system (max level 20, XP from monsters + quests)
+- ✅ Stat point allocation (5 stats: STR/DEX/CON/LCK/INT, 3 points per level)
+- ✅ Stat-scaled combat (strength → damage, dexterity → crit chance, luck → gold bonus)
+- ✅ Level-up VFX (golden flash, floating text, auto-open stat screen)
+- ✅ XP bar + level display in HUD
+- ✅ LevelUpScene (stat allocation overlay with keyboard/mouse/gamepad support)
+- ✅ Tab navigation between player overlay screens (TAB key cycles Inventory → Quests → Map → Stats)
 
 ## Planned Features (See PRD.md)
-- Phase 3: XP/leveling, skills, character classes
+- Phase 3b: Skills, character classes
 - Phase 4: Multiple areas, crafting
 - Phase 5: Save system polish, audio, accessibility
 

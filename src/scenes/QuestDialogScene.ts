@@ -493,8 +493,11 @@ export class QuestDialogScene extends Phaser.Scene {
       }
     }
 
-    // XP stored for future leveling system (emit event for tracking)
-    // For now, show a notification via the UI scene
+    // Award XP
+    if (rewards.xp) {
+      this.player.addXP(rewards.xp);
+    }
+
     this.scene.get(SCENE_KEYS.GAME).events.emit(EVENTS.QUEST_TURNED_IN, this.questId, rewards);
   }
 

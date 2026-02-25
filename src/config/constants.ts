@@ -44,6 +44,26 @@ export const CHEST_LOOT_TABLE = [
   { itemId: 'weapon_sword_steel', chance: 0.02 },
 ];
 
+// Leveling system
+export const MAX_LEVEL = 20;
+export const STAT_POINTS_PER_LEVEL = 3;
+export const BASE_STATS = { strength: 1, dexterity: 1, constitution: 1, luck: 1, intelligence: 1 };
+export const BASE_MAX_HEALTH = 100;
+// Cumulative XP thresholds: XP_PER_LEVEL[n] = 80n + 20n² (index 0 unused, index 1 = level 2 threshold)
+export const XP_PER_LEVEL: number[] = (() => {
+  const table = [0]; // index 0 = no threshold for level 1
+  let cumulative = 0;
+  for (let n = 1; n <= MAX_LEVEL; n++) {
+    cumulative += 80 * n + 20 * n * n;
+    table.push(cumulative);
+  }
+  return table;
+})();
+
+// Tab-navigable player overlay scenes (in cycle order)
+export const PLAYER_OVERLAY_TABS = ['INVENTORY', 'QUEST_LOG', 'MAP', 'LEVEL_UP'] as const;
+export type PlayerOverlayTab = typeof PLAYER_OVERLAY_TABS[number];
+
 // I-frames
 export const PLAYER_IFRAMES_DURATION = 500;
 export const PLAYER_IFRAMES_FLASH_RATE = 80;
@@ -73,7 +93,8 @@ export const SCENE_KEYS = {
   QUEST_DIALOG: 'QuestDialogScene',
   MAP: 'MapScene',
   QUEST_LOG: 'QuestLogScene',
-  NARRATOR: 'NarratorScene'
+  NARRATOR: 'NarratorScene',
+  LEVEL_UP: 'LevelUpScene'
 } as const;
 
 // Monster tier system
@@ -114,5 +135,10 @@ export const EVENTS = {
   ARC_NEXT_QUEST_NPC: 'arc-next-quest-npc',
   BOSS_ROOM_ENTERED: 'boss-room-entered',
   BOSS_DEFEATED: 'boss-defeated',
-  CLOSE_NARRATOR: 'close-narrator'
+  CLOSE_NARRATOR: 'close-narrator',
+  XP_GAINED: 'xp-gained',
+  LEVEL_UP: 'level-up',
+  STATS_CHANGED: 'stats-changed',
+  OPEN_LEVEL_UP: 'open-level-up',
+  CLOSE_LEVEL_UP: 'close-level-up'
 } as const;

@@ -87,6 +87,14 @@ export interface ShopItem {
   sellPrice: number;
 }
 
+export interface PlayerStats {
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  luck: number;
+  intelligence: number;
+}
+
 export interface PlayerState {
   health: number;
   maxHealth: number;
@@ -94,6 +102,10 @@ export interface PlayerState {
   inventory: InventoryItem[];
   equipment: Equipment;
   position: { x: number; y: number };
+  level: number;
+  xp: number;
+  stats: PlayerStats;
+  statPoints: number;
 }
 
 export type RoomType = 'start' | 'challenge' | 'boss';

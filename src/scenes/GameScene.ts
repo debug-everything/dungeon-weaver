@@ -660,20 +660,25 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Track monster kills for room clearing + boss defeated
+    // Track monster kills for room clearing + boss defeated + XP award
     this.events.on(EVENTS.MONSTER_KILLED, (monsterData: MonsterData, worldX: number, worldY: number) => {
       this.onMonsterKilled(worldX, worldY);
+      if (monsterData?.xpReward) {
+        this.player.addXP(monsterData.xpReward);
+      }
       if (monsterData?.bossOnly) {
         this.events.emit(EVENTS.BOSS_DEFEATED);
       }
     });
 
-    // Loot dropped
+    // Loot dropped (luck bonus on gold)
     this.events.on('loot-dropped', (data: { x: number; y: number; gold: number; items: string[] }) => {
-      this.player.addGold(data.gold);
+      const luckBonus = 1 + (this.player.stats.luck - 1) * 0.02;
+      const adjustedGold = Math.floor(data.gold * luckBonus);
+      this.player.addGold(adjustedGold);
 
       // Show gold pickup text
-      const goldText = this.add.text(data.x, data.y, `+${data.gold} gold`, {
+      const goldText = this.add.text(data.x, data.y, `+${adjustedGold} gold`, {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ffd700',
@@ -886,6 +891,49 @@ export class GameScene extends Phaser.Scene {
       this.narratorActive = false;
     });
 
+    // Level up VFX + auto-open stat allocation
+    this.events.on(EVENTS.LEVEL_UP, (_newLevel: number) => {
+      // Golden flash
+      this.cameras.main.flash(300, 255, 215, 0, false);
+
+      // Floating "LEVEL UP!" text
+      const text = this.add.text(this.player.x, this.player.y - 40, 'LEVEL UP!', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#ffd700',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(1001);
+
+      this.tweens.add({
+        targets: text,
+        y: this.player.y - 80,
+        alpha: 0,
+        scale: 1.5,
+        duration: 1500,
+        ease: 'Power2',
+        onComplete: () => text.destroy()
+      });
+
+      // Auto-open level up scene after a short delay
+      this.time.delayedCall(500, () => {
+        if (!this.isPaused) {
+          this.openLevelUpScene();
+        }
+      });
+    });
+
+    // Open/close level up scene
+    this.events.on(EVENTS.OPEN_LEVEL_UP, () => {
+      if (!this.isPaused) {
+        this.openLevelUpScene();
+      }
+    });
+
+    this.events.on(EVENTS.CLOSE_LEVEL_UP, () => {
+      this.resumeGame();
+    });
+
     // Player died
     this.events.on('player-died', () => {
       this.cameras.main.fade(1000, 0, 0, 0);
@@ -1059,6 +1107,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private openLevelUpScene(): void {
+    this.pauseGame();
+    this.scene.launch(SCENE_KEYS.LEVEL_UP, { player: this.player });
+  }
+
   serializeGameState(): SaveGamePayload {
     return {
       playerName: 'Hero',
@@ -1066,7 +1119,11 @@ export class GameScene extends Phaser.Scene {
         health: this.player.health,
         maxHealth: this.player.maxHealth,
         gold: this.player.gold,
-        position: { x: this.player.x, y: this.player.y }
+        position: { x: this.player.x, y: this.player.y },
+        level: this.player.level,
+        xp: this.player.xp,
+        stats: { ...this.player.stats },
+        statPoints: this.player.statPoints
       },
       inventoryState: this.player.inventory.getAllItems(),
       equipmentState: this.player.inventory.getEquipment(),
