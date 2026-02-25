@@ -106,7 +106,8 @@ export const SCENE_KEYS = {
   MAP: 'MapScene',
   QUEST_LOG: 'QuestLogScene',
   NARRATOR: 'NarratorScene',
-  LEVEL_UP: 'LevelUpScene'
+  LEVEL_UP: 'LevelUpScene',
+  TERMINAL: 'TerminalScene'
 } as const;
 
 // Monster tier system
@@ -153,5 +154,7 @@ export const EVENTS = {
   STATS_CHANGED: 'stats-changed',
   OPEN_LEVEL_UP: 'open-level-up',
   CLOSE_LEVEL_UP: 'close-level-up',
-  PLAYER_SPELL: 'player-spell'
+  PLAYER_SPELL: 'player-spell',
+  OPEN_TERMINAL: 'open-terminal',
+  CLOSE_TERMINAL: 'close-terminal'
 } as const;

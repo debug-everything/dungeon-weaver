@@ -964,6 +964,17 @@ export class GameScene extends Phaser.Scene {
       this.resumeGame();
     });
 
+    // Debug terminal (no pause)
+    this.events.on(EVENTS.OPEN_TERMINAL, () => {
+      if (!this.scene.isActive(SCENE_KEYS.TERMINAL)) {
+        this.scene.launch(SCENE_KEYS.TERMINAL, { player: this.player, rooms: this.rooms });
+      }
+    });
+
+    this.events.on(EVENTS.CLOSE_TERMINAL, () => {
+      this.scene.stop(SCENE_KEYS.TERMINAL);
+    });
+
     // Player died
     this.events.on('player-died', () => {
       this.cameras.main.fade(1000, 0, 0, 0);

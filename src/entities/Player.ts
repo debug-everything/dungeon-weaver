@@ -24,6 +24,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private dodgeKey!: Phaser.Input.Keyboard.Key;
   private levelUpKey!: Phaser.Input.Keyboard.Key;
   private tabKey!: Phaser.Input.Keyboard.Key;
+  private terminalKey!: Phaser.Input.Keyboard.Key;
 
   public health: number;
   public maxHealth: number;
@@ -117,6 +118,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.dodgeKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.levelUpKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
     this.tabKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+    this.terminalKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.BACKTICK);
   }
 
   update(time: number): void {
@@ -137,6 +139,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleQuestLogKey();
     this.handleLevelUpKey();
     this.handleTabKey();
+    this.handleTerminalKey();
     this.updateGamepadState();
   }
 
@@ -837,6 +840,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
       // TAB from game world opens first overlay tab (Inventory)
       this.scene.events.emit(EVENTS.OPEN_INVENTORY);
+    }
+  }
+
+  private handleTerminalKey(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.terminalKey)) {
+      this.scene.events.emit(EVENTS.OPEN_TERMINAL);
     }
   }
 
