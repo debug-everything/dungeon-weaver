@@ -28,7 +28,19 @@ export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback
   sword:   { arcWidth: 120, knockback: 40 },
   hammer:  { arcWidth: 160, knockback: 80 },
   katana:  { arcWidth: 100, knockback: 30 },
-  unarmed: { arcWidth: 90,  knockback: 10 }
+  unarmed: { arcWidth: 90,  knockback: 10 },
+  spell:   { arcWidth: 0,   knockback: 0 }
+};
+
+// Spell projectile settings
+export const SPELL_PROJECTILE_SPEED: Record<string, number> = {
+  fireball: 200,
+  lightning: 350
+};
+
+export const SPELL_COLORS: Record<string, { primary: number; secondary: number; trail: number }> = {
+  fireball:  { primary: 0xff6600, secondary: 0xff2200, trail: 0xffaa00 },
+  lightning: { primary: 0x4488ff, secondary: 0xffffff, trail: 0x2266cc }
 };
 
 // Chests
@@ -140,5 +152,6 @@ export const EVENTS = {
   LEVEL_UP: 'level-up',
   STATS_CHANGED: 'stats-changed',
   OPEN_LEVEL_UP: 'open-level-up',
-  CLOSE_LEVEL_UP: 'close-level-up'
+  CLOSE_LEVEL_UP: 'close-level-up',
+  PLAYER_SPELL: 'player-spell'
 } as const;

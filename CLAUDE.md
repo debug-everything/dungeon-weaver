@@ -159,11 +159,12 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
 - ✅ 28 monster types with AI across 6 families (undead, beast, orc, demon, elemental, dark_knight)
 - ✅ 3 NPC merchants
-- ✅ 12 weapons, 5 outfits, 3 shields, 5 consumables
+- ✅ 12 melee weapons, 2 spell books, 5 outfits, 3 shields, 5 consumables
 - ✅ Inventory & equipment system (3 slots: weapon, armor, shield)
 - ✅ Armor system (5 outfits that change player sprite + 3 shields, defense stat with damage reduction)
 - ✅ Combat with arc-based attack hitbox (per-weapon-class arc width and reach)
-- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed (arc width + knockback per class)
+- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed (arc width + knockback per class), spell (projectile)
+- ✅ Spell system (Fireball + Lightning tomes, projectile physics, INT scaling, Wizard Cloak requirement, lightning chain AOE)
 - ✅ Knockback on hit (weapon-class-specific force, monsters stop at walls)
 - ✅ Invincibility frames (500ms after damage, flashing visual)
 - ✅ Dodge/roll (SHIFT key, afterimage trail, brief i-frames)
@@ -192,7 +193,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Narrator comments & boss dialog (LLM-generated cinematic overlay on quest complete, boss encounter, boss defeat)
 - ✅ XP & leveling system (max level 20, XP from monsters + quests)
 - ✅ Stat point allocation (5 stats: STR/DEX/CON/LCK/INT, 3 points per level)
-- ✅ Stat-scaled combat (strength → damage, dexterity → crit chance, luck → gold bonus)
+- ✅ Stat-scaled combat (strength → melee damage, intelligence → spell damage, dexterity → crit chance, luck → gold bonus)
 - ✅ Level-up VFX (golden flash, floating text, auto-open stat screen)
 - ✅ XP bar + level display in HUD
 - ✅ LevelUpScene (stat allocation overlay with keyboard/mouse/gamepad support)

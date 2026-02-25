@@ -1,4 +1,4 @@
-import { Item, InventoryItem, Equipment, EquipmentSlot, WeaponClass } from '../types';
+import { Item, InventoryItem, Equipment, EquipmentSlot, WeaponClass, SpellType } from '../types';
 import { INVENTORY_SLOTS, EVENTS } from '../config/constants';
 import { getItem } from '../data/items';
 
@@ -156,6 +156,18 @@ export class InventorySystem {
       }
     }
     return defense;
+  }
+
+  isSpellWeapon(): boolean {
+    return this.getWeaponClass() === 'spell';
+  }
+
+  getSpellType(): SpellType | undefined {
+    return this.equipment.weapon?.stats.spellType;
+  }
+
+  getEquippedArmor(): Item | null {
+    return this.equipment.armor;
   }
 
   hasItem(itemId: string): boolean {

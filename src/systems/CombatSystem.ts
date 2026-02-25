@@ -70,6 +70,22 @@ export class CombatSystem {
     return { damage, isCritical };
   }
 
+  calculateSpellDamage(baseDamage: number): DamageResult {
+    const stats = this.statsGetter?.();
+    const intBonus = stats ? (stats.intelligence - 1) * 0.8 : 0;
+    const critChance = stats ? 0.08 + (stats.dexterity - 1) * 0.005 : 0.08;
+
+    const variance = Math.random() * 0.2 + 0.9; // 90% to 110%
+    const isCritical = Math.random() < critChance;
+
+    let damage = Math.floor((baseDamage + intBonus) * variance);
+    if (isCritical) {
+      damage = Math.floor(damage * 1.5);
+    }
+
+    return { damage, isCritical };
+  }
+
   calculateMonsterDamage(baseDamage: number, playerDefense: number): DamageResult {
     const variance = Math.random() * 0.3 + 0.85;
     const reduction = Math.max(0, playerDefense * 0.5);

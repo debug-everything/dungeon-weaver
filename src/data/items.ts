@@ -139,6 +139,30 @@ export const ITEMS: Record<string, Item> = {
     stackable: false
   },
 
+  // Weapons - Spell Books
+  spell_fireball: {
+    id: 'spell_fireball',
+    name: 'Fireball Tome',
+    type: 'weapon',
+    slot: 'weapon',
+    stats: { damage: 18, speed: 0.8, range: 120, weaponClass: 'spell', spellType: 'fireball', aoe: 1 },
+    value: 300,
+    sprite: 'spell_fireball',
+    description: 'An ancient tome of fire magic. Launches a fireball projectile.',
+    stackable: false
+  },
+  spell_lightning: {
+    id: 'spell_lightning',
+    name: 'Lightning Tome',
+    type: 'weapon',
+    slot: 'weapon',
+    stats: { damage: 12, speed: 1.4, range: 150, weaponClass: 'spell', spellType: 'lightning', aoe: 3 },
+    value: 240,
+    sprite: 'spell_lightning',
+    description: 'A crackling tome of storm magic. Lightning chains to nearby enemies.',
+    stackable: false
+  },
+
   // Consumables - Potions
   flask_red: {
     id: 'flask_red',

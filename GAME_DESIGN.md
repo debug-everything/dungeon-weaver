@@ -23,15 +23,33 @@
 
 | Stat | Value |
 |------|-------|
-| Max Health | 100 |
+| Base Max Health | 100 (+ Constitution × 5) |
 | Speed | 120 |
 | Starting Gold | 50 |
 | Inventory Slots | 20 |
 | Interaction Distance | 32px |
+| Max Level | 20 |
+| Stat Points per Level | 3 |
+
+### Leveling & Stats
+- XP earned from monster kills (`xpReward`) and quest turn-ins (`rewards.xp`)
+- XP curve: cumulative thresholds `80n + 20n²` (Lv2: 120, Lv5: 900, Lv10: 2800, Lv15: 5700, Lv20: 9600)
+- On level up: full HP restore, golden flash VFX, floating "LEVEL UP!" text, auto-opens stat allocation screen
+- 3 stat points per level, allocated freely. Unspent points are banked.
+- All stats start at 1.
+
+| Stat | Effect per point |
+|------|-----------------|
+| Strength (STR) | +0.5 melee damage (additive to weapon base) |
+| Dexterity (DEX) | +0.5% crit chance (base 10%) |
+| Constitution (CON) | +5 max HP (base 100) |
+| Luck (LCK) | +2% gold bonus on loot drops |
+| Intelligence (INT) | +0.8 spell damage per point (base from spell book) |
 
 ### Combat
 - Attack with SPACE key (directional arc based on facing)
-- Critical hit: 10% chance, 1.5x damage
+- Critical hit: 10% + DEX bonus, 1.5x damage
+- Damage formula: `(weaponDamage + STR bonus) × variance × combo × charge`
 - Damage variance: 85%-115% of base
 - Attack cooldown: 400ms base (modified by weapon speed)
 - **Attack arcs**: Each weapon class has a distinct arc width, reach multiplier, and knockback force
@@ -49,6 +67,17 @@
 | Hammer | 160° | 80 | Slow, wide arc, massive knockback |
 | Katana | 100° | 30 | Fast, longest reach |
 | Unarmed | 90° | 10 | Fallback when no weapon equipped |
+| Spell | N/A | 0 | Projectile-based ranged attack |
+
+### Spell System
+- Spell books equip in the weapon slot (weapon class: `spell`)
+- **Casting requires the Wizard Cloak** (`armor_wizard`) to be equipped. Equipping the book alone is allowed, but pressing SPACE without the cloak shows "Requires Wizard Cloak!" floating error
+- Spells fire instantly on SPACE press — no combo, no charge
+- Spell damage formula: `(baseDamage + (INT-1) × 0.8) × variance` (90%-110%), 8% base crit + DEX bonus
+- Projectiles are graphics-based (glowing circles with particle trails), destroyed on wall/monster hit or max range
+- **Fireball**: Single target, 200px/s projectile, orange/red visuals
+- **Lightning**: Chains to up to 2 additional nearby enemies within 60px. Damage decays per chain: 100% → 60% → 35%. Visual: jagged blue lightning arcs between chained targets (fades in 200ms)
+- Sold by Aldric the Sage
 
 ---
 
@@ -181,6 +210,8 @@ Tiers unlock new monster families as the player completes story arcs:
 | War Hammer | `weapon_hammer` | 22 | 0.7 | 24 | hammer | 180 |
 | Sledgehammer | `weapon_sledgehammer` | 35 | 0.5 | 28 | hammer | 350 |
 | Silver Katana | `weapon_katana_silver` | 28 | 1.3 | 32 | katana | 450 |
+| Fireball Tome | `spell_fireball` | 18 | 0.8 | 120 | spell | 300 |
+| Lightning Tome | `spell_lightning` | 12 | 1.4 | 150 | spell | 240 |
 
 ### Consumables
 
@@ -334,7 +365,7 @@ When a quest has **collect** objectives, `injectQuestLoot()` adds the target ite
 `monster_zombie`, `monster_zombie_small`, `monster_zombie_green`, `monster_zombie_tall`, `monster_skelet`, `monster_necromancer`, `monster_bat`, `monster_wogol`, `monster_rokita`, `monster_tentackle`, `monster_goblin`, `monster_orc`, `monster_orc_armored`, `monster_orc_masked`, `monster_orc_shaman`, `monster_orc_veteran`, `monster_ogre`, `monster_imp`, `monster_chort`, `monster_bies`, `monster_demon`, `monster_elemental_goo`, `monster_elemental_fire`, `monster_elemental_water`, `monster_elemental_air`, `monster_elemental_earth`, `monster_elemental_plant`, `monster_elemental_gold`, `npc_wizzard` (Elemental Lord), `monster_dark_knight`
 
 **Items (25 sprites):**
-`weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`, `armor_peasant`, `armor_spy`, `armor_wizard`, `armor_barbarian`, `armor_knight`, `armor_shield_wooden`, `armor_shield_iron`, `armor_shield_golden`
+`weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `spell_fireball`, `spell_lightning`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`, `armor_peasant`, `armor_spy`, `armor_wizard`, `armor_barbarian`, `armor_knight`, `armor_shield_wooden`, `armor_shield_iron`, `armor_shield_golden`
 
 ---
 

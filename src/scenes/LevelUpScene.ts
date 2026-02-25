@@ -19,7 +19,7 @@ const STAT_ROWS: StatRowDef[] = [
   { key: 'dexterity', name: 'DEX', effectText: (v) => `+${((v - 1) * 0.5).toFixed(1)}% crit` },
   { key: 'constitution', name: 'CON', effectText: (v) => `+${(v - 1) * 5} HP` },
   { key: 'luck', name: 'LCK', effectText: (v) => `+${((v - 1) * 2).toFixed(0)}% gold` },
-  { key: 'intelligence', name: 'INT', effectText: () => `(future: mana)` },
+  { key: 'intelligence', name: 'INT', effectText: (v) => `+${((v - 1) * 0.8).toFixed(1)} spell dmg` },
 ];
 
 export class LevelUpScene extends Phaser.Scene {

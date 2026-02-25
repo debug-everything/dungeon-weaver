@@ -4,7 +4,8 @@ import {
   WEAPON_CLASS_DEFAULTS, PLAYER_IFRAMES_DURATION, PLAYER_IFRAMES_FLASH_RATE,
   DODGE_SPEED, DODGE_DURATION, DODGE_COOLDOWN, DODGE_IFRAMES,
   CHARGE_TIME, CHARGE_MIN_TIME,
-  MAX_LEVEL, STAT_POINTS_PER_LEVEL, BASE_STATS, BASE_MAX_HEALTH, XP_PER_LEVEL
+  MAX_LEVEL, STAT_POINTS_PER_LEVEL, BASE_STATS, BASE_MAX_HEALTH, XP_PER_LEVEL,
+  SPELL_PROJECTILE_SPEED
 } from '../config/constants';
 import { PlayerStats } from '../types';
 import { InventorySystem } from '../systems/InventorySystem';
@@ -211,10 +212,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private handleAttack(time: number): void {
     const cooldown = this.combat.getAttackCooldown();
-    const keyboardDown = this.spaceKey.isDown;
-    const gamepadDown = this.isGamepadButtonDown(0); // A button
     const keyboardJustDown = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const gamepadJustDown = this.isGamepadButtonJustDown(0);
+
+    // Spell weapons: fire instantly on press (no charge/combo)
+    if (this.inventory.isSpellWeapon()) {
+      if ((keyboardJustDown || gamepadJustDown) && !this.isAttacking && time - this.lastAttackTime > cooldown) {
+        this.performSpellAttack(time);
+      }
+      return;
+    }
+
+    const keyboardDown = this.spaceKey.isDown;
+    const gamepadDown = this.isGamepadButtonDown(0); // A button
     const keyboardJustUp = Phaser.Input.Keyboard.JustUp(this.spaceKey);
     const gamepadJustUp = this.isGamepadButtonJustUp(0);
 
@@ -320,6 +330,71 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.attackHitbox = null;
       }
       this.isAttacking = false;
+    });
+  }
+
+  private performSpellAttack(time: number): void {
+    // Check wizard cloak requirement
+    const armor = this.inventory.getEquippedArmor();
+    if (!armor || armor.id !== 'armor_wizard') {
+      this.showRequiresWizardCloak();
+      return;
+    }
+
+    this.isAttacking = true;
+    this.lastAttackTime = time;
+    this.setVelocity(0);
+
+    const spellType = this.inventory.getSpellType();
+    if (!spellType) return;
+
+    const weapon = this.inventory.getEquippedWeapon();
+    if (!weapon) return;
+
+    const baseDamage = weapon.stats.damage || 10;
+    const damageResult = this.combat.calculateSpellDamage(baseDamage);
+    const range = (weapon.stats.range || 120) * SCALE;
+    const speed = SPELL_PROJECTILE_SPEED[spellType] || 200;
+    const aoe = weapon.stats.aoe || 1;
+
+    const directionDeg = this.getDirectionDeg();
+    const directionRad = Phaser.Math.DegToRad(directionDeg);
+
+    this.scene.events.emit(EVENTS.PLAYER_SPELL, {
+      originX: this.x,
+      originY: this.y,
+      directionRad,
+      range,
+      speed,
+      spellType,
+      damage: damageResult,
+      aoe
+    });
+
+    // Brief cast tint flash
+    this.setTint(spellType === 'fireball' ? 0xff6600 : 0x4488ff);
+    this.scene.time.delayedCall(120, () => {
+      this.clearTint();
+      this.isAttacking = false;
+    });
+  }
+
+  private showRequiresWizardCloak(): void {
+    const errorText = this.scene.add.text(this.x, this.y - 30, 'Requires Wizard Cloak!', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#ff4444',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(1001);
+
+    this.scene.tweens.add({
+      targets: errorText,
+      y: this.y - 55,
+      alpha: 0,
+      duration: 1200,
+      ease: 'Power2',
+      onComplete: () => errorText.destroy()
     });
   }
 

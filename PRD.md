@@ -229,17 +229,27 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ## Phase 3: Progression Systems
 
-### Experience & Leveling
-- [ ] XP gain from killing monsters
-- [ ] Level up system
-- [ ] Stat increases on level up
-- [ ] Level display in UI
+### Phase 3a: Experience & Leveling ✅
+- [x] XP gain from killing monsters (xpReward per monster type)
+- [x] XP gain from quest turn-ins (rewards.xp)
+- [x] Level up system (max level 20, XP curve: 80n + 20n²)
+- [x] Stat point allocation (3 points per level, 5 stats: STR/DEX/CON/LCK/INT)
+- [x] Stat effects (STR → melee damage, DEX → crit chance, CON → max HP, LCK → gold bonus, INT → spell damage)
+- [x] Level-up VFX (golden flash, floating text, auto-open stat screen)
+- [x] XP bar + level display in HUD
+- [x] LevelUpScene (stat allocation overlay with keyboard/mouse/gamepad)
+- [x] Tab navigation between player overlays (TAB cycles, I/Q/M/L shortcuts work cross-tab)
 
-### Skills & Abilities
+### Phase 3b: Spells & Skills
+- [x] Spell book weapons (Fireball Tome, Lightning Tome) — equip in weapon slot, fire projectiles on SPACE
+- [x] Wizard Cloak requirement for casting (check at attack time, floating error if missing)
+- [x] INT stat scales spell damage (+0.8 per point)
+- [x] Spell projectile physics (wall collision via tile lookup, distance-based monster collision)
+- [x] Lightning chain AOE (chains to up to 2 nearby enemies, damage decay 100%→60%→35%, jagged arc visuals)
+- [x] Spell books sold by Aldric the Sage
 - [ ] Skill tree system
-- [ ] Active abilities (fireball, heal, etc.)
+- [ ] Additional spell types (heal, shield, etc.)
 - [ ] Passive abilities
-- [ ] Ability cooldowns
 - [ ] Mana/energy resource
 
 ### Quests
@@ -286,10 +296,12 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 ## Phase 5: Polish & Meta
 
 ### Save System
-- [ ] Local storage save
+- [x] Save endpoint (F5 quick-save to backend)
+- [ ] Restore from save (load player level, XP, stats, statPoints, inventory, equipment, dungeon state)
 - [ ] Auto-save functionality
 - [ ] Multiple save slots
-- [ ] Save/load UI
+- [ ] Save/load UI (menu screen with slot selection)
+- [ ] Show F5/save shortcut in HUD controls text
 
 ### Audio
 - [ ] Background music

@@ -58,6 +58,8 @@ export const NPCS: Record<string, NPCData> = {
       "May the ancient spirits guide your path."
     ],
     shopInventory: [
+      { itemId: 'spell_fireball', stock: 1, buyPrice: 300, sellPrice: 120 },
+      { itemId: 'spell_lightning', stock: 1, buyPrice: 240, sellPrice: 96 },
       { itemId: 'flask_red', stock: 20, buyPrice: 22, sellPrice: 10 },
       { itemId: 'flask_big_red', stock: 10, buyPrice: 50, sellPrice: 22 },
       { itemId: 'flask_blue', stock: 15, buyPrice: 30, sellPrice: 12 },

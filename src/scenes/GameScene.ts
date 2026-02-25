@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier } from '../config/constants';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier, SPELL_COLORS } from '../config/constants';
+import type { SpellType } from '../types';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
@@ -14,6 +15,22 @@ import { clearShopSubsets, rotateShopSubset } from '../systems/ShopSystem';
 import { generateDungeon as generateBSPDungeon } from '../systems/DungeonGenerator';
 import { saveGame, checkLLMEnabled, getArcStatus, SaveGamePayload, SaveData } from '../services/ApiClient';
 import { StoryArcInfo } from '../types';
+
+interface SpellProjectile {
+  graphics: Phaser.GameObjects.Graphics;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  directionRad: number;
+  originX: number;
+  originY: number;
+  range: number;
+  spellType: SpellType;
+  damage: { damage: number; isCritical: boolean };
+  aoe: number;
+  trailTimer: Phaser.Time.TimerEvent;
+}
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -44,6 +61,7 @@ export class GameScene extends Phaser.Scene {
   private currentTier: MonsterTier = 1;
   private bossRoomEntered: boolean = false;
   private narratorActive: boolean = false;
+  private spellProjectiles: SpellProjectile[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -66,6 +84,7 @@ export class GameScene extends Phaser.Scene {
     this.currentTier = 1;
     this.bossRoomEntered = false;
     this.narratorActive = false;
+    this.spellProjectiles = [];
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -637,6 +656,17 @@ export class GameScene extends Phaser.Scene {
           this.player.combat.createHitEffect(m.x, m.y);
         }
       });
+    });
+
+    // Player spell attack (projectile-based)
+    this.events.on(EVENTS.PLAYER_SPELL, (data: {
+      originX: number; originY: number;
+      directionRad: number; range: number; speed: number;
+      spellType: SpellType;
+      damage: { damage: number; isCritical: boolean };
+      aoe: number;
+    }) => {
+      this.createSpellProjectile(data);
     });
 
     // Monster attack
@@ -1229,6 +1259,9 @@ export class GameScene extends Phaser.Scene {
       (monster as Monster).update(time);
     });
 
+    // Update spell projectiles
+    this.updateSpellProjectiles();
+
     // Update NPC quest indicators (throttled to every 500ms)
     if (time - this.lastIndicatorUpdate > 500) {
       this.lastIndicatorUpdate = time;
@@ -1271,5 +1304,322 @@ export class GameScene extends Phaser.Scene {
         n.hideInteractionPrompt();
       }
     });
+  }
+
+  // --- Spell Projectile System ---
+
+  private createSpellProjectile(data: {
+    originX: number; originY: number;
+    directionRad: number; range: number; speed: number;
+    spellType: SpellType;
+    damage: { damage: number; isCritical: boolean };
+    aoe: number;
+  }): void {
+    const colors = SPELL_COLORS[data.spellType];
+    const graphics = this.add.graphics();
+    graphics.setDepth(15);
+
+    // Draw initial projectile
+    this.drawProjectileGraphics(graphics, 0, 0, colors, data.spellType, data.directionRad);
+
+    const vx = Math.cos(data.directionRad) * data.speed;
+    const vy = Math.sin(data.directionRad) * data.speed;
+
+    // Trail particle timer
+    const trailTimer = this.time.addEvent({
+      delay: 50,
+      loop: true,
+      callback: () => {
+        const proj = this.spellProjectiles.find(p => p.trailTimer === trailTimer);
+        const px = proj ? proj.x : data.originX;
+        const py = proj ? proj.y : data.originY;
+
+        if (data.spellType === 'lightning') {
+          // Spark trail — tiny bright white flashes that scatter sideways
+          const spark = this.add.graphics();
+          spark.setDepth(14);
+          const sparkX = px + (Math.random() - 0.5) * 8;
+          const sparkY = py + (Math.random() - 0.5) * 8;
+          spark.lineStyle(1, 0xffffff, 0.9);
+          spark.beginPath();
+          spark.moveTo(sparkX, sparkY);
+          spark.lineTo(sparkX + (Math.random() - 0.5) * 6, sparkY + (Math.random() - 0.5) * 6);
+          spark.strokePath();
+          this.tweens.add({
+            targets: spark,
+            alpha: 0,
+            duration: 120,
+            onComplete: () => spark.destroy()
+          });
+        } else {
+          // Fireball: ember trail
+          const trail = this.add.circle(px, py, 3, colors.trail, 0.6);
+          trail.setDepth(14);
+          this.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scale: 0,
+            duration: 200,
+            onComplete: () => trail.destroy()
+          });
+        }
+      }
+    });
+
+    this.spellProjectiles.push({
+      graphics,
+      x: data.originX,
+      y: data.originY,
+      vx,
+      vy,
+      directionRad: data.directionRad,
+      originX: data.originX,
+      originY: data.originY,
+      range: data.range,
+      spellType: data.spellType,
+      damage: data.damage,
+      aoe: data.aoe,
+      trailTimer
+    });
+  }
+
+  private drawProjectileGraphics(graphics: Phaser.GameObjects.Graphics, x: number, y: number, colors: { primary: number; secondary: number; trail: number }, spellType: SpellType, dirRad?: number): void {
+    graphics.clear();
+    if (spellType === 'fireball') {
+      // Outer glow
+      graphics.fillStyle(colors.trail, 0.3);
+      graphics.fillCircle(x, y, 10);
+      // Core
+      graphics.fillStyle(colors.primary, 0.9);
+      graphics.fillCircle(x, y, 6);
+      // Hot center
+      graphics.fillStyle(colors.secondary, 1);
+      graphics.fillCircle(x, y, 3);
+    } else {
+      // Lightning bolt — jagged zigzag line along travel direction
+      const angle = dirRad ?? 0;
+      const boltLength = 24;
+      const halfLen = boltLength / 2;
+      // Perpendicular direction for zigzag offsets
+      const perpX = -Math.sin(angle);
+      const perpY = Math.cos(angle);
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+
+      // Generate jagged bolt points (re-randomized each frame for crackle)
+      const segments = 5;
+      const points: { px: number; py: number }[] = [];
+      for (let s = 0; s <= segments; s++) {
+        const t = s / segments;
+        const baseX = x + dirX * (t * boltLength - halfLen);
+        const baseY = y + dirY * (t * boltLength - halfLen);
+        // Random perpendicular jitter (none at endpoints)
+        const jitter = (s === 0 || s === segments) ? 0 : (Math.random() - 0.5) * 12;
+        points.push({ px: baseX + perpX * jitter, py: baseY + perpY * jitter });
+      }
+
+      // Outer glow bolt (thicker, dimmer)
+      graphics.lineStyle(5, colors.trail, 0.4);
+      graphics.beginPath();
+      graphics.moveTo(points[0].px, points[0].py);
+      for (let s = 1; s < points.length; s++) {
+        graphics.lineTo(points[s].px, points[s].py);
+      }
+      graphics.strokePath();
+
+      // Main bolt (blue)
+      graphics.lineStyle(3, colors.primary, 0.9);
+      graphics.beginPath();
+      graphics.moveTo(points[0].px, points[0].py);
+      for (let s = 1; s < points.length; s++) {
+        graphics.lineTo(points[s].px, points[s].py);
+      }
+      graphics.strokePath();
+
+      // Bright core (white, thin)
+      graphics.lineStyle(1, colors.secondary, 1);
+      graphics.beginPath();
+      graphics.moveTo(points[0].px, points[0].py);
+      for (let s = 1; s < points.length; s++) {
+        graphics.lineTo(points[s].px, points[s].py);
+      }
+      graphics.strokePath();
+
+      // Small bright point at tip
+      graphics.fillStyle(colors.secondary, 0.9);
+      graphics.fillCircle(points[points.length - 1].px, points[points.length - 1].py, 3);
+    }
+  }
+
+  private updateSpellProjectiles(): void {
+    const dt = this.game.loop.delta / 1000; // seconds
+    const scaledTile = TILE_SIZE * SCALE;
+
+    for (let i = this.spellProjectiles.length - 1; i >= 0; i--) {
+      const proj = this.spellProjectiles[i];
+
+      // Move
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+      proj.graphics.setPosition(proj.x, proj.y);
+
+      // Redraw lightning bolt each frame for crackling effect
+      if (proj.spellType === 'lightning') {
+        const colors = SPELL_COLORS[proj.spellType];
+        this.drawProjectileGraphics(proj.graphics, 0, 0, colors, proj.spellType, proj.directionRad);
+      }
+
+      // Check max range
+      const traveled = Phaser.Math.Distance.Between(proj.originX, proj.originY, proj.x, proj.y);
+      if (traveled >= proj.range) {
+        this.destroySpellProjectile(i);
+        continue;
+      }
+
+      // Check wall collision (tile lookup)
+      const tileX = Math.floor(proj.x / scaledTile);
+      const tileY = Math.floor(proj.y / scaledTile);
+      if (tileX < 0 || tileX >= DUNGEON_WIDTH || tileY < 0 || tileY >= DUNGEON_HEIGHT ||
+          this.dungeon[tileY]?.[tileX] === 1 || this.dungeon[tileY]?.[tileX] === 2 || this.dungeon[tileY]?.[tileX] === 4) {
+        this.createSpellImpactEffect(proj.x, proj.y, proj.spellType);
+        this.destroySpellProjectile(i);
+        continue;
+      }
+
+      // Check monster collision (distance-based)
+      let hitMonster: Monster | null = null;
+      this.monsters.getChildren().forEach((monster) => {
+        if (hitMonster) return;
+        const m = monster as Monster;
+        if (!m.active) return;
+        const dist = Phaser.Math.Distance.Between(proj.x, proj.y, m.x, m.y);
+        const hitRadius = Math.max(m.displayWidth, m.displayHeight) / 2 + 6;
+        if (dist <= hitRadius) {
+          hitMonster = m;
+        }
+      });
+
+      if (hitMonster) {
+        this.onSpellHitMonster(proj, hitMonster);
+        this.destroySpellProjectile(i);
+      }
+    }
+  }
+
+  private onSpellHitMonster(proj: SpellProjectile, target: Monster): void {
+    // Primary target
+    target.takeDamage(proj.damage.damage, proj.damage.isCritical);
+    this.player.combat.createHitEffect(target.x, target.y);
+    this.createSpellImpactEffect(target.x, target.y, proj.spellType);
+
+    // AOE chaining (lightning)
+    if (proj.aoe > 1) {
+      const chainRange = 60;
+      const hitTargets: Monster[] = [target];
+      const damageDecay = [1.0, 0.6, 0.35];
+
+      // Find nearby monsters to chain to
+      const candidates: { monster: Monster; dist: number }[] = [];
+      this.monsters.getChildren().forEach((monster) => {
+        const m = monster as Monster;
+        if (!m.active || m === target) return;
+        const dist = Phaser.Math.Distance.Between(target.x, target.y, m.x, m.y);
+        if (dist <= chainRange) {
+          candidates.push({ monster: m, dist });
+        }
+      });
+
+      // Sort by distance and take up to (aoe - 1) additional targets
+      candidates.sort((a, b) => a.dist - b.dist);
+      const chainCount = Math.min(candidates.length, proj.aoe - 1);
+
+      for (let c = 0; c < chainCount; c++) {
+        const chainTarget = candidates[c].monster;
+        const chainDamage = Math.floor(proj.damage.damage * (damageDecay[c + 1] ?? 0.35));
+        const chainCrit = proj.damage.isCritical;
+
+        chainTarget.takeDamage(chainDamage, chainCrit);
+        this.player.combat.createHitEffect(chainTarget.x, chainTarget.y);
+        hitTargets.push(chainTarget);
+      }
+
+      // Draw lightning chain arcs between hit targets
+      if (hitTargets.length > 1) {
+        this.createLightningChain(hitTargets);
+      }
+    }
+  }
+
+  private createLightningChain(targets: Monster[]): void {
+    const chainGraphics = this.add.graphics();
+    chainGraphics.setDepth(16);
+
+    for (let i = 0; i < targets.length - 1; i++) {
+      const from = targets[i];
+      const to = targets[i + 1];
+
+      // Draw jagged lightning line
+      chainGraphics.lineStyle(3, 0x4488ff, 0.9);
+      chainGraphics.beginPath();
+      chainGraphics.moveTo(from.x, from.y);
+
+      // Add 2-3 intermediate jagged points
+      const segments = 3;
+      for (let s = 1; s < segments; s++) {
+        const t = s / segments;
+        const midX = from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 20;
+        const midY = from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 20;
+        chainGraphics.lineTo(midX, midY);
+      }
+
+      chainGraphics.lineTo(to.x, to.y);
+      chainGraphics.strokePath();
+
+      // Inner bright line
+      chainGraphics.lineStyle(1, 0xffffff, 0.8);
+      chainGraphics.beginPath();
+      chainGraphics.moveTo(from.x, from.y);
+      chainGraphics.lineTo(to.x, to.y);
+      chainGraphics.strokePath();
+    }
+
+    // Fade out and destroy
+    this.tweens.add({
+      targets: chainGraphics,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => chainGraphics.destroy()
+    });
+  }
+
+  private createSpellImpactEffect(x: number, y: number, spellType: SpellType): void {
+    const colors = SPELL_COLORS[spellType];
+    const particleCount = 8;
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = this.add.circle(x, y, 3, colors.primary, 0.8);
+      particle.setDepth(16);
+
+      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.5;
+      const distance = 12 + Math.random() * 8;
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => particle.destroy()
+      });
+    }
+  }
+
+  private destroySpellProjectile(index: number): void {
+    const proj = this.spellProjectiles[index];
+    proj.trailTimer.destroy();
+    proj.graphics.destroy();
+    this.spellProjectiles.splice(index, 1);
   }
 }

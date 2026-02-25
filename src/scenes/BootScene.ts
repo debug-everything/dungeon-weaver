@@ -131,6 +131,9 @@ export class BootScene extends Phaser.Scene {
 
     // Generate shield placeholder sprites
     this.generateShieldSprites();
+
+    // Generate spell book sprites
+    this.generateSpellBookSprites();
   }
 
   create(): void {
@@ -172,6 +175,48 @@ export class BootScene extends Phaser.Scene {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(7, 6, 2, 4);
       ctx.fillRect(6, 7, 4, 2);
+    });
+  }
+
+  private generateSpellBookSprites(): void {
+    // Fireball tome — red/orange book
+    this.drawArmor('spell_fireball', (ctx) => {
+      // Book body
+      ctx.fillStyle = '#8B2500';
+      ctx.fillRect(3, 2, 10, 12);
+      // Spine
+      ctx.fillStyle = '#5C1A00';
+      ctx.fillRect(3, 2, 2, 12);
+      // Pages
+      ctx.fillStyle = '#F5DEB3';
+      ctx.fillRect(5, 3, 7, 10);
+      // Fire symbol
+      ctx.fillStyle = '#FF4400';
+      ctx.fillRect(7, 5, 3, 4);
+      ctx.fillStyle = '#FFAA00';
+      ctx.fillRect(8, 4, 1, 2);
+      ctx.fillStyle = '#FF6600';
+      ctx.fillRect(7, 6, 3, 2);
+    });
+
+    // Lightning tome — blue book
+    this.drawArmor('spell_lightning', (ctx) => {
+      // Book body
+      ctx.fillStyle = '#1A3A6B';
+      ctx.fillRect(3, 2, 10, 12);
+      // Spine
+      ctx.fillStyle = '#0F2244';
+      ctx.fillRect(3, 2, 2, 12);
+      // Pages
+      ctx.fillStyle = '#F5DEB3';
+      ctx.fillRect(5, 3, 7, 10);
+      // Lightning bolt symbol
+      ctx.fillStyle = '#4488FF';
+      ctx.fillRect(8, 4, 2, 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(7, 6, 2, 1);
+      ctx.fillStyle = '#4488FF';
+      ctx.fillRect(7, 7, 2, 2);
     });
   }
 
