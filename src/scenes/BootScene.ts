@@ -36,12 +36,46 @@ export class BootScene extends Phaser.Scene {
     // Load player
     this.load.image('hero_basic', 'assets/items/hero_basic.png');
 
-    // Load monsters
+    // Load monsters — Undead family
     this.load.image('monster_zombie', 'assets/items/monster_zombie.png');
+    this.load.image('monster_zombie_small', 'assets/items/monster_zombie_small.png');
+    this.load.image('monster_zombie_green', 'assets/items/monster_zombie_green.png');
+    this.load.image('monster_zombie_tall', 'assets/items/monster_zombie_tall.png');
     this.load.image('monster_skelet', 'assets/items/monster_skelet.png');
-    this.load.image('monster_orc', 'assets/items/monster_orc.png');
+    this.load.image('monster_necromancer', 'assets/items/monster_necromancer.png');
+
+    // Load monsters — Beast family
+    this.load.image('monster_bat', 'assets/items/monster_bat.png');
+    this.load.image('monster_wogol', 'assets/items/monster_wogol.png');
+    this.load.image('monster_rokita', 'assets/items/monster_rokita.png');
+    this.load.image('monster_tentackle', 'assets/items/monster_tentackle.png');
+
+    // Load monsters — Orc family
     this.load.image('monster_goblin', 'assets/items/monster_goblin.png');
+    this.load.image('monster_orc', 'assets/items/monster_orc.png');
+    this.load.image('monster_orc_armored', 'assets/items/monster_orc_armored.png');
+    this.load.image('monster_orc_masked', 'assets/items/monster_orc_masked.png');
+    this.load.image('monster_orc_shaman', 'assets/items/monster_orc_shaman.png');
+    this.load.image('monster_orc_veteran', 'assets/items/monster_orc_veteran.png');
+    this.load.image('monster_ogre', 'assets/items/monster_ogre.png');
+
+    // Load monsters — Demon family
+    this.load.image('monster_imp', 'assets/items/monster_imp.png');
+    this.load.image('monster_chort', 'assets/items/monster_chort.png');
+    this.load.image('monster_bies', 'assets/items/monster_bies.png');
     this.load.image('monster_demon', 'assets/items/monster_demon.png');
+
+    // Load monsters — Elemental family
+    this.load.image('monster_elemental_goo', 'assets/items/monster_elemental_goo.png');
+    this.load.image('monster_elemental_fire', 'assets/items/monster_elemental_fire.png');
+    this.load.image('monster_elemental_water', 'assets/items/monster_elemental_water.png');
+    this.load.image('monster_elemental_air', 'assets/items/monster_elemental_air.png');
+    this.load.image('monster_elemental_earth', 'assets/items/monster_elemental_earth.png');
+    this.load.image('monster_elemental_plant', 'assets/items/monster_elemental_plant.png');
+    this.load.image('monster_elemental_gold', 'assets/items/monster_elemental_gold_tall.png');
+
+    // Load monsters — Dark Knight
+    this.load.image('monster_dark_knight', 'assets/items/monster_dark_knight.png');
 
     // Load NPCs
     this.load.image('npc_merchant', 'assets/items/npc_merchant.png');

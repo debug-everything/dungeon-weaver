@@ -28,6 +28,8 @@ export interface ArcStatus {
   status: 'active' | 'completed';
   nextQuestNpcId: string | null;
   nextQuestReady: boolean;
+  completedArcCount: number;
+  tier: number;
 }
 
 class StoryArcService {
@@ -37,6 +39,7 @@ class StoryArcService {
   private existingArcTitles: string[] = [];
   private existingQuestIds: string[] = [];
   private generating: boolean = false;
+  private completedArcCount: number = 0;
 
   async initialize(): Promise<void> {
     llmLogger.info('Initializing story arc system (questsPerArc=%d, bossEnabled=%s)...',
@@ -137,7 +140,8 @@ class StoryArcService {
           },
           questIndex: idx,
           previousSummaries: this.currentArc.questSummaries.slice(0, idx),
-          isBossQuest: isBoss
+          isBossQuest: isBoss,
+          tier: this.getTier()
         });
 
         // Force correct NPC
@@ -222,7 +226,9 @@ class StoryArcService {
     if (this.currentArc.currentQuestIndex >= this.currentArc.totalQuests) {
       // Arc complete!
       this.currentArc.status = 'completed';
-      llmLogger.info('Story arc completed: "%s"! Starting new arc in background...', this.currentArc.title);
+      this.completedArcCount++;
+      llmLogger.info('Story arc completed: "%s"! (total completed: %d, new tier: %d) Starting new arc in background...',
+        this.currentArc.title, this.completedArcCount, this.getTier());
 
       // Start new arc in background
       this.startNewArcInBackground();
@@ -255,6 +261,17 @@ class StoryArcService {
     return this.currentArc.npcAssignments[idx];
   }
 
+  /** Monster tier based on completed arc count: 0 arcs → 1, 1 arc → 2, 2+ arcs → 3 */
+  getTier(): number {
+    if (this.completedArcCount >= 2) return 3;
+    if (this.completedArcCount >= 1) return 2;
+    return 1;
+  }
+
+  getCompletedArcCount(): number {
+    return this.completedArcCount;
+  }
+
   getArcStatus(): ArcStatus | null {
     if (!this.currentArc) return null;
 
@@ -265,7 +282,9 @@ class StoryArcService {
       totalQuests: this.currentArc.totalQuests,
       status: this.currentArc.status,
       nextQuestNpcId: this.getNextQuestNpcId(),
-      nextQuestReady: this.currentQuest !== null
+      nextQuestReady: this.currentQuest !== null,
+      completedArcCount: this.completedArcCount,
+      tier: this.getTier()
     };
   }
 

@@ -163,8 +163,11 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Weapon class system (sword/dagger/hammer/katana/unarmed with distinct arc, knockback, reach)
 
 ### Monster Enhancements
-- [ ] Additional monster types (5-10 more)
-- [ ] Monster variants (armored, elite, etc.)
+- [x] 28 monster types across 6 families (undead, beast, orc, demon, elemental, dark_knight)
+- [x] Monster family system with tier-gated unlocks (3 tiers based on completed arcs)
+- [x] Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) with colored name labels
+- [x] Family-based room spawning (all monsters in a room from same family)
+- [x] 32x32 sprite support for large boss monsters (tentacle, ogre)
 - [ ] Ranged enemy attacks
 - [ ] Boss attack patterns
 - [ ] Monster spawners/nests
@@ -359,10 +362,10 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 ### Phase 2+ Success
 - [ ] 30+ minutes of gameplay content
 - [ ] 3+ dungeon floors
-- [ ] 15+ monster types
+- [x] 28 monster types across 6 families
 - [ ] 50+ items
 - [ ] Player retention through progression
 
 ---
 
-*Last Updated: Phase 2e Complete (Story-arc Quests)*
+*Last Updated: Phase 2f Complete (Monster Families, Tiers & Boss System)*

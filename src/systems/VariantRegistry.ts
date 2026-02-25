@@ -24,7 +24,7 @@ export function registerMonsterVariant(variant: MonsterVariant): void {
     id: variant.variantId,
     name: variant.name,
     type: variant.baseType,
-    sprite: variant.baseSprite,
+    sprite: base.sprite,
     health: Math.round(base.health * multiplier),
     damage: Math.round(base.damage * multiplier),
     speed: Math.round(base.speed * multiplier),
@@ -83,8 +83,8 @@ export function injectQuestLoot(quest: QuestDefinition): void {
     const dropChance = 0.5;
 
     for (const monster of Object.values(MONSTERS)) {
-      // Skip boss
-      if (monster.type === 'demon') continue;
+      // Skip boss-only monsters
+      if (monster.bossOnly) continue;
 
       // If quest has kill targets, only inject into matching monster types
       if (killTargetTypes.length > 0 && !killTargetTypes.includes(monster.type)) continue;

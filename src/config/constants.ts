@@ -75,6 +75,16 @@ export const SCENE_KEYS = {
   QUEST_LOG: 'QuestLogScene'
 } as const;
 
+// Monster tier system
+import type { MonsterFamily } from '../types';
+export type MonsterTier = 1 | 2 | 3;
+export const MONSTER_TIER_FAMILIES: Record<MonsterTier, MonsterFamily[]> = {
+  1: ['undead', 'beast'],
+  2: ['undead', 'beast', 'orc', 'demon'],
+  3: ['undead', 'beast', 'orc', 'demon', 'elemental', 'dark_knight']
+};
+export const BOSS_LABEL_COLORS = { miniBoss: '#ffaa00', arcBoss: '#ff4444' };
+
 export const EVENTS = {
   PLAYER_HEALTH_CHANGED: 'player-health-changed',
   PLAYER_GOLD_CHANGED: 'player-gold-changed',

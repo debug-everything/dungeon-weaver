@@ -56,27 +56,88 @@
 
 ### Bestiary
 
-| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold |
-|------|----|--------|----|-----|-------|--------|----|------|
-| Zombie | `zombie` | `monster_zombie` | 15 | 3 | 40 | 100 | 10 | 2-8 |
-| Skeleton | `skelet` | `monster_skelet` | 12 | 4 | 60 | 120 | 15 | 5-12 |
-| Goblin | `goblin` | `monster_goblin` | 10 | 2 | 90 | 140 | 12 | 8-20 |
-| Orc | `orc` | `monster_orc` | 25 | 6 | 55 | 110 | 25 | 10-25 |
-| Demon Lord | `demon` | `monster_demon` | 75 | 10 | 70 | 180 | 100 | 50-100 |
+#### Undead Family (Tier 1)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Zombie | `zombie` | `monster_zombie` | 15 | 3 | 40 | 100 | 10 | 2-8 | No |
+| Zombie Runt | `zombie_small` | `monster_zombie_small` | 8 | 2 | 35 | 80 | 6 | 1-5 | No |
+| Plague Zombie | `zombie_green` | `monster_zombie_green` | 20 | 4 | 38 | 100 | 14 | 3-10 | No |
+| Hulking Zombie | `zombie_tall` | `monster_zombie_tall` | 30 | 5 | 30 | 90 | 20 | 5-15 | No |
+| Skeleton | `skelet` | `monster_skelet` | 12 | 4 | 60 | 120 | 15 | 5-12 | No |
+| Necromancer | `necromancer` | `monster_necromancer` | 70 | 9 | 50 | 170 | 100 | 40-80 | Boss |
+
+#### Beast Family (Tier 1)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Bat | `bat` | `monster_bat` | 6 | 2 | 100 | 160 | 8 | 1-4 | No |
+| Wogol | `wogol` | `monster_wogol` | 18 | 5 | 70 | 120 | 18 | 6-14 | No |
+| Rokita | `rokita` | `monster_rokita` | 28 | 6 | 75 | 130 | 22 | 8-18 | No |
+| Tentacle Horror | `tentacle` | `monster_tentackle` | 80 | 11 | 35 | 170 | 110 | 50-100 | Boss (32x32) |
+
+#### Orc Family (Tier 2)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Goblin | `goblin` | `monster_goblin` | 10 | 2 | 90 | 140 | 12 | 8-20 | No |
+| Orc Warrior | `orc` | `monster_orc` | 25 | 6 | 55 | 110 | 25 | 10-25 | No |
+| Armored Orc | `orc_armored` | `monster_orc_armored` | 35 | 7 | 45 | 110 | 30 | 12-28 | No |
+| Masked Orc | `orc_masked` | `monster_orc_masked` | 28 | 8 | 65 | 130 | 28 | 10-25 | No |
+| Orc Shaman | `orc_shaman` | `monster_orc_shaman` | 22 | 6 | 50 | 140 | 25 | 10-22 | No |
+| Orc Veteran | `orc_veteran` | `monster_orc_veteran` | 40 | 9 | 50 | 120 | 35 | 15-35 | No |
+| Ogre | `ogre` | `monster_ogre` | 90 | 12 | 40 | 160 | 120 | 60-120 | Boss (32x32) |
+
+#### Demon Family (Tier 2)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Imp | `imp` | `monster_imp` | 10 | 3 | 85 | 130 | 12 | 5-12 | No |
+| Chort | `chort` | `monster_chort` | 30 | 7 | 65 | 140 | 30 | 15-30 | No |
+| Bies | `bies` | `monster_bies` | 45 | 8 | 60 | 150 | 40 | 20-40 | No |
+| Demon Lord | `demon` | `monster_demon` | 75 | 10 | 70 | 180 | 100 | 50-100 | Boss |
+
+#### Elemental Family (Tier 3)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Goo Elemental | `elemental_goo` | `monster_elemental_goo` | 15 | 3 | 45 | 100 | 12 | 4-10 | No |
+| Fire Elemental | `elemental_fire` | `monster_elemental_fire` | 25 | 8 | 60 | 130 | 28 | 10-22 | No |
+| Water Elemental | `elemental_water` | `monster_elemental_water` | 30 | 5 | 55 | 120 | 25 | 8-20 | No |
+| Air Elemental | `elemental_air` | `monster_elemental_air` | 20 | 6 | 80 | 140 | 22 | 8-18 | No |
+| Earth Elemental | `elemental_earth` | `monster_elemental_earth` | 40 | 7 | 35 | 100 | 30 | 12-25 | No |
+| Plant Elemental | `elemental_plant` | `monster_elemental_plant` | 22 | 4 | 50 | 110 | 18 | 6-14 | No |
+| Gold Elemental | `elemental_gold` | `monster_elemental_gold` | 50 | 9 | 45 | 120 | 45 | 30-60 | No |
+| Elemental Lord | `elemental_lord` | `npc_wizzard` | 85 | 11 | 55 | 170 | 110 | 50-100 | Boss |
+
+#### Dark Knight Family (Tier 3)
+
+| Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
+|------|----|--------|----|-----|-------|--------|----|------|-------|
+| Dark Knight | `dark_knight` | `monster_dark_knight` | 55 | 10 | 55 | 140 | 50 | 25-50 | No |
 
 ### AI Behavior
 - **States:** Idle, Chasing, Attacking
 - Monsters detect player within their detect range and begin chasing
 - Each monster type has its own attack range and cooldown
-- Demon Lord is boss-only (never spawns from respawns)
+- Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) never spawn from respawns
 - **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
 
-### Boss Variants
-Story-arc boss quests spawn variant monsters with boosted stats (2.5x health/damage/speed multiplier) and a **colored name** displayed above them in red (`#ff4444`). This distinguishes arc bosses from regular Demon Lords.
+### Boss Labels
+- **Mini-boss** (dungeon boss room): orange name label `#ffaa00`
+- **Arc boss** (story-arc final quest): red name label `#ff4444`, boosted stats (2.5x multiplier)
+- Story-arc boss quests can use any boss-only monster type (demon, ogre, tentacle, necromancer, elemental_lord)
+
+### Monster Tier System
+Tiers unlock new monster families as the player completes story arcs:
+- **Tier 1** (0 arcs completed): Undead + Beast
+- **Tier 2** (1+ arcs completed): + Orc + Demon
+- **Tier 3** (2+ arcs completed): + Elemental + Dark Knight
 
 ### Spawning
-- Initial: 2-4 monsters per room (skip safe room), boss in last room
-- Respawn: every 15 seconds, 1-2 monsters in a random room far from the player
+- **Family-based rooms**: Each room picks one family from the current tier's allowed families; all monsters in that room are from that family
+- Initial: 2-4 monsters per room (skip safe room), boss from unlocked families in boss room (orange name label)
+- Respawn: every 15 seconds, 1-2 non-boss monsters from allowed families in a random room far from the player
 - Max monsters: 20
 - Quest-aware respawning: 50% bias toward active kill quest target types
 
@@ -269,8 +330,8 @@ When a quest has **collect** objectives, `injectQuestLoot()` adds the target ite
 
 ### Available Base Types
 
-**Monsters (5 sprites):**
-`monster_zombie`, `monster_skelet`, `monster_goblin`, `monster_orc`, `monster_demon`
+**Monsters (28 sprites):**
+`monster_zombie`, `monster_zombie_small`, `monster_zombie_green`, `monster_zombie_tall`, `monster_skelet`, `monster_necromancer`, `monster_bat`, `monster_wogol`, `monster_rokita`, `monster_tentackle`, `monster_goblin`, `monster_orc`, `monster_orc_armored`, `monster_orc_masked`, `monster_orc_shaman`, `monster_orc_veteran`, `monster_ogre`, `monster_imp`, `monster_chort`, `monster_bies`, `monster_demon`, `monster_elemental_goo`, `monster_elemental_fire`, `monster_elemental_water`, `monster_elemental_air`, `monster_elemental_earth`, `monster_elemental_plant`, `monster_elemental_gold`, `npc_wizzard` (Elemental Lord), `monster_dark_knight`
 
 **Items (25 sprites):**
 `weapon_sword_wooden`, `weapon_sword_rusty`, `weapon_sword_steel`, `weapon_sword_silver`, `weapon_sword_golden`, `weapon_sword_ruby`, `weapon_dagger_small`, `weapon_dagger_steel`, `weapon_dagger_golden`, `weapon_katana_silver`, `weapon_hammer`, `weapon_sledgehammer`, `flask_red`, `flask_big_red`, `flask_blue`, `flask_green`, `flask_yellow`, `armor_peasant`, `armor_spy`, `armor_wizard`, `armor_barbarian`, `armor_knight`, `armor_shield_wooden`, `armor_shield_iron`, `armor_shield_golden`
@@ -298,7 +359,7 @@ LLM-generated quests are organized into coherent **story arcs** — multi-quest 
 | Title | Evocative arc name (e.g. "The Heartforge Conspiracy") |
 | Theme | Thematic description guiding all quests in the arc |
 | Quest Count | Configurable via `server/game.config.json` (default: 3) |
-| Boss Quest | Final quest uses demon-type enemies with 2.5x stat boost and red colored name |
+| Boss Quest | Final quest uses any boss-type enemy (demon, ogre, tentacle, necromancer, elemental_lord) with 2.5x stat boost and red colored name |
 | NPC Assignment | LLM picks the most fitting NPC per quest based on personality profiles |
 
 ### Arc Flow

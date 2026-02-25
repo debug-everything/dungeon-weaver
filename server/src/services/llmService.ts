@@ -5,6 +5,7 @@ import { llmLogger } from '../logger.js';
 export interface QuestGenerationContext {
   existingQuestIds: string[];
   targetNpcId: string;
+  tier?: number;
 }
 
 // NPC personality profiles — influence quest themes, dialog tone, and reward types
@@ -74,7 +75,40 @@ interface QuestReward {
   items?: { itemId: string; quantity: number }[];
 }
 
-const SYSTEM_PROMPT = `You are a quest designer for a dungeon crawler RPG. Generate a single quest as a JSON object.
+// Tier-based monster type/sprite maps (cumulative)
+const TIER_MONSTER_TYPES: Record<number, string[]> = {
+  1: ['zombie', 'zombie_small', 'zombie_green', 'zombie_tall', 'skelet', 'bat', 'wogol', 'rokita'],
+  2: ['zombie', 'zombie_small', 'zombie_green', 'zombie_tall', 'skelet', 'bat', 'wogol', 'rokita',
+      'goblin', 'orc', 'orc_armored', 'orc_masked', 'orc_shaman', 'orc_veteran', 'imp', 'chort', 'bies'],
+  3: ['zombie', 'zombie_small', 'zombie_green', 'zombie_tall', 'skelet', 'bat', 'wogol', 'rokita',
+      'goblin', 'orc', 'orc_armored', 'orc_masked', 'orc_shaman', 'orc_veteran', 'imp', 'chort', 'bies',
+      'elemental_goo', 'elemental_fire', 'elemental_water', 'elemental_air', 'elemental_earth', 'elemental_plant', 'elemental_gold', 'dark_knight']
+};
+
+const TIER_MONSTER_SPRITES: Record<number, string[]> = {
+  1: ['monster_zombie', 'monster_zombie_small', 'monster_zombie_green', 'monster_zombie_tall', 'monster_skelet', 'monster_bat', 'monster_wogol', 'monster_rokita'],
+  2: ['monster_zombie', 'monster_zombie_small', 'monster_zombie_green', 'monster_zombie_tall', 'monster_skelet', 'monster_bat', 'monster_wogol', 'monster_rokita',
+      'monster_goblin', 'monster_orc', 'monster_orc_armored', 'monster_orc_masked', 'monster_orc_shaman', 'monster_orc_veteran', 'monster_imp', 'monster_chort', 'monster_bies'],
+  3: ['monster_zombie', 'monster_zombie_small', 'monster_zombie_green', 'monster_zombie_tall', 'monster_skelet', 'monster_bat', 'monster_wogol', 'monster_rokita',
+      'monster_goblin', 'monster_orc', 'monster_orc_armored', 'monster_orc_masked', 'monster_orc_shaman', 'monster_orc_veteran', 'monster_imp', 'monster_chort', 'monster_bies',
+      'monster_elemental_goo', 'monster_elemental_fire', 'monster_elemental_water', 'monster_elemental_air', 'monster_elemental_earth', 'monster_elemental_plant', 'monster_elemental_gold', 'monster_dark_knight']
+};
+
+const BOSS_TYPES = ['demon', 'ogre', 'tentacle', 'necromancer', 'elemental_lord'];
+const BOSS_SPRITES = ['monster_demon', 'monster_ogre', 'monster_tentackle', 'monster_necromancer', 'monster_elemental_lord'];
+
+function buildSystemPrompt(tier: number = 1, isBossQuest: boolean = false): string {
+  const allowedTypes = TIER_MONSTER_TYPES[tier] || TIER_MONSTER_TYPES[1];
+  const allowedSprites = TIER_MONSTER_SPRITES[tier] || TIER_MONSTER_SPRITES[1];
+
+  const monsterTypeEnum = isBossQuest
+    ? `${allowedTypes.map(t => `"${t}"`).join(',')},${BOSS_TYPES.map(t => `"${t}"`).join(',')}`
+    : allowedTypes.map(t => `"${t}"`).join(',');
+  const monsterSpriteEnum = isBossQuest
+    ? `${allowedSprites.map(s => `"${s}"`).join(',')},${BOSS_SPRITES.map(s => `"${s}"`).join(',')}`
+    : allowedSprites.map(s => `"${s}"`).join(',');
+
+  return `You are a quest designer for a dungeon crawler RPG. Generate a single quest as a JSON object.
 
 You can create VARIANT monsters and items — custom-named versions of existing types that reuse base sprites but have unique names and scaled stats. This makes quests feel unique without needing new assets.
 
@@ -92,8 +126,8 @@ You can create VARIANT monsters and items — custom-named versions of existing 
     "monsters": [            // (optional) For kill quests — variant monsters
       {
         "variantId": string,      // Unique id e.g. "monster_hunchback_goblin"
-        "baseType": enum,         // ONE OF: "zombie","skelet","orc","goblin","demon"
-        "baseSprite": enum,       // ONE OF: "monster_zombie","monster_skelet","monster_orc","monster_goblin","monster_demon"
+        "baseType": enum,         // ONE OF: ${monsterTypeEnum}
+        "baseSprite": enum,       // ONE OF: ${monsterSpriteEnum}
         "name": string,           // Display name e.g. "Hunchback Goblin"
         "statMultiplier": number  // 0.5-2.0, scales base health/damage/xp/gold
       }
@@ -153,6 +187,12 @@ DialogNode = {
 
 ## VALID ENUM VALUES
 
+MONSTER BASE TYPES (for variant baseType and kill objective target):
+${monsterTypeEnum}
+
+MONSTER SPRITES (for variant baseSprite):
+${monsterSpriteEnum}
+
 NPC_NAMES (use as "speaker" based on npcId):
 - "npc_merchant" → "Marcus the Merchant"
 - "npc_merchant_2" → "Elena the Exotic"
@@ -177,6 +217,7 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
 - Collect objective "target" can be a variantId defined in variants.items
 - Reward itemId can be a variantId defined in variants.items
 - You don't HAVE to use variants — simple quests without them are fine too
+- ONLY use monster types and sprites from the lists above. Do NOT use types or sprites not listed.
 
 ## COMPLETE EXAMPLE
 
@@ -234,6 +275,7 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
 }
 
 Respond with ONLY the JSON object.`;
+}
 
 let client: OpenAI | null = null;
 let supportsJsonMode: boolean | null = null;
@@ -263,6 +305,7 @@ export interface ArcQuestContext {
   questIndex: number;
   previousSummaries: string[];
   isBossQuest: boolean;
+  tier?: number;
 }
 
 const ARC_SYSTEM_PROMPT = `You are a narrative designer for a dungeon crawler RPG. Generate a story arc outline as a JSON object.
@@ -367,6 +410,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
 // ── Quest generation (standalone or arc) ──
 
 export async function generateQuestDefinition(context: QuestGenerationContext): Promise<GeneratedQuestDefinition> {
+  const tier = context.tier ?? 1;
   const npcProfile = NPC_PROFILES[context.targetNpcId];
   const npcDirective = npcProfile
     ? `Assign this quest to NPC "${context.targetNpcId}" ("${npcProfile.name}").\n\nNPC PERSONALITY:\n${npcProfile.personality}\n\nLet this personality shape the quest theme, dialog tone, objective choices, and reward types.`
@@ -374,7 +418,7 @@ export async function generateQuestDefinition(context: QuestGenerationContext): 
   const userPrompt = `Generate a unique quest. Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.
 ${npcDirective} Create an interesting quest with varied dialog. Make the quest feel distinct and flavorful.`;
 
-  const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
+  const raw = await callLLM(buildSystemPrompt(tier, false), userPrompt);
   return JSON.parse(raw) as GeneratedQuestDefinition;
 }
 
@@ -418,8 +462,9 @@ export async function generateArcQuest(context: ArcQuestContext): Promise<Genera
     ? `\nPrevious quests in this arc (already completed by the player):\n${context.previousSummaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n`
     : '';
 
+  const bossTypes = BOSS_TYPES.map(t => `"${t}"`).join(', ');
   const bossDirective = context.isBossQuest
-    ? `\nIMPORTANT: This is the FINAL BOSS QUEST of the arc. Create a powerful variant monster (use "demon" base type with statMultiplier 1.8-2.0). Escalate the narrative stakes. Provide higher rewards (xp: 150-200, gold: 80-100). Include dramatic intro lines (3-4 lines). The monster should have an imposing, evocative name.`
+    ? `\nIMPORTANT: This is the FINAL BOSS QUEST of the arc. Create a powerful variant monster using one of these boss base types: ${bossTypes} (with statMultiplier 1.8-2.0). Escalate the narrative stakes. Provide higher rewards (xp: 150-200, gold: 80-100). Include dramatic intro lines (3-4 lines). The monster should have an imposing, evocative name.`
     : '';
 
   const userPrompt = `Generate a quest that is part of a story arc.
@@ -443,7 +488,8 @@ Requirements:
 
 Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.`;
 
-  llmLogger.info('Generating arc quest %d/%d for NPC "%s" (boss=%s)...', context.questIndex + 1, context.arc.quests.length, questInfo.npcId, context.isBossQuest);
-  const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
+  const tier = context.tier ?? 1;
+  llmLogger.info('Generating arc quest %d/%d for NPC "%s" (boss=%s, tier=%d)...', context.questIndex + 1, context.arc.quests.length, questInfo.npcId, context.isBossQuest, tier);
+  const raw = await callLLM(buildSystemPrompt(tier, context.isBossQuest), userPrompt);
   return JSON.parse(raw) as GeneratedQuestDefinition;
 }

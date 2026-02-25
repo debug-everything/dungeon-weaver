@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS } from '../config/constants';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier } from '../config/constants';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
-import { DungeonRoom, NPCData, ChestData } from '../types';
-import { MONSTERS } from '../data/monsters';
+import { DungeonRoom, NPCData, ChestData, MonsterFamily } from '../types';
+import { MONSTERS, getNonBossMonstersByFamily, getBossMonsters } from '../data/monsters';
 import { NPCS } from '../data/npcs';
 import { QUESTS } from '../data/quests';
 import { QuestSystem } from '../systems/QuestSystem';
@@ -40,6 +40,7 @@ export class GameScene extends Phaser.Scene {
   private arcNextQuestNpcId: string | null = null;
   private roomClearState: Map<number, { total: number; killed: number }> = new Map();
   private bossUnlocked: boolean = false;
+  private currentTier: MonsterTier = 1;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -59,6 +60,7 @@ export class GameScene extends Phaser.Scene {
     this.lastArcPoll = 0;
     this.roomClearState = new Map();
     this.bossUnlocked = false;
+    this.currentTier = 1;
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -126,6 +128,16 @@ export class GameScene extends Phaser.Scene {
         this.questSystem.registerQuest(quest);
       }
     });
+
+    // Fetch tier from arc status
+    getArcStatus().then(raw => {
+      if (raw && typeof raw === 'object' && 'tier' in (raw as Record<string, unknown>)) {
+        const tier = (raw as Record<string, unknown>).tier as number;
+        if (tier >= 1 && tier <= 3) {
+          this.currentTier = tier as MonsterTier;
+        }
+      }
+    }).catch(() => {});
 
     // Setup event listeners
     this.setupEventListeners();
@@ -233,7 +245,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnMonsters(): void {
-    const monsterTypes = Object.keys(MONSTERS);
+    const allowedFamilies = MONSTER_TIER_FAMILIES[this.currentTier];
 
     for (let i = 0; i < this.rooms.length; i++) {
       const room = this.rooms[i];
@@ -243,12 +255,27 @@ export class GameScene extends Phaser.Scene {
       const isBoss = room.isBossRoom || i === this.rooms.length - 1;
       const monsterCount = Phaser.Math.Between(2, 4);
 
-      for (let j = 0; j < monsterCount; j++) {
-        const monsterType = isBoss && j === 0
-          ? 'monster_demon' // Boss in boss room
-          : Phaser.Utils.Array.GetRandom(monsterTypes.filter(t => t !== 'monster_demon'));
+      // Pick one family for this room (thematic consistency)
+      const roomFamily = Phaser.Utils.Array.GetRandom(allowedFamilies) as MonsterFamily;
+      const roomPool = getNonBossMonstersByFamily(roomFamily);
 
-        const monsterData = MONSTERS[monsterType];
+      for (let j = 0; j < monsterCount; j++) {
+        let monsterData;
+
+        if (isBoss && j === 0) {
+          // Spawn a boss from unlocked families
+          const allowedBosses = getBossMonsters().filter(b => allowedFamilies.includes(b.family));
+          monsterData = allowedBosses.length > 0
+            ? { ...Phaser.Utils.Array.GetRandom(allowedBosses), nameColor: BOSS_LABEL_COLORS.miniBoss }
+            : MONSTERS['monster_demon'];
+        } else if (roomPool.length > 0) {
+          monsterData = Phaser.Utils.Array.GetRandom(roomPool);
+        } else {
+          // Fallback: random non-boss from any allowed family
+          const fallback = allowedFamilies.flatMap(f => getNonBossMonstersByFamily(f));
+          monsterData = fallback.length > 0 ? Phaser.Utils.Array.GetRandom(fallback) : MONSTERS['monster_zombie'];
+        }
+
         const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
         const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;
 
@@ -515,8 +542,11 @@ export class GameScene extends Phaser.Scene {
     // Pick a random non-safe room (skip room 0)
     if (this.rooms.length <= 1) return;
 
-    const nonBossTypes = Object.keys(MONSTERS).filter(t => t !== 'monster_demon');
-    if (nonBossTypes.length === 0) return;
+    // Build pool of non-boss monsters from allowed families
+    const allowedFamilies = MONSTER_TIER_FAMILIES[this.currentTier];
+    const nonBossPool = allowedFamilies.flatMap(f => getNonBossMonstersByFamily(f));
+    if (nonBossPool.length === 0) return;
+    const nonBossIds = nonBossPool.map(m => m.id);
 
     // Build quest-target monster types from active kill objectives
     const questTargetTypes: string[] = [];
@@ -528,7 +558,7 @@ export class GameScene extends Phaser.Scene {
           const progress = state.objectiveProgress[i];
           if (obj.type === 'kill' && !progress?.completed) {
             const spriteKey = `monster_${obj.target}`;
-            if (nonBossTypes.includes(spriteKey)) {
+            if (nonBossIds.includes(spriteKey)) {
               questTargetTypes.push(spriteKey);
             }
           }
@@ -554,13 +584,13 @@ export class GameScene extends Phaser.Scene {
 
     for (let i = 0; i < spawnCount && livingMonsters + i < this.maxMonsters; i++) {
       // 50% chance to bias toward a quest target type (if any active)
-      let monsterType: string;
+      let monsterData;
       if (questTargetTypes.length > 0 && Math.random() < 0.5) {
-        monsterType = Phaser.Utils.Array.GetRandom(questTargetTypes);
+        const monsterType = Phaser.Utils.Array.GetRandom(questTargetTypes);
+        monsterData = MONSTERS[monsterType];
       } else {
-        monsterType = Phaser.Utils.Array.GetRandom(nonBossTypes);
+        monsterData = Phaser.Utils.Array.GetRandom(nonBossPool);
       }
-      const monsterData = MONSTERS[monsterType];
       const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
       const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;
 
@@ -853,12 +883,16 @@ export class GameScene extends Phaser.Scene {
   private pollArcStatus(): void {
     getArcStatus().then(raw => {
       if (!raw || typeof raw !== 'object') return;
-      const info = raw as StoryArcInfo;
+      const info = raw as StoryArcInfo & { tier?: number };
       if (info.status === 'active' && info.nextQuestReady && info.nextQuestNpcId) {
         // Only set if no quest is locally registered for this NPC yet
         if (!this.questSystem.hasAnyQuest(info.nextQuestNpcId)) {
           this.arcNextQuestNpcId = info.nextQuestNpcId;
         }
+      }
+      // Update tier from server
+      if (info.tier && info.tier >= 1 && info.tier <= 3) {
+        this.currentTier = info.tier as MonsterTier;
       }
     }).catch(() => {});
   }

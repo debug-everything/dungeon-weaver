@@ -27,18 +27,28 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(SCALE);
-    this.setDepth(5);
-
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(12, 12);
-    body.setOffset(2, 4);
+    const isLarge = data.spriteSize && data.spriteSize.width === 32;
+    if (isLarge) {
+      // 32x32 sprites: scale 1 so they appear same size as 16x16 at SCALE=2
+      this.setScale(1);
+      this.setDepth(5);
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      body.setSize(24, 24);
+      body.setOffset(4, 8);
+    } else {
+      this.setScale(SCALE);
+      this.setDepth(5);
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      body.setSize(12, 12);
+      body.setOffset(2, 4);
+    }
 
     this.createHealthBar();
 
     // Show colored name for boss monsters
     if (data.nameColor) {
-      this.nameText = scene.add.text(x, y - 28, data.name, {
+      const nameY = isLarge ? y - 36 : y - 28;
+      this.nameText = scene.add.text(x, nameY, data.name, {
         fontSize: '9px',
         fontFamily: 'monospace',
         color: data.nameColor,
@@ -59,10 +69,11 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     this.healthBar.clear();
 
-    const barWidth = 24;
+    const isLarge = this.monsterData.spriteSize && this.monsterData.spriteSize.width === 32;
+    const barWidth = isLarge ? 36 : 24;
     const barHeight = 4;
     const x = this.x - barWidth / 2;
-    const y = this.y - 20;
+    const y = this.y - (isLarge ? 28 : 20);
 
     // Background
     this.healthBar.fillStyle(0x333333);
@@ -120,7 +131,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     // Update boss name position
     if (this.nameText) {
-      this.nameText.setPosition(this.x, this.y - 28);
+      const isLarge = this.monsterData.spriteSize && this.monsterData.spriteSize.width === 32;
+      this.nameText.setPosition(this.x, this.y - (isLarge ? 36 : 28));
     }
 
     // Skip AI during knockback

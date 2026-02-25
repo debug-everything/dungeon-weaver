@@ -2,7 +2,20 @@ import type { GeneratedQuestDefinition } from './llmService.js';
 
 const VALID_NPC_IDS = ['npc_merchant', 'npc_merchant_2', 'npc_sage'];
 const VALID_QUEST_TYPES = ['rescue', 'recover', 'destroy', 'investigate'];
-const VALID_MONSTER_TYPES = ['zombie', 'skelet', 'orc', 'goblin', 'demon'];
+const VALID_MONSTER_TYPES = [
+  // Undead
+  'zombie', 'zombie_small', 'zombie_green', 'zombie_tall', 'skelet', 'necromancer',
+  // Beast
+  'bat', 'wogol', 'rokita', 'tentacle',
+  // Orc
+  'goblin', 'orc', 'orc_armored', 'orc_masked', 'orc_shaman', 'orc_veteran', 'ogre',
+  // Demon
+  'imp', 'chort', 'bies', 'demon',
+  // Elemental
+  'elemental_goo', 'elemental_fire', 'elemental_water', 'elemental_air', 'elemental_earth', 'elemental_plant', 'elemental_gold', 'elemental_lord',
+  // Dark Knight
+  'dark_knight'
+];
 const VALID_ITEM_IDS = [
   'weapon_sword_wooden', 'weapon_sword_rusty', 'weapon_sword_steel', 'weapon_sword_silver',
   'weapon_sword_golden', 'weapon_sword_ruby', 'weapon_dagger_small',
@@ -12,7 +25,15 @@ const VALID_ITEM_IDS = [
   'armor_peasant', 'armor_spy', 'armor_wizard', 'armor_barbarian', 'armor_knight',
   'armor_shield_wooden', 'armor_shield_iron', 'armor_shield_golden'
 ];
-const VALID_MONSTER_SPRITES = ['monster_zombie', 'monster_skelet', 'monster_orc', 'monster_goblin', 'monster_demon'];
+const VALID_MONSTER_SPRITES = [
+  'monster_zombie', 'monster_zombie_small', 'monster_zombie_green', 'monster_zombie_tall', 'monster_skelet', 'monster_necromancer',
+  'monster_bat', 'monster_wogol', 'monster_rokita', 'monster_tentackle',
+  'monster_goblin', 'monster_orc', 'monster_orc_armored', 'monster_orc_masked', 'monster_orc_shaman', 'monster_orc_veteran', 'monster_ogre',
+  'monster_imp', 'monster_chort', 'monster_bies', 'monster_demon',
+  'monster_elemental_goo', 'monster_elemental_fire', 'monster_elemental_water', 'monster_elemental_air', 'monster_elemental_earth', 'monster_elemental_plant', 'monster_elemental_gold',
+  'monster_elemental_lord',
+  'monster_dark_knight'
+];
 const VALID_OBJECTIVE_TYPES = ['kill', 'collect', 'talk_to', 'explore'];
 const VALID_DIALOG_ACTIONS = ['accept_quest', 'decline_quest', 'end_dialog', 'turn_in_quest'];
 const DIALOG_PHASES = ['offer', 'inProgress', 'readyToTurnIn', 'completed'] as const;

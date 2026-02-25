@@ -151,9 +151,9 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e)
+## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e + 2f)
 - ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
-- ✅ 5 monster types with AI
+- ✅ 28 monster types with AI across 6 families (undead, beast, orc, demon, elemental, dark_knight)
 - ✅ 3 NPC merchants
 - ✅ 12 weapons, 5 outfits, 3 shields, 5 consumables
 - ✅ Inventory & equipment system (3 slots: weapon, armor, shield)
@@ -172,6 +172,9 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ NPC personality-driven quest generation (each NPC has distinct quest themes/tone)
 - ✅ Dynamic quest variants (LLM-generated custom monsters/items with base sprite reuse)
 - ✅ Boss monster colored names (red text above arc boss monsters)
+- ✅ Monster tier system (3 tiers unlocked by arc completion, gating family availability)
+- ✅ Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) with 32x32 sprite support
+- ✅ Family-based room spawning (thematic consistency per room)
 - ✅ Quest-aware monster respawns (bias toward active quest targets)
 - ✅ Fog of war with Bresenham line-of-sight
 - ✅ Save/load via backend API

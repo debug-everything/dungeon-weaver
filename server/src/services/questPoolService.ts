@@ -48,7 +48,8 @@ class QuestPoolService {
         const startTime = Date.now();
         const quest = await generateQuestDefinition({
           existingQuestIds: this.existingIds,
-          targetNpcId: npcId
+          targetNpcId: npcId,
+          tier: storyArcService.getTier()
         });
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 

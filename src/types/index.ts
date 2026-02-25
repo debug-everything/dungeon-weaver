@@ -35,13 +35,20 @@ export interface Equipment {
   shield: Item | null;
 }
 
-export type MonsterType = 'zombie' | 'skelet' | 'orc' | 'goblin' | 'demon';
+export type MonsterType = 'zombie' | 'zombie_small' | 'zombie_green' | 'zombie_tall' | 'skelet' | 'necromancer'
+  | 'bat' | 'wogol' | 'rokita' | 'tentacle'
+  | 'goblin' | 'orc' | 'orc_armored' | 'orc_masked' | 'orc_shaman' | 'orc_veteran' | 'ogre'
+  | 'imp' | 'chort' | 'bies' | 'demon'
+  | 'elemental_goo' | 'elemental_fire' | 'elemental_water' | 'elemental_air' | 'elemental_earth' | 'elemental_plant' | 'elemental_gold' | 'elemental_lord'
+  | 'dark_knight';
+export type MonsterFamily = 'undead' | 'beast' | 'orc' | 'demon' | 'elemental' | 'dark_knight';
 export type MonsterState = 'idle' | 'chasing' | 'attacking' | 'dead';
 
 export interface MonsterData {
   id: string;
   name: string;
   type: MonsterType;
+  family: MonsterFamily;
   sprite: string;
   health: number;
   damage: number;
@@ -53,6 +60,8 @@ export interface MonsterData {
   goldDrop: { min: number; max: number };
   lootTable: LootEntry[];
   nameColor?: string;
+  bossOnly?: boolean;
+  spriteSize?: { width: number; height: number };
 }
 
 export interface LootEntry {
