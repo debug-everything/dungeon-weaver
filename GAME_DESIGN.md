@@ -80,6 +80,8 @@
 
 Staffs are blunt melee weapons with lower damage than swords (6-8 range). They use arc-based melee attacks via SPACE key. Each staff has an `element` property linking it to a specific spell type. Sold by Aldric the Sage.
 
+**Planned**: Universal staff (e.g. "Archmagos Staff") — compatible with all tome types, very high cost (~2000g).
+
 ### Spell System
 - Spell tomes equip in the **spellbook slot** (separate from the weapon slot)
 - **Casting requires a matching staff** equipped in the weapon slot. Fire Staff → Fireball Tome, Storm Staff → Lightning Tome, Frost Staff → Frost Tome.

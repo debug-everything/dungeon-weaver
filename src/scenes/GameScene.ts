@@ -1671,8 +1671,74 @@ export class GameScene extends Phaser.Scene {
 
   private createSpellImpactEffect(x: number, y: number, spellType: SpellType): void {
     const colors = SPELL_COLORS[spellType];
-    const particleCount = 8;
 
+    if (spellType === 'frost') {
+      // Frost burst: snowflake particles radiating outward + falling
+      const flakeCount = 12;
+      for (let i = 0; i < flakeCount; i++) {
+        const flake = this.add.graphics();
+        flake.setDepth(16);
+
+        const angle = (Math.PI * 2 / flakeCount) * i + (Math.random() - 0.5) * 0.4;
+        const size = 1.5 + Math.random() * 2;
+        const color = Math.random() > 0.4 ? 0x88ddff : 0xffffff;
+
+        // Draw snowflake at origin
+        flake.fillStyle(color, 0.8);
+        flake.fillCircle(0, 0, size);
+        // Cross pattern for snowflake look
+        flake.lineStyle(1, 0xffffff, 0.6);
+        flake.beginPath();
+        flake.moveTo(-3, 0);
+        flake.lineTo(3, 0);
+        flake.moveTo(0, -3);
+        flake.lineTo(0, 3);
+        // Diagonal arms
+        flake.moveTo(-2, -2);
+        flake.lineTo(2, 2);
+        flake.moveTo(2, -2);
+        flake.lineTo(-2, 2);
+        flake.strokePath();
+
+        flake.setPosition(x, y);
+
+        const distance = 16 + Math.random() * 14;
+        const targetX = x + Math.cos(angle) * distance;
+        const targetY = y + Math.sin(angle) * distance;
+
+        // Burst outward then drift down
+        this.tweens.add({
+          targets: flake,
+          x: targetX,
+          y: targetY + 8 + Math.random() * 6,
+          alpha: 0,
+          scale: 0.3 + Math.random() * 0.3,
+          duration: 500 + Math.random() * 300,
+          ease: 'Power2',
+          onComplete: () => flake.destroy()
+        });
+      }
+
+      // Central ice flash
+      const flash = this.add.graphics();
+      flash.setDepth(15);
+      flash.fillStyle(0xaaddff, 0.5);
+      flash.fillCircle(x, y, 14);
+      flash.fillStyle(0xffffff, 0.4);
+      flash.fillCircle(x, y, 8);
+      this.tweens.add({
+        targets: flash,
+        alpha: 0,
+        scale: 1.5,
+        duration: 250,
+        ease: 'Power1',
+        onComplete: () => flash.destroy()
+      });
+      return;
+    }
+
+    // Default impact (fireball, lightning)
+    const particleCount = 8;
     for (let i = 0; i < particleCount; i++) {
       const particle = this.add.circle(x, y, 3, colors.primary, 0.8);
       particle.setDepth(16);

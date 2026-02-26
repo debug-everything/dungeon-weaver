@@ -65,17 +65,18 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] I key to open/close inventory
 
 ### Equipment System
-- [x] 6 equipment slots (weapon, head, chest, legs, boots, shield)
+- [x] 4 equipment slots (weapon, armor, shield, spellbook)
 - [x] Equip/unequip functionality
 - [x] Stats display (damage, speed, defense)
 - [x] Equipment affects combat calculations
 
 ### Items & Weapons
-- [x] 12 weapons implemented:
+- [x] 15 weapons implemented:
   - [x] Wooden Sword, Rusty Sword, Steel Sword, Silver Sword, Ruby Sword, Golden Sword
   - [x] Small Dagger, Steel Dagger, Golden Dagger
   - [x] War Hammer, Sledgehammer
   - [x] Silver Katana
+  - [x] Fire Staff, Storm Staff, Frost Staff
 - [x] 5 consumables:
   - [x] Health Potion (25 HP)
   - [x] Large Health Potion (50 HP)
@@ -160,7 +161,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Charged attacks (hold SPACE for up to 2.5x damage)
 - [x] Dodge/roll mechanic (SHIFT key, afterimage trail, i-frames)
 - [x] Attack arc hitbox system (replaces square hitbox, per-weapon-class arc width)
-- [x] Weapon class system (sword/dagger/hammer/katana/unarmed with distinct arc, knockback, reach)
+- [x] Weapon class system (sword/dagger/hammer/katana/staff/unarmed with distinct arc, knockback, reach)
 
 ### Monster Enhancements
 - [x] 28 monster types across 6 families (undead, beast, orc, demon, elemental, dark_knight)
@@ -192,7 +193,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 ### Phase 2d: Simplified Armor System ✅
 - [x] Replace 5 armor slots (head/chest/legs/boots) with single "armor" slot
 - [x] 5 outfit types that change player sprite appearance (Knight, Wizard, Spy, Peasant, Barbarian)
-- [x] Keep shield as separate stats-only slot (3 slots total: weapon, armor, shield)
+- [x] Keep shield as separate stats-only slot (4 slots total: weapon, armor, shield, spellbook)
 - [x] Outfits in NPC shops and monster loot tables
 - [x] Remove runtime-generated armor sprites, use NPC sprites for outfits + keep shield sprites
 
@@ -241,16 +242,21 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Tab navigation between player overlays (TAB cycles, I/Q/M/L shortcuts work cross-tab)
 
 ### Phase 3b: Spells & Skills
-- [x] Spell book weapons (Fireball Tome, Lightning Tome) — equip in weapon slot, fire projectiles on SPACE
-- [x] Wizard Cloak requirement for casting (check at attack time, floating error if missing)
+- [x] Spell tomes (Fireball, Lightning, Frost) — equip in dedicated spellbook slot, cast with ENTER key
+- [x] Dual weapon system: melee weapon (SPACE) + spell tome (ENTER) can be equipped simultaneously
+- [x] Staff weapon class (Fire Staff, Storm Staff, Frost Staff) — required to cast matching spell tomes
+- [x] Elemental pairing: Fire Staff → Fireball, Storm Staff → Lightning, Frost Staff → Frost
+- [x] Error messages for wrong/missing staff ("Requires a Staff!", "Requires Fire Staff!", etc.)
 - [x] INT stat scales spell damage (+0.8 per point)
 - [x] Spell projectile physics (wall collision via tile lookup, distance-based monster collision)
 - [x] Lightning chain AOE (chains to up to 2 nearby enemies, damage decay 100%→60%→35%, jagged arc visuals)
-- [x] Spell books sold by Aldric the Sage
+- [x] Frost freeze effect with ice overlay visual on frozen monsters
+- [x] Spell tomes and staffs sold by Aldric the Sage
+- [x] Mana system (50 max, per-spell costs, INT-scaled regen, mana potions, blue HUD bar)
+- [ ] Universal staff (e.g. "Archmagos Staff") — works with all tome types, very high cost (~2000g)
 - [ ] Skill tree system
 - [ ] Additional spell types (heal, shield, etc.)
 - [ ] Passive abilities
-- [ ] Mana/energy resource
 
 ### Quests
 - [x] Quest log UI (Q key overlay with active/completed quests, NPC turn-in guidance)
@@ -380,4 +386,4 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ---
 
-*Last Updated: Phase 2f Complete (Monster Families, Tiers & Boss System)*
+*Last Updated: Phase 3b Partial (Dual Weapon Slots, Staff + Tome System, ENTER Key Casting)*
