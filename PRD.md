@@ -386,4 +386,10 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ---
 
-*Last Updated: Phase 3b Partial (Dual Weapon Slots, Staff + Tome System, ENTER Key Casting)*
+### Deployment
+- [x] Render Blueprint (`render.yaml`) — single web service
+- [x] Express serves Vite static build in production
+- [x] SQLite persistence via Render disk (`/data/game.db`)
+- [x] Unified build (`npm run build`) and start (`npm start`) scripts
+
+*Last Updated: Render deployment Blueprint*

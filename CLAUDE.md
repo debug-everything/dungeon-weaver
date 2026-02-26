@@ -54,6 +54,7 @@ src/
     ├── LevelUpScene.ts        # Stat allocation overlay (L key / TAB)
     └── ShopScene.ts           # Shop interface
 
+render.yaml                    # Render Blueprint (single web service + disk)
 server/
 ├── game.config.json           # Story arc settings (questsPerArc, bossQuestEnabled)
 ├── src/
@@ -255,8 +256,12 @@ npx tsc --noEmit
 
 ### Build for Production
 ```bash
-npm run build
+npm run build              # Vite build + install server deps
+npm start                  # Start production server (serves frontend + API)
 ```
+
+### Deploy to Render
+Push to GitHub and connect repo in Render dashboard, or use "New Blueprint Instance" with `render.yaml`. Set `LLM_API_KEY` in the Render dashboard. SQLite is persisted on a Render disk at `/data/game.db`.
 
 ## Debugging
 Enable physics debug in `src/main.ts`:

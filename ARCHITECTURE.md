@@ -179,3 +179,31 @@ npm run dev            # Both frontend (4200) + backend (4201) via concurrently
 npm run dev:client     # Frontend only
 npm run dev:server     # Backend only
 ```
+
+## Deployment (Render)
+
+Deployed as a single Render web service via Blueprint (`render.yaml`).
+
+### How It Works
+- **Build:** `npm install && npm run build` → Vite builds frontend to `dist/`, then installs server dependencies
+- **Start:** Express serves both `/api/*` routes and the Vite static build (`dist/`) from a single process
+- **Database:** SQLite persisted on a Render disk mounted at `/data` (1 GB), path set via `DATABASE_PATH=/data/game.db`
+- **Host binding:** Server binds to `0.0.0.0` (Render requirement)
+
+### Static File Serving
+In production (`NODE_ENV=production`), `server/src/index.ts` adds:
+1. `express.static()` serving `../dist` (the Vite build output)
+2. Catch-all `*` route returning `index.html` for SPA client-side routing
+
+### Environment Variables
+Set in Render dashboard (or `render.yaml` defaults):
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `NODE_ENV` | `production` | Enables static serving |
+| `PORT` | `4201` | Server listen port |
+| `DATABASE_PATH` | `/data/game.db` | Points to persistent disk |
+| `LLM_ENABLED` | `true` | Master switch |
+| `LLM_API_KEY` | — | Set in dashboard |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible endpoint |
+| `LLM_MODEL` | `gpt-4.1-mini` | Model name |
+| `STORY_ARC_DAILY_MAX` | `5` | Daily arc generation cap |
