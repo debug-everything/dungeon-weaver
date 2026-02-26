@@ -1,6 +1,6 @@
 import { generateStoryArc, generateArcQuest, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES } from './llmService.js';
 import { validateQuest } from './questValidator.js';
-import { gameConfig } from '../config.js';
+import { config, gameConfig } from '../config.js';
 import { llmLogger } from '../logger.js';
 
 const MAX_RETRIES = 3;
@@ -30,6 +30,8 @@ export interface ArcStatus {
   nextQuestReady: boolean;
   completedArcCount: number;
   tier: number;
+  dailyArcsUsed: number;
+  dailyArcsMax: number;
 }
 
 class StoryArcService {
@@ -41,9 +43,13 @@ class StoryArcService {
   private generating: boolean = false;
   private completedArcCount: number = 0;
 
+  // Daily arc generation limit
+  private dailyArcCount: number = 0;
+  private dailyArcDate: string = ''; // YYYY-MM-DD
+
   async initialize(): Promise<void> {
-    llmLogger.info('Initializing story arc system (questsPerArc=%d, bossEnabled=%s)...',
-      gameConfig.storyArc.questsPerArc, gameConfig.storyArc.bossQuestEnabled);
+    llmLogger.info('Initializing story arc system (questsPerArc=%d, bossEnabled=%s, dailyMax=%d)...',
+      gameConfig.storyArc.questsPerArc, gameConfig.storyArc.bossQuestEnabled, config.storyArcDailyMax);
 
     await this.generateNewArc();
     if (this.currentArc) {
@@ -51,7 +57,32 @@ class StoryArcService {
     }
   }
 
+  private isDailyLimitReached(): boolean {
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.dailyArcDate !== today) {
+      // New day — reset counter
+      this.dailyArcDate = today;
+      this.dailyArcCount = 0;
+    }
+    return this.dailyArcCount >= config.storyArcDailyMax;
+  }
+
+  private incrementDailyArcCount(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.dailyArcDate !== today) {
+      this.dailyArcDate = today;
+      this.dailyArcCount = 0;
+    }
+    this.dailyArcCount++;
+  }
+
   private async generateNewArc(): Promise<boolean> {
+    if (this.isDailyLimitReached()) {
+      llmLogger.warn('Daily story arc limit reached (%d/%d). No new arcs will be generated until tomorrow.',
+        this.dailyArcCount, config.storyArcDailyMax);
+      return false;
+    }
+
     const totalQuests = gameConfig.storyArc.questsPerArc + (gameConfig.storyArc.bossQuestEnabled ? 1 : 0);
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -104,7 +135,9 @@ class StoryArcService {
 
         this.existingArcIds.push(outline.id);
         this.existingArcTitles.push(outline.title);
-        llmLogger.info('Story arc generated: "%s" (%d quests)', outline.title, totalQuests);
+        this.incrementDailyArcCount();
+        llmLogger.info('Story arc generated: "%s" (%d quests, daily %d/%d)',
+          outline.title, totalQuests, this.dailyArcCount, config.storyArcDailyMax);
         return true;
       } catch (err) {
         llmLogger.error({ err }, 'Arc generation failed (attempt %d/%d)', attempt + 1, MAX_RETRIES);
@@ -284,7 +317,9 @@ class StoryArcService {
       nextQuestNpcId: this.getNextQuestNpcId(),
       nextQuestReady: this.currentQuest !== null,
       completedArcCount: this.completedArcCount,
-      tier: this.getTier()
+      tier: this.getTier(),
+      dailyArcsUsed: this.dailyArcCount,
+      dailyArcsMax: config.storyArcDailyMax
     };
   }
 

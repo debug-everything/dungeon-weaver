@@ -3,7 +3,7 @@ import { NPCData } from '../types';
 export const NPCS: Record<string, NPCData> = {
   npc_merchant: {
     id: 'npc_merchant',
-    name: 'Marcus the Merchant',
+    name: 'Marcus the Barterer',
     type: 'merchant',
     sprite: 'npc_merchant',
     dialogue: [
@@ -25,7 +25,7 @@ export const NPCS: Record<string, NPCData> = {
   },
   npc_merchant_2: {
     id: 'npc_merchant_2',
-    name: 'Elena the Exotic',
+    name: 'Elena the Divine',
     type: 'merchant_2',
     sprite: 'npc_merchant_2',
     dialogue: [

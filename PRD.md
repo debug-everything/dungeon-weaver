@@ -46,8 +46,8 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ### NPC & Shop System
 - [x] 3 NPC merchants:
-  - [x] Marcus the Merchant (basic weapons & potions)
-  - [x] Elena the Exotic (rare/exotic weapons)
+  - [x] Marcus the Barterer (basic weapons & potions)
+  - [x] Elena the Divine (rare/exotic weapons)
   - [x] Aldric the Sage (consumables & magic items)
 - [x] E key interaction when near NPC
 - [x] Interaction prompt display

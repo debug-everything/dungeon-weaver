@@ -24,5 +24,6 @@ export const config = {
     apiKey: process.env.LLM_API_KEY || '',
     baseURL: process.env.LLM_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.LLM_MODEL || 'gpt-4.1-mini'
-  }
+  },
+  storyArcDailyMax: parseInt(process.env.STORY_ARC_DAILY_MAX || '5', 10)
 };

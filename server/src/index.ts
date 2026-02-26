@@ -1,3 +1,5 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
@@ -20,7 +22,17 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', llmEnabled: config.llm.enabled });
 });
 
-app.listen(config.port, () => {
+// In production, serve the Vite-built frontend as static files
+if (process.env.NODE_ENV === 'production') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distPath = path.join(__dirname, '../../dist');
+  app.use(express.static(distPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+app.listen(config.port, '0.0.0.0', () => {
   logger.info('Server running on port %d', config.port);
   llmLogger.info('Status: %s', config.llm.enabled ? 'ENABLED' : 'DISABLED');
   if (config.llm.enabled) {

@@ -291,8 +291,8 @@ Weapon, Armor, Shield, Spellbook (4 slots total)
 
 | NPC | ID | Role | Specialty |
 |-----|----|------|-----------|
-| Marcus the Merchant | `npc_merchant` | Shop | Basic weapons, potions & starter outfits |
-| Elena the Exotic | `npc_merchant_2` | Shop | Rare weapons & high-tier outfits |
+| Marcus the Barterer | `npc_merchant` | Shop | Basic weapons, potions & starter outfits |
+| Elena the Divine | `npc_merchant_2` | Shop | Rare weapons & high-tier outfits |
 | Aldric the Sage | `npc_sage` | Shop | Consumables & potions |
 
 All NPCs are located in the safe room (room 0), spread to separate corners to avoid label overlap.
@@ -352,8 +352,8 @@ Quest generation includes NPC personality context that shapes quest themes, dial
 
 | NPC | Personality | Preferred Quest Types | Reward Tendencies |
 |-----|------------|----------------------|-------------------|
-| Marcus the Merchant | Practical, commerce-focused | destroy, recover | Gold, weapons |
-| Elena the Exotic | Adventurous, artifact collector | investigate, recover | Rare weapons, variant items |
+| Marcus the Barterer | Practical, commerce-focused | destroy, recover | Gold, weapons |
+| Elena the Divine | Adventurous, artifact collector | investigate, recover | Rare weapons, variant items |
 | Aldric the Sage | Scholarly, mystical | investigate, destroy | Potions, consumables |
 
 ### Balance Constraints

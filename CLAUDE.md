@@ -216,9 +216,11 @@ LLM_ENABLED=true           # Master switch (must be "true" to activate)
 LLM_API_KEY=your-key       # Required alongside LLM_ENABLED
 LLM_BASE_URL=https://...   # OpenAI-compatible endpoint
 LLM_MODEL=gpt-4.1-mini     # Model name (default; gpt-4.1-nano for lower cost)
+STORY_ARC_DAILY_MAX=5      # Max story arcs generated per day (default: 5)
 ```
 
 Both `LLM_ENABLED=true` AND `LLM_API_KEY` must be set. Missing either = LLM disabled (hardcoded quests only).
+`STORY_ARC_DAILY_MAX` caps how many story arcs can be generated per calendar day (resets at midnight UTC). When the limit is reached, no new arcs are generated until the next day.
 
 **Logging**: Uses pino with pretty console output + JSON file at `server/logs/server.log`.
 ```bash

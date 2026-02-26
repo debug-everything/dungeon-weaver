@@ -11,11 +11,11 @@ export interface QuestGenerationContext {
 // NPC personality profiles — influence quest themes, dialog tone, and reward types
 export const NPC_PROFILES: Record<string, { name: string; personality: string }> = {
   npc_merchant: {
-    name: 'Marcus the Merchant',
+    name: 'Marcus the Barterer',
     personality: `Marcus is a practical, no-nonsense trader. His quests revolve around protecting trade routes, recovering stolen merchandise, eliminating pests that threaten his business, or sourcing rare goods. He speaks in a direct, business-like manner. He favors "destroy" and "recover" quest types. Rewards lean toward gold and weapons.`
   },
   npc_merchant_2: {
-    name: 'Elena the Exotic',
+    name: 'Elena the Divine',
     personality: `Elena is an adventurous collector of rare and exotic artifacts. Her quests involve tracking down ancient relics, investigating mysterious dungeon anomalies, recovering lost treasures, or hunting rare monster variants. She speaks with wonder and excitement. She favors "investigate" and "recover" quest types. Rewards lean toward rare weapons and unique variant items.`
   },
   npc_sage: {
@@ -204,8 +204,8 @@ MONSTER SPRITES (for variant baseSprite):
 ${monsterSpriteEnum}
 
 NPC_NAMES (use as "speaker" based on npcId):
-- "npc_merchant" → "Marcus the Merchant"
-- "npc_merchant_2" → "Elena the Exotic"
+- "npc_merchant" → "Marcus the Barterer"
+- "npc_merchant_2" → "Elena the Divine"
 - "npc_sage" → "Aldric the Sage"
 
 ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
@@ -261,36 +261,36 @@ ITEM_IDS (for objective targets, reward itemId, and variants baseItem):
   "rewards": {"xp": 50, "gold": 30, "items": [{"itemId": "flask_red", "quantity": 1}]},
   "dialog": {
     "offer": [
-      {"id": "offer_1", "speaker": "Marcus the Merchant", "text": "So, what do you say? Will you help me deal with them?", "responses": [
+      {"id": "offer_1", "speaker": "Marcus the Barterer", "text": "So, what do you say? Will you help me deal with them?", "responses": [
         {"text": "I'll handle it.", "nextNodeId": "offer_accept", "action": {"type": "accept_quest"}},
         {"text": "Not right now.", "nextNodeId": "offer_decline", "action": {"type": "decline_quest"}}
       ]},
-      {"id": "offer_accept", "speaker": "Marcus the Merchant", "text": "Thank you! Kill at least three of those pests and I'll reward you handsomely."},
-      {"id": "offer_decline", "speaker": "Marcus the Merchant", "text": "I understand. Come back if you change your mind."}
+      {"id": "offer_accept", "speaker": "Marcus the Barterer", "text": "Thank you! Kill at least three of those pests and I'll reward you handsomely."},
+      {"id": "offer_decline", "speaker": "Marcus the Barterer", "text": "I understand. Come back if you change your mind."}
     ],
     "inProgress": [
-      {"id": "progress_1", "speaker": "Marcus the Merchant", "text": "Have you dealt with those goblins yet? They're still causing trouble.", "responses": [
+      {"id": "progress_1", "speaker": "Marcus the Barterer", "text": "Have you dealt with those goblins yet? They're still causing trouble.", "responses": [
         {"text": "Still working on it.", "nextNodeId": "progress_working"},
         {"text": "I'll get back to it.", "nextNodeId": "progress_later", "action": {"type": "end_dialog"}}
       ]},
-      {"id": "progress_working", "speaker": "Marcus the Merchant", "text": "Keep at it! I'm counting on you."},
-      {"id": "progress_later", "speaker": "Marcus the Merchant", "text": "Hurry if you can. My stock is dwindling."}
+      {"id": "progress_working", "speaker": "Marcus the Barterer", "text": "Keep at it! I'm counting on you."},
+      {"id": "progress_later", "speaker": "Marcus the Barterer", "text": "Hurry if you can. My stock is dwindling."}
     ],
     "readyToTurnIn": [
-      {"id": "turnin_1", "speaker": "Marcus the Merchant", "text": "You've done it! I can see the goblin threat is gone. Ready for your reward?", "responses": [
+      {"id": "turnin_1", "speaker": "Marcus the Barterer", "text": "You've done it! I can see the goblin threat is gone. Ready for your reward?", "responses": [
         {"text": "Here to collect.", "nextNodeId": "turnin_accept", "action": {"type": "turn_in_quest"}},
         {"text": "Not yet.", "nextNodeId": "turnin_later", "action": {"type": "end_dialog"}}
       ]},
-      {"id": "turnin_accept", "speaker": "Marcus the Merchant", "text": "Excellent work! Here's your reward as promised."},
-      {"id": "turnin_later", "speaker": "Marcus the Merchant", "text": "Come back when you're ready to collect."}
+      {"id": "turnin_accept", "speaker": "Marcus the Barterer", "text": "Excellent work! Here's your reward as promised."},
+      {"id": "turnin_later", "speaker": "Marcus the Barterer", "text": "Come back when you're ready to collect."}
     ],
     "completed": [
-      {"id": "done_1", "speaker": "Marcus the Merchant", "text": "Thanks again for clearing out those goblins. My business is safe once more.", "responses": [
+      {"id": "done_1", "speaker": "Marcus the Barterer", "text": "Thanks again for clearing out those goblins. My business is safe once more.", "responses": [
         {"text": "Glad to help.", "nextNodeId": "done_end", "action": {"type": "end_dialog"}},
         {"text": "Farewell.", "nextNodeId": "done_bye", "action": {"type": "end_dialog"}}
       ]},
-      {"id": "done_end", "speaker": "Marcus the Merchant", "text": "May fortune favor you, adventurer!"},
-      {"id": "done_bye", "speaker": "Marcus the Merchant", "text": "Safe travels, friend."}
+      {"id": "done_end", "speaker": "Marcus the Barterer", "text": "May fortune favor you, adventurer!"},
+      {"id": "done_bye", "speaker": "Marcus the Barterer", "text": "Safe travels, friend."}
     ]
   }
 }
@@ -348,8 +348,8 @@ A story arc is a coherent multi-quest narrative with a title, theme, and sequent
 }
 
 ## NPC PERSONALITIES (pick the most fitting NPC per quest)
-- "npc_merchant" (Marcus the Merchant): Practical trader. Business threats, stolen goods, trade routes. Favors "destroy" and "recover".
-- "npc_merchant_2" (Elena the Exotic): Adventurous collector. Relics, mysteries, rare finds. Favors "investigate" and "recover".
+- "npc_merchant" (Marcus the Barterer): Practical trader. Business threats, stolen goods, trade routes. Favors "destroy" and "recover".
+- "npc_merchant_2" (Elena the Divine): Adventurous collector. Relics, mysteries, rare finds. Favors "investigate" and "recover".
 - "npc_sage" (Aldric the Sage): Scholarly mystic. Supernatural phenomena, alchemy, undead. Favors "investigate" and "destroy".
 
 ## RULES

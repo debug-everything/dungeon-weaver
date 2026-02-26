@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: dungeon-rpg-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4201"
+      - key: DATABASE_PATH
+        value: /data/game.db
+      - key: LLM_ENABLED
+        value: true
+        sync: true
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://api.openai.com/v1
+        sync: true
+      - key: LLM_MODEL
+        value: gpt-4.1-mini
+        sync: true
+      - key: STORY_ARC_DAILY_MAX
+        value: 5
+        sync: true
+    disk:
+      name: dungeon-data
+      mountPath: /data
+      sizeGB: 1
