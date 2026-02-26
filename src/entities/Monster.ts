@@ -14,6 +14,9 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private lastAttackTime: number = 0;
   private healthBar: Phaser.GameObjects.Graphics | null = null;
   private isKnockedBack: boolean = false;
+  private isFrozen: boolean = false;
+  private frozenTimer: Phaser.Time.TimerEvent | null = null;
+  private freezeOverlay: Phaser.GameObjects.Graphics | null = null;
   private nameText: Phaser.GameObjects.Text | null = null;
   private fogSystem: FogOfWarSystem | null = null;
 
@@ -100,6 +103,46 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     return this.fogSystem.hasLineOfSightWorld(this.x, this.y, this.target.x, this.target.y, scaledTile);
   }
 
+  applyFreeze(duration: number): void {
+    if (this.isFrozen) {
+      // Refresh existing freeze timer
+      this.frozenTimer?.destroy();
+      // Keep existing overlay
+    } else {
+      // Create freeze overlay
+      this.freezeOverlay = this.scene.add.graphics();
+      this.freezeOverlay.setDepth(this.depth + 1);
+    }
+
+    this.isFrozen = true;
+    this.setTint(0x88ccff);
+    (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+
+    // Draw the ice overlay
+    this.drawFreezeOverlay();
+
+    this.frozenTimer = this.scene.time.delayedCall(duration, () => {
+      this.isFrozen = false;
+      this.clearTint();
+      this.frozenTimer = null;
+      if (this.freezeOverlay) {
+        this.freezeOverlay.destroy();
+        this.freezeOverlay = null;
+      }
+    });
+  }
+
+  private drawFreezeOverlay(): void {
+    if (!this.freezeOverlay) return;
+    this.freezeOverlay.clear();
+    const isLarge = this.monsterData.spriteSize && this.monsterData.spriteSize.width === 32;
+    const size = isLarge ? 16 : 12;
+    this.freezeOverlay.fillStyle(0xaaddff, 0.3);
+    this.freezeOverlay.fillRect(this.x - size, this.y - size, size * 2, size * 2);
+    this.freezeOverlay.lineStyle(1, 0xcceeFF, 0.5);
+    this.freezeOverlay.strokeRect(this.x - size, this.y - size, size * 2, size * 2);
+  }
+
   applyKnockback(fromX: number, fromY: number, force: number): void {
     if (this.isKnockedBack) return;
 
@@ -125,6 +168,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.setVisible(onVisibleTile);
       if (this.healthBar) this.healthBar.setVisible(onVisibleTile);
       if (this.nameText) this.nameText.setVisible(onVisibleTile);
+      if (this.freezeOverlay) this.freezeOverlay.setVisible(onVisibleTile);
     }
 
     this.updateHealthBar();
@@ -135,7 +179,13 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.nameText.setPosition(this.x, this.y - (isLarge ? 36 : 28));
     }
 
-    // Skip AI during knockback
+    // Skip AI during freeze or knockback
+    if (this.isFrozen) {
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      // Update freeze overlay position
+      if (this.freezeOverlay) this.drawFreezeOverlay();
+      return;
+    }
     if (this.isKnockedBack) return;
 
     if (!this.target || !this.target.active) {
@@ -238,6 +288,14 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private die(): void {
     this.monsterState = 'dead';
     this.setActive(false);
+    if (this.frozenTimer) {
+      this.frozenTimer.destroy();
+      this.frozenTimer = null;
+    }
+    if (this.freezeOverlay) {
+      this.freezeOverlay.destroy();
+      this.freezeOverlay = null;
+    }
 
     // Death animation
     this.scene.tweens.add({

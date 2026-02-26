@@ -5,7 +5,13 @@ export const SCALE = 2;
 
 export const PLAYER_SPEED = 120;
 export const PLAYER_MAX_HEALTH = 100;
+export const PLAYER_MAX_MANA = 50;
 export const PLAYER_START_GOLD = 50;
+
+// Mana regeneration
+export const MANA_REGEN_BASE = 1.0;
+export const MANA_REGEN_PER_INT = 0.3;
+export const MANA_REGEN_TICK = 500;
 
 export const DUNGEON_WIDTH = 60;
 export const DUNGEON_HEIGHT = 45;
@@ -29,18 +35,21 @@ export const WEAPON_CLASS_DEFAULTS: Record<string, { arcWidth: number; knockback
   hammer:  { arcWidth: 160, knockback: 80 },
   katana:  { arcWidth: 100, knockback: 30 },
   unarmed: { arcWidth: 90,  knockback: 10 },
+  staff:   { arcWidth: 100, knockback: 50 },
   spell:   { arcWidth: 0,   knockback: 0 }
 };
 
 // Spell projectile settings
 export const SPELL_PROJECTILE_SPEED: Record<string, number> = {
   fireball: 200,
-  lightning: 350
+  lightning: 350,
+  frost: 160
 };
 
 export const SPELL_COLORS: Record<string, { primary: number; secondary: number; trail: number }> = {
   fireball:  { primary: 0xff6600, secondary: 0xff2200, trail: 0xffaa00 },
-  lightning: { primary: 0x4488ff, secondary: 0xffffff, trail: 0x2266cc }
+  lightning: { primary: 0x4488ff, secondary: 0xffffff, trail: 0x2266cc },
+  frost:     { primary: 0x88ddff, secondary: 0xffffff, trail: 0x44aadd }
 };
 
 // Chests
@@ -154,6 +163,7 @@ export const EVENTS = {
   STATS_CHANGED: 'stats-changed',
   OPEN_LEVEL_UP: 'open-level-up',
   CLOSE_LEVEL_UP: 'close-level-up',
+  PLAYER_MANA_CHANGED: 'player-mana-changed',
   PLAYER_SPELL: 'player-spell',
   OPEN_TERMINAL: 'open-terminal',
   CLOSE_TERMINAL: 'close-terminal'

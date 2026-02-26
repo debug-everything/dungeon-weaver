@@ -1,7 +1,7 @@
 export type ItemType = 'weapon' | 'armor' | 'consumable' | 'misc';
-export type EquipmentSlot = 'weapon' | 'armor' | 'shield';
-export type WeaponClass = 'sword' | 'dagger' | 'hammer' | 'katana' | 'unarmed' | 'spell';
-export type SpellType = 'fireball' | 'lightning';
+export type EquipmentSlot = 'weapon' | 'armor' | 'shield' | 'spellbook';
+export type WeaponClass = 'sword' | 'dagger' | 'hammer' | 'katana' | 'unarmed' | 'spell' | 'staff';
+export type SpellType = 'fireball' | 'lightning' | 'frost';
 
 export interface ItemStats {
   damage?: number;
@@ -9,8 +9,11 @@ export interface ItemStats {
   speed?: number;
   range?: number;
   healAmount?: number;
+  manaRestoreAmount?: number;
+  manaCost?: number;
   weaponClass?: WeaponClass;
   spellType?: SpellType;
+  element?: SpellType;
   aoe?: number;
 }
 
@@ -36,6 +39,7 @@ export interface Equipment {
   weapon: Item | null;
   armor: Item | null;
   shield: Item | null;
+  spellbook: Item | null;
 }
 
 export type MonsterType = 'zombie' | 'zombie_small' | 'zombie_green' | 'zombie_tall' | 'skelet' | 'necromancer'
@@ -101,6 +105,8 @@ export interface PlayerStats {
 export interface PlayerState {
   health: number;
   maxHealth: number;
+  mana: number;
+  maxMana: number;
   gold: number;
   inventory: InventoryItem[];
   equipment: Equipment;

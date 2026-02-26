@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import {
-  PLAYER_SPEED, PLAYER_MAX_HEALTH, PLAYER_START_GOLD, SCALE, EVENTS,
+  PLAYER_SPEED, PLAYER_MAX_HEALTH, PLAYER_MAX_MANA, PLAYER_START_GOLD, SCALE, EVENTS,
   WEAPON_CLASS_DEFAULTS, PLAYER_IFRAMES_DURATION, PLAYER_IFRAMES_FLASH_RATE,
   DODGE_SPEED, DODGE_DURATION, DODGE_COOLDOWN, DODGE_IFRAMES,
   CHARGE_TIME, CHARGE_MIN_TIME,
   MAX_LEVEL, STAT_POINTS_PER_LEVEL, BASE_STATS, BASE_MAX_HEALTH, XP_PER_LEVEL,
-  SPELL_PROJECTILE_SPEED
+  SPELL_PROJECTILE_SPEED,
+  MANA_REGEN_BASE, MANA_REGEN_PER_INT, MANA_REGEN_TICK
 } from '../config/constants';
 import { PlayerStats } from '../types';
 import { InventorySystem } from '../systems/InventorySystem';
@@ -25,9 +26,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private levelUpKey!: Phaser.Input.Keyboard.Key;
   private tabKey!: Phaser.Input.Keyboard.Key;
   private terminalKey!: Phaser.Input.Keyboard.Key;
+  private enterKey!: Phaser.Input.Keyboard.Key;
 
   public health: number;
   public maxHealth: number;
+  public mana: number;
+  public maxMana: number;
   public gold: number;
   public inventory: InventorySystem;
   public combat: CombatSystem;
@@ -58,6 +62,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private chargeStartTime: number = 0;
   private chargeEffect: Phaser.GameObjects.Graphics | null = null;
 
+  // Mana regen
+  private manaRegenTimer: Phaser.Time.TimerEvent | null = null;
+
   // Gamepad button tracking (for justDown detection)
   private prevGamepadButtons: boolean[] = [];
 
@@ -79,6 +86,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Initialize stats
     this.health = PLAYER_MAX_HEALTH;
     this.maxHealth = PLAYER_MAX_HEALTH;
+    this.mana = PLAYER_MAX_MANA;
+    this.maxMana = PLAYER_MAX_MANA;
     this.gold = PLAYER_START_GOLD;
 
     // Initialize systems
@@ -98,6 +107,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Setup input
     this.setupInput();
+
+    // Mana regen timer
+    this.manaRegenTimer = scene.time.addEvent({
+      delay: MANA_REGEN_TICK,
+      loop: true,
+      callback: () => this.regenMana()
+    });
   }
 
   private setupInput(): void {
@@ -119,6 +135,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.levelUpKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
     this.tabKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.terminalKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.BACKTICK);
+    this.enterKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
   }
 
   update(time: number): void {
@@ -132,6 +149,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.handleMovement();
     this.handleAttack(time);
+    this.handleSpellCast(time);
     this.handleDodge(time);
     this.handleInventoryKey();
     this.handleInteractKey();
@@ -217,14 +235,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const cooldown = this.combat.getAttackCooldown();
     const keyboardJustDown = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const gamepadJustDown = this.isGamepadButtonJustDown(0);
-
-    // Spell weapons: fire instantly on press (no charge/combo)
-    if (this.inventory.isSpellWeapon()) {
-      if ((keyboardJustDown || gamepadJustDown) && !this.isAttacking && time - this.lastAttackTime > cooldown) {
-        this.performSpellAttack(time);
-      }
-      return;
-    }
 
     const keyboardDown = this.spaceKey.isDown;
     const gamepadDown = this.isGamepadButtonDown(0); // A button
@@ -336,11 +346,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  private performSpellAttack(time: number): void {
-    // Check wizard cloak requirement
-    const armor = this.inventory.getEquippedArmor();
-    if (!armor || armor.id !== 'armor_wizard') {
-      this.showRequiresWizardCloak();
+  private handleSpellCast(time: number): void {
+    const keyboardJustDown = Phaser.Input.Keyboard.JustDown(this.enterKey);
+    if (!keyboardJustDown || this.isAttacking || this.isCharging) return;
+
+    // Check spellbook equipped
+    const spellbook = this.inventory.getEquippedSpellbook();
+    if (!spellbook) return;
+
+    const spellType = spellbook.stats.spellType;
+    if (!spellType) return;
+
+    // Check weapon is a staff
+    const weaponClass = this.inventory.getWeaponClass();
+    if (weaponClass !== 'staff') {
+      this.showFloatingError('Requires a Staff!');
+      return;
+    }
+
+    // Check staff element matches spellbook
+    const staffElement = this.inventory.getStaffElement();
+    if (staffElement !== spellType) {
+      const elementNames: Record<string, string> = { fireball: 'Fire', lightning: 'Storm', frost: 'Frost' };
+      this.showFloatingError(`Requires ${elementNames[spellType] || spellType} Staff!`);
+      return;
+    }
+
+    // Check cooldown
+    const cooldown = this.combat.getAttackCooldown();
+    if (time - this.lastAttackTime <= cooldown) return;
+
+    // Check mana cost
+    const manaCost = spellbook.stats.manaCost || 0;
+    if (manaCost > 0 && !this.consumeMana(manaCost)) {
+      this.showNotEnoughMana();
       return;
     }
 
@@ -348,17 +387,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.lastAttackTime = time;
     this.setVelocity(0);
 
-    const spellType = this.inventory.getSpellType();
-    if (!spellType) return;
-
-    const weapon = this.inventory.getEquippedWeapon();
-    if (!weapon) return;
-
-    const baseDamage = weapon.stats.damage || 10;
+    const baseDamage = spellbook.stats.damage || 10;
     const damageResult = this.combat.calculateSpellDamage(baseDamage);
-    const range = (weapon.stats.range || 120) * SCALE;
+    const range = (spellbook.stats.range || 120) * SCALE;
     const speed = SPELL_PROJECTILE_SPEED[spellType] || 200;
-    const aoe = weapon.stats.aoe || 1;
+    const aoe = spellbook.stats.aoe || 1;
 
     const directionDeg = this.getDirectionDeg();
     const directionRad = Phaser.Math.DegToRad(directionDeg);
@@ -375,15 +408,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
 
     // Brief cast tint flash
-    this.setTint(spellType === 'fireball' ? 0xff6600 : 0x4488ff);
+    this.setTint(spellType === 'frost' ? 0x88ddff : spellType === 'fireball' ? 0xff6600 : 0x4488ff);
     this.scene.time.delayedCall(120, () => {
       this.clearTint();
       this.isAttacking = false;
     });
   }
 
-  private showRequiresWizardCloak(): void {
-    const errorText = this.scene.add.text(this.x, this.y - 30, 'Requires Wizard Cloak!', {
+  private showFloatingError(message: string): void {
+    const errorText = this.scene.add.text(this.x, this.y - 30, message, {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#ff4444',
@@ -748,6 +781,53 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  // --- Mana ---
+
+  private regenMana(): void {
+    if (this.mana >= this.maxMana) return;
+    const rate = MANA_REGEN_BASE + (this.stats.intelligence - 1) * MANA_REGEN_PER_INT;
+    const regenAmount = rate * (MANA_REGEN_TICK / 1000);
+    const prevMana = this.mana;
+    this.mana = Math.min(this.mana + regenAmount, this.maxMana);
+    if (this.mana !== prevMana) {
+      this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
+    }
+  }
+
+  consumeMana(amount: number): boolean {
+    if (this.mana < amount) return false;
+    this.mana -= amount;
+    this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
+    return true;
+  }
+
+  restoreMana(amount: number): void {
+    const prevMana = this.mana;
+    this.mana = Math.min(this.mana + amount, this.maxMana);
+    if (this.mana !== prevMana) {
+      this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
+    }
+  }
+
+  private showNotEnoughMana(): void {
+    const errorText = this.scene.add.text(this.x, this.y - 30, 'Not enough mana!', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#4488ff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(1001);
+
+    this.scene.tweens.add({
+      targets: errorText,
+      y: this.y - 55,
+      alpha: 0,
+      duration: 1200,
+      ease: 'Power2',
+      onComplete: () => errorText.destroy()
+    });
+  }
+
   addGold(amount: number): void {
     this.gold += amount;
     this.scene.events.emit(EVENTS.PLAYER_GOLD_CHANGED, this.gold);
@@ -770,6 +850,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (item.stats.healAmount) {
       this.heal(item.stats.healAmount);
     }
+    if (item.stats.manaRestoreAmount) {
+      this.restoreMana(item.stats.manaRestoreAmount);
+    }
 
     // Remove item from inventory
     this.inventory.removeItem(slotIndex);
@@ -779,6 +862,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private die(): void {
     this.clearIFrameTimers();
     this.destroyChargeEffect();
+    if (this.manaRegenTimer) {
+      this.manaRegenTimer.destroy();
+      this.manaRegenTimer = null;
+    }
     this.setActive(false);
     this.setVisible(false);
     this.scene.events.emit('player-died');
@@ -861,9 +948,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.level++;
       this.statPoints += STAT_POINTS_PER_LEVEL;
 
-      // Full HP restore on level up
+      // Full HP + mana restore on level up
       this.health = this.maxHealth;
+      this.mana = this.maxMana;
       this.scene.events.emit(EVENTS.PLAYER_HEALTH_CHANGED, this.health, this.maxHealth);
+      this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
       this.scene.events.emit(EVENTS.LEVEL_UP, this.level, this.statPoints);
     }
 

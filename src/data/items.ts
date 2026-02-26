@@ -139,13 +139,48 @@ export const ITEMS: Record<string, Item> = {
     stackable: false
   },
 
-  // Weapons - Spell Books
+  // Weapons - Staffs
+  weapon_staff_fire: {
+    id: 'weapon_staff_fire',
+    name: 'Fire Staff',
+    type: 'weapon',
+    slot: 'weapon',
+    stats: { damage: 6, speed: 0.9, range: 22, weaponClass: 'staff', element: 'fireball' },
+    value: 120,
+    sprite: 'weapon_staff_fire',
+    description: 'A staff imbued with fire magic. Required to cast Fireball Tome.',
+    stackable: false
+  },
+  weapon_staff_storm: {
+    id: 'weapon_staff_storm',
+    name: 'Storm Staff',
+    type: 'weapon',
+    slot: 'weapon',
+    stats: { damage: 7, speed: 0.9, range: 22, weaponClass: 'staff', element: 'lightning' },
+    value: 100,
+    sprite: 'weapon_staff_storm',
+    description: 'A staff crackling with storm energy. Required to cast Lightning Tome.',
+    stackable: false
+  },
+  weapon_staff_frost: {
+    id: 'weapon_staff_frost',
+    name: 'Frost Staff',
+    type: 'weapon',
+    slot: 'weapon',
+    stats: { damage: 8, speed: 0.8, range: 24, weaponClass: 'staff', element: 'frost' },
+    value: 140,
+    sprite: 'weapon_staff_frost',
+    description: 'A staff radiating cold. Required to cast Frost Tome.',
+    stackable: false
+  },
+
+  // Spell Books (equip to spellbook slot)
   spell_fireball: {
     id: 'spell_fireball',
     name: 'Fireball Tome',
     type: 'weapon',
-    slot: 'weapon',
-    stats: { damage: 18, speed: 0.8, range: 120, weaponClass: 'spell', spellType: 'fireball', aoe: 1 },
+    slot: 'spellbook',
+    stats: { damage: 18, speed: 0.8, range: 120, weaponClass: 'spell', spellType: 'fireball', aoe: 1, manaCost: 15 },
     value: 300,
     sprite: 'spell_fireball',
     description: 'An ancient tome of fire magic. Launches a fireball projectile.',
@@ -155,11 +190,22 @@ export const ITEMS: Record<string, Item> = {
     id: 'spell_lightning',
     name: 'Lightning Tome',
     type: 'weapon',
-    slot: 'weapon',
-    stats: { damage: 12, speed: 1.4, range: 150, weaponClass: 'spell', spellType: 'lightning', aoe: 3 },
+    slot: 'spellbook',
+    stats: { damage: 12, speed: 1.4, range: 150, weaponClass: 'spell', spellType: 'lightning', aoe: 3, manaCost: 10 },
     value: 240,
     sprite: 'spell_lightning',
     description: 'A crackling tome of storm magic. Lightning chains to nearby enemies.',
+    stackable: false
+  },
+  spell_frost: {
+    id: 'spell_frost',
+    name: 'Frost Tome',
+    type: 'weapon',
+    slot: 'spellbook',
+    stats: { damage: 14, speed: 1.0, range: 130, weaponClass: 'spell', spellType: 'frost', aoe: 1, manaCost: 12 },
+    value: 280,
+    sprite: 'spell_frost',
+    description: 'A frigid tome of ice magic. Freezes enemies on impact.',
     stackable: false
   },
 
@@ -190,10 +236,10 @@ export const ITEMS: Record<string, Item> = {
     id: 'flask_blue',
     name: 'Mana Potion',
     type: 'consumable',
-    stats: {},
+    stats: { manaRestoreAmount: 30 },
     value: 25,
     sprite: 'flask_blue',
-    description: 'Restores magical energy.',
+    description: 'Restores 30 mana.',
     stackable: true,
     maxStack: 10
   },

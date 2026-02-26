@@ -44,7 +44,7 @@
 | Dexterity (DEX) | +0.5% crit chance (base 10%) |
 | Constitution (CON) | +5 max HP (base 100) |
 | Luck (LCK) | +2% gold bonus on loot drops |
-| Intelligence (INT) | +0.8 spell damage per point (base from spell book) |
+| Intelligence (INT) | +0.8 spell damage per point (base from spell book), +0.3 mana regen/sec per point |
 
 ### Combat
 - Attack with SPACE key (directional arc based on facing)
@@ -67,17 +67,40 @@
 | Hammer | 160° | 80 | Slow, wide arc, massive knockback |
 | Katana | 100° | 30 | Fast, longest reach |
 | Unarmed | 90° | 10 | Fallback when no weapon equipped |
-| Spell | N/A | 0 | Projectile-based ranged attack |
+| Staff | 100° | 50 | Blunt melee, required for spell casting |
+| Spell | N/A | 0 | Projectile-based ranged attack (via tome) |
+
+### Staff Weapons
+
+| Staff | ID | Damage | Speed | Range | Element | Value |
+|-------|----|--------|-------|-------|---------|-------|
+| Fire Staff | `weapon_staff_fire` | 6 | 0.9 | 22 | fireball | 120 |
+| Storm Staff | `weapon_staff_storm` | 7 | 0.9 | 22 | lightning | 100 |
+| Frost Staff | `weapon_staff_frost` | 8 | 0.8 | 24 | frost | 140 |
+
+Staffs are blunt melee weapons with lower damage than swords (6-8 range). They use arc-based melee attacks via SPACE key. Each staff has an `element` property linking it to a specific spell type. Sold by Aldric the Sage.
 
 ### Spell System
-- Spell books equip in the weapon slot (weapon class: `spell`)
-- **Casting requires the Wizard Cloak** (`armor_wizard`) to be equipped. Equipping the book alone is allowed, but pressing SPACE without the cloak shows "Requires Wizard Cloak!" floating error
-- Spells fire instantly on SPACE press — no combo, no charge
+- Spell tomes equip in the **spellbook slot** (separate from the weapon slot)
+- **Casting requires a matching staff** equipped in the weapon slot. Fire Staff → Fireball Tome, Storm Staff → Lightning Tome, Frost Staff → Frost Tome.
+  - No staff equipped: "Requires a Staff!" floating error
+  - Wrong element staff: "Requires [Element] Staff!" floating error
+- Spells fire on ENTER key press — no combo, no charge
+- **Mana cost**: Fireball = 15, Lightning = 10, Frost = 12. Casting with insufficient mana shows "Not enough mana!" floating error.
 - Spell damage formula: `(baseDamage + (INT-1) × 0.8) × variance` (90%-110%), 8% base crit + DEX bonus
 - Projectiles are graphics-based (glowing circles with particle trails), destroyed on wall/monster hit or max range
 - **Fireball**: Single target, 200px/s projectile, orange/red visuals
 - **Lightning**: Chains to up to 2 additional nearby enemies within 60px. Damage decays per chain: 100% → 60% → 35%. Visual: jagged blue lightning arcs between chained targets (fades in 200ms)
+- **Frost**: Single target, 160px/s projectile, ice-blue crystalline shard visual. Freezes enemies on hit for 1-2 seconds (HP-based resistance: `clamp(2000 - (maxHP / 200) * 1000, 1000, 2000)` ms). Frozen enemies turn blue, cannot move or attack.
 - Sold by Aldric the Sage
+
+### Mana System
+- **Max mana**: 50 (`PLAYER_MAX_MANA`)
+- **Regen**: Base 1.0 mana/sec + 0.3/sec per INT above 1. Ticks every 500ms.
+- **Mana potion** (`flask_blue`): Restores 30 mana
+- **HUD**: Blue mana bar below health bar, shows current/max values
+- Mana fully restores on level up
+- Melee weapons do not consume mana
 
 ---
 
@@ -150,7 +173,7 @@
 - Monsters detect player within their detect range and begin chasing
 - Each monster type has its own attack range and cooldown
 - Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) never spawn from respawns
-- **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
+- **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, staff=50, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
 
 ### Boss Labels
 - **Mini-boss** (dungeon boss room): orange name label `#ffaa00`
@@ -212,6 +235,7 @@ Tiers unlock new monster families as the player completes story arcs:
 | Silver Katana | `weapon_katana_silver` | 28 | 1.3 | 32 | katana | 450 |
 | Fireball Tome | `spell_fireball` | 18 | 0.8 | 120 | spell | 300 |
 | Lightning Tome | `spell_lightning` | 12 | 1.4 | 150 | spell | 240 |
+| Frost Tome | `spell_frost` | 14 | 1.0 | 130 | spell | 280 |
 
 ### Consumables
 
@@ -219,7 +243,7 @@ Tiers unlock new monster families as the player completes story arcs:
 |------|----|--------|-------|-----------|
 | Health Potion | `flask_red` | Heal 25 HP | 20 | 10 |
 | Large Health Potion | `flask_big_red` | Heal 50 HP | 45 | 10 |
-| Mana Potion | `flask_blue` | (unused) | 25 | 10 |
+| Mana Potion | `flask_blue` | Restore 30 mana | 25 | 10 |
 | Antidote | `flask_green` | (unused) | 30 | 10 |
 | Speed Potion | `flask_yellow` | (unused) | 40 | 10 |
 
@@ -253,7 +277,11 @@ Equipping an outfit changes the player's sprite appearance.
 | Knight + Golden Shield | 13 | 6.5 | ~3.5 damage |
 
 ### Equipment Slots
-Weapon, Armor, Shield (3 slots total)
+Weapon, Armor, Shield, Spellbook (4 slots total)
+- **Weapon**: Melee weapon (sword, dagger, hammer, katana, staff) — used with SPACE
+- **Armor**: Body armor that changes player sprite
+- **Shield**: Adds defense
+- **Spellbook**: Spell tome — cast with ENTER (requires matching staff in weapon slot)
 
 ---
 

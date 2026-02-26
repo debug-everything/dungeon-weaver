@@ -964,15 +964,17 @@ export class GameScene extends Phaser.Scene {
       this.resumeGame();
     });
 
-    // Debug terminal (no pause)
+    // Debug terminal (no pause, but disable game keyboard so typing doesn't trigger shortcuts)
     this.events.on(EVENTS.OPEN_TERMINAL, () => {
       if (!this.scene.isActive(SCENE_KEYS.TERMINAL)) {
         this.scene.launch(SCENE_KEYS.TERMINAL, { player: this.player, rooms: this.rooms });
+        if (this.input.keyboard) this.input.keyboard.enabled = false;
       }
     });
 
     this.events.on(EVENTS.CLOSE_TERMINAL, () => {
       this.scene.stop(SCENE_KEYS.TERMINAL);
+      if (this.input.keyboard) this.input.keyboard.enabled = true;
     });
 
     // Player died
@@ -1159,6 +1161,8 @@ export class GameScene extends Phaser.Scene {
       playerState: {
         health: this.player.health,
         maxHealth: this.player.maxHealth,
+        mana: this.player.mana,
+        maxMana: this.player.maxMana,
         gold: this.player.gold,
         position: { x: this.player.x, y: this.player.y },
         level: this.player.level,
@@ -1362,6 +1366,30 @@ export class GameScene extends Phaser.Scene {
             duration: 120,
             onComplete: () => spark.destroy()
           });
+        } else if (data.spellType === 'frost') {
+          // Snowflake/ice particle trail
+          const flake = this.add.graphics();
+          flake.setDepth(14);
+          const fx = px + (Math.random() - 0.5) * 10;
+          const fy = py + (Math.random() - 0.5) * 10;
+          const size = 1 + Math.random() * 2;
+          const color = Math.random() > 0.5 ? 0x88ddff : 0xffffff;
+          flake.fillStyle(color, 0.7);
+          flake.fillCircle(fx, fy, size);
+          // Small cross for snowflake look
+          flake.lineStyle(1, 0xffffff, 0.5);
+          flake.beginPath();
+          flake.moveTo(fx - 2, fy);
+          flake.lineTo(fx + 2, fy);
+          flake.moveTo(fx, fy - 2);
+          flake.lineTo(fx, fy + 2);
+          flake.strokePath();
+          this.tweens.add({
+            targets: flake,
+            alpha: 0,
+            duration: 250,
+            onComplete: () => flake.destroy()
+          });
         } else {
           // Fireball: ember trail
           const trail = this.add.circle(px, py, 3, colors.trail, 0.6);
@@ -1406,6 +1434,38 @@ export class GameScene extends Phaser.Scene {
       // Hot center
       graphics.fillStyle(colors.secondary, 1);
       graphics.fillCircle(x, y, 3);
+    } else if (spellType === 'frost') {
+      // Crystalline ice shard
+      const angle = dirRad ?? 0;
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+      const perpX = -Math.sin(angle);
+      const perpY = Math.cos(angle);
+
+      // Outer frost glow
+      graphics.fillStyle(colors.trail, 0.25);
+      graphics.fillCircle(x, y, 9);
+
+      // Diamond/shard shape along travel direction
+      graphics.fillStyle(colors.primary, 0.9);
+      graphics.beginPath();
+      graphics.moveTo(x + dirX * 8, y + dirY * 8);           // tip
+      graphics.lineTo(x + perpX * 4, y + perpY * 4);          // left
+      graphics.lineTo(x - dirX * 6, y - dirY * 6);            // tail
+      graphics.lineTo(x - perpX * 4, y - perpY * 4);          // right
+      graphics.closePath();
+      graphics.fillPath();
+
+      // Bright core line
+      graphics.lineStyle(2, colors.secondary, 0.9);
+      graphics.beginPath();
+      graphics.moveTo(x - dirX * 4, y - dirY * 4);
+      graphics.lineTo(x + dirX * 6, y + dirY * 6);
+      graphics.strokePath();
+
+      // Shimmer sparkle at tip
+      graphics.fillStyle(colors.secondary, 0.8 + Math.random() * 0.2);
+      graphics.fillCircle(x + dirX * 6, y + dirY * 6, 2);
     } else {
       // Lightning bolt — jagged zigzag line along travel direction
       const angle = dirRad ?? 0;
@@ -1474,8 +1534,8 @@ export class GameScene extends Phaser.Scene {
       proj.y += proj.vy * dt;
       proj.graphics.setPosition(proj.x, proj.y);
 
-      // Redraw lightning bolt each frame for crackling effect
-      if (proj.spellType === 'lightning') {
+      // Redraw lightning bolt / frost shard each frame for animated effect
+      if (proj.spellType === 'lightning' || proj.spellType === 'frost') {
         const colors = SPELL_COLORS[proj.spellType];
         this.drawProjectileGraphics(proj.graphics, 0, 0, colors, proj.spellType, proj.directionRad);
       }
@@ -1522,6 +1582,12 @@ export class GameScene extends Phaser.Scene {
     target.takeDamage(proj.damage.damage, proj.damage.isCritical);
     this.player.combat.createHitEffect(target.x, target.y);
     this.createSpellImpactEffect(target.x, target.y, proj.spellType);
+
+    // Frost freeze effect
+    if (proj.spellType === 'frost' && target.active) {
+      const freezeDuration = Math.max(1000, Math.min(2000, 2000 - (target.maxHealth / 200) * 1000));
+      target.applyFreeze(freezeDuration);
+    }
 
     // AOE chaining (lightning)
     if (proj.aoe > 1) {

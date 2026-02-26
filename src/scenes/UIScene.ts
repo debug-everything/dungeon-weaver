@@ -6,9 +6,13 @@ import { GameScene } from './GameScene';
 export class UIScene extends Phaser.Scene {
   private healthBar!: Phaser.GameObjects.Graphics;
   private healthText!: Phaser.GameObjects.Text;
+  private manaBar!: Phaser.GameObjects.Graphics;
+  private manaText!: Phaser.GameObjects.Text;
   private goldText!: Phaser.GameObjects.Text;
   private weaponIcon!: Phaser.GameObjects.Image;
   private weaponText!: Phaser.GameObjects.Text;
+  private spellbookIcon!: Phaser.GameObjects.Image;
+  private spellbookText!: Phaser.GameObjects.Text;
   private _controlsText!: Phaser.GameObjects.Text;
   private questTrackerContainer!: Phaser.GameObjects.Container;
 
@@ -20,6 +24,8 @@ export class UIScene extends Phaser.Scene {
 
   private currentHealth: number = 100;
   private maxHealth: number = 100;
+  private currentMana: number = 50;
+  private maxMana: number = 50;
   private currentLevel: number = 1;
   private currentXP: number = 0;
   private currentXPToNext: number = XP_PER_LEVEL[1];
@@ -53,9 +59,30 @@ export class UIScene extends Phaser.Scene {
       fontSize: '20px'
     }).setOrigin(0, 0);
 
-    // --- Level & XP bar (below health bar) ---
+    // --- Mana bar (below health bar) ---
+    const manaBg = this.add.rectangle(20, 48, 204, 16, 0x333333);
+    manaBg.setOrigin(0);
+    manaBg.setStrokeStyle(1, 0x555555);
+
+    this.manaBar = this.add.graphics();
+    this.updateManaBar();
+
+    this.manaText = this.add.text(122, 56, `${Math.floor(this.currentMana)}/${this.maxMana}`, {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    // Mana icon
+    this.add.text(8, 47, '💧', {
+      fontSize: '14px'
+    }).setOrigin(0, 0);
+
+    // --- Level & XP bar (below mana bar) ---
     // Level badge
-    this.levelText = this.add.text(20, 48, 'Lv.1', {
+    this.levelText = this.add.text(20, 68, 'Lv.1', {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffd700',
@@ -64,7 +91,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // Stat points badge (next to level, hidden when 0)
-    this.statPointsBadge = this.add.text(60, 48, '', {
+    this.statPointsBadge = this.add.text(60, 68, '', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#00ff88',
@@ -73,7 +100,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // XP bar background
-    const xpBg = this.add.rectangle(20, 62, 204, 8, 0x222222);
+    const xpBg = this.add.rectangle(20, 82, 204, 8, 0x222222);
     xpBg.setOrigin(0);
     xpBg.setStrokeStyle(1, 0x444444);
 
@@ -82,7 +109,7 @@ export class UIScene extends Phaser.Scene {
     this.updateXPBar();
 
     // XP text (right-aligned)
-    this.xpText = this.add.text(224, 66, `0 / ${this.currentXPToNext}`, {
+    this.xpText = this.add.text(224, 86, `0 / ${this.currentXPToNext}`, {
       fontSize: '8px',
       fontFamily: 'monospace',
       color: '#aaaaaa',
@@ -119,11 +146,26 @@ export class UIScene extends Phaser.Scene {
       color: '#c9a227'
     }).setOrigin(0, 0.5);
 
+    // Equipped spellbook display (below weapon)
+    const spellbookBg = this.add.rectangle(170, GAME_HEIGHT - 60, 120, 50, 0x333333, 0.8);
+    spellbookBg.setOrigin(0);
+    spellbookBg.setStrokeStyle(1, 0x4a4a6a);
+
+    this.spellbookIcon = this.add.image(200, GAME_HEIGHT - 35, 'spell_fireball');
+    this.spellbookIcon.setScale(2);
+    this.spellbookIcon.setVisible(false);
+
+    this.spellbookText = this.add.text(230, GAME_HEIGHT - 35, 'No Tome', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#6688cc'
+    }).setOrigin(0, 0.5);
+
     // Quest tracker (below XP bar, shifted down)
-    this.questTrackerContainer = this.add.container(20, 80);
+    this.questTrackerContainer = this.add.container(20, 98);
 
     // Controls reminder
-    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Attack (hold to charge) | SHIFT: Dodge | TAB: Player menu | E: Interact', {
+    this._controlsText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 15, 'WASD: Move | SPACE: Melee | ENTER: Cast Spell | SHIFT: Dodge | TAB: Menu | E: Interact', {
       fontSize: '9px',
       fontFamily: 'monospace',
       color: '#666666'
@@ -133,6 +175,7 @@ export class UIScene extends Phaser.Scene {
     const gameScene = this.scene.get(SCENE_KEYS.GAME);
 
     gameScene.events.on(EVENTS.PLAYER_HEALTH_CHANGED, this.onHealthChanged, this);
+    gameScene.events.on(EVENTS.PLAYER_MANA_CHANGED, this.onManaChanged, this);
     gameScene.events.on(EVENTS.PLAYER_GOLD_CHANGED, this.onGoldChanged, this);
     gameScene.events.on(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipmentChanged, this);
     gameScene.events.on(EVENTS.MONSTER_KILLED, this.onMonsterKilled, this);
@@ -147,6 +190,7 @@ export class UIScene extends Phaser.Scene {
     // Clean up on scene shutdown
     this.events.on('shutdown', () => {
       gameScene.events.off(EVENTS.PLAYER_HEALTH_CHANGED, this.onHealthChanged, this);
+      gameScene.events.off(EVENTS.PLAYER_MANA_CHANGED, this.onManaChanged, this);
       gameScene.events.off(EVENTS.PLAYER_GOLD_CHANGED, this.onGoldChanged, this);
       gameScene.events.off(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipmentChanged, this);
       gameScene.events.off(EVENTS.MONSTER_KILLED, this.onMonsterKilled, this);
@@ -165,9 +209,9 @@ export class UIScene extends Phaser.Scene {
     if (hasGamepad !== this.gamepadConnected) {
       this.gamepadConnected = hasGamepad;
       if (hasGamepad) {
-        this._controlsText.setText('LS: Move | A: Attack (hold charge) | B: Dodge | X: Interact | Y: Inventory | Select: Map');
+        this._controlsText.setText('LS: Move | A: Melee (hold charge) | B: Dodge | X: Interact | Y: Inventory | Select: Map');
       } else {
-        this._controlsText.setText('WASD: Move | SPACE: Attack (hold to charge) | SHIFT: Dodge | TAB: Player menu | E: Interact');
+        this._controlsText.setText('WASD: Move | SPACE: Melee | ENTER: Cast Spell | SHIFT: Dodge | TAB: Menu | E: Interact');
       }
     }
   }
@@ -192,13 +236,21 @@ export class UIScene extends Phaser.Scene {
     this.healthBar.fillRect(22, 22, barWidth, 20);
   }
 
+  private updateManaBar(): void {
+    this.manaBar.clear();
+    const manaPercent = this.currentMana / this.maxMana;
+    const barWidth = 200 * manaPercent;
+    this.manaBar.fillStyle(0x4488ff);
+    this.manaBar.fillRect(22, 50, barWidth, 12);
+  }
+
   private updateXPBar(): void {
     this.xpBar.clear();
 
     if (this.currentLevel >= MAX_LEVEL) {
       // Full gold bar at max level
       this.xpBar.fillStyle(0xffd700);
-      this.xpBar.fillRect(22, 63, 200, 6);
+      this.xpBar.fillRect(22, 83, 200, 6);
       return;
     }
 
@@ -209,7 +261,7 @@ export class UIScene extends Phaser.Scene {
     const barWidth = 200 * Math.min(progress, 1);
 
     this.xpBar.fillStyle(0x6688ff);
-    this.xpBar.fillRect(22, 63, barWidth, 6);
+    this.xpBar.fillRect(22, 83, barWidth, 6);
   }
 
   private onHealthChanged(health: number, maxHealth: number): void {
@@ -222,6 +274,13 @@ export class UIScene extends Phaser.Scene {
     if (health < this.currentHealth) {
       this.cameras.main.flash(100, 255, 0, 0, false);
     }
+  }
+
+  private onManaChanged(mana: number, maxMana: number): void {
+    this.currentMana = mana;
+    this.maxMana = maxMana;
+    this.updateManaBar();
+    this.manaText.setText(`${Math.floor(mana)}/${maxMana}`);
   }
 
   private onGoldChanged(gold: number): void {
@@ -239,10 +298,20 @@ export class UIScene extends Phaser.Scene {
   private onEquipmentChanged(equipment: Equipment): void {
     if (equipment.weapon) {
       this.weaponIcon.setTexture(equipment.weapon.sprite);
+      this.weaponIcon.setVisible(true);
       this.weaponText.setText(equipment.weapon.name);
     } else {
-      this.weaponIcon.setTexture('weapon_sword_wooden');
+      this.weaponIcon.setVisible(false);
       this.weaponText.setText('No Weapon');
+    }
+
+    if (equipment.spellbook) {
+      this.spellbookIcon.setTexture(equipment.spellbook.sprite);
+      this.spellbookIcon.setVisible(true);
+      this.spellbookText.setText(equipment.spellbook.name);
+    } else {
+      this.spellbookIcon.setVisible(false);
+      this.spellbookText.setText('No Tome');
     }
   }
 

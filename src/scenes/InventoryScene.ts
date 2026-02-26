@@ -246,9 +246,10 @@ export class InventoryScene extends Phaser.Scene {
 
   private createEquipmentSlots(startX: number, startY: number): void {
     const slots: { slot: EquipmentSlot; label: string; x: number; y: number }[] = [
-      { slot: 'weapon', label: 'Weapon', x: -60, y: 30 },
-      { slot: 'armor', label: 'Armor', x: 0, y: 30 },
-      { slot: 'shield', label: 'Shield', x: 60, y: 30 }
+      { slot: 'weapon', label: 'Weapon', x: -90, y: 30 },
+      { slot: 'armor', label: 'Armor', x: -30, y: 30 },
+      { slot: 'shield', label: 'Shield', x: 30, y: 30 },
+      { slot: 'spellbook', label: 'Tome', x: 90, y: 30 }
     ];
 
     // Label
@@ -465,9 +466,10 @@ export class InventoryScene extends Phaser.Scene {
     this.tooltipContainer.add(name);
 
     // Item type
-    const typeLabel = item.type === 'armor'
-      ? (item.slot === 'shield' ? 'SHIELD' : 'ARMOR')
-      : item.type.toUpperCase();
+    const typeLabel = item.slot === 'spellbook' ? 'SPELLBOOK'
+      : item.type === 'armor'
+        ? (item.slot === 'shield' ? 'SHIELD' : 'ARMOR')
+        : item.type.toUpperCase();
     const type = this.add.text(10, -28, typeLabel, {
       fontSize: '8px',
       fontFamily: 'monospace',

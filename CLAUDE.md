@@ -76,10 +76,11 @@ server/
 
 ## Game Controls
 - **WASD / Arrow Keys**: Move player
-- **SPACE**: Attack (tap for normal, hold to charge)
+- **SPACE**: Melee attack (tap for normal, hold to charge)
 - **SHIFT**: Dodge/roll in facing direction
 - **TAB**: Open player menu (cycles: Inventory → Quests → Map → Stats)
 - **I**: Open/close inventory
+- **ENTER**: Cast spell (requires matching staff + tome equipped)
 - **E**: Interact with NPCs
 - **Q**: Open/close quest log
 - **M**: Open/close dungeon map
@@ -159,19 +160,21 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
 - ✅ 28 monster types with AI across 6 families (undead, beast, orc, demon, elemental, dark_knight)
 - ✅ 3 NPC merchants
-- ✅ 12 melee weapons, 2 spell books, 5 outfits, 3 shields, 5 consumables
-- ✅ Inventory & equipment system (3 slots: weapon, armor, shield)
+- ✅ 12 melee weapons, 3 staffs, 3 spell tomes, 5 outfits, 3 shields, 5 consumables
+- ✅ Inventory & equipment system (4 slots: weapon, armor, shield, spellbook)
 - ✅ Armor system (5 outfits that change player sprite + 3 shields, defense stat with damage reduction)
 - ✅ Combat with arc-based attack hitbox (per-weapon-class arc width and reach)
-- ✅ Weapon classes: sword, dagger, hammer, katana, unarmed (arc width + knockback per class), spell (projectile)
-- ✅ Spell system (Fireball + Lightning tomes, projectile physics, INT scaling, Wizard Cloak requirement, lightning chain AOE)
+- ✅ Weapon classes: sword, dagger, hammer, katana, staff, unarmed (arc width + knockback per class), spell (projectile)
+- ✅ Dual weapon system: melee weapon (SPACE) + spell tome (ENTER), staffs required for matching elemental tomes
+- ✅ Spell system (Fireball + Lightning + Frost tomes, projectile physics, INT scaling, staff element pairing, lightning chain AOE, frost freeze, mana cost)
+- ✅ Mana system (50 max mana, per-spell costs, INT-scaled regen, mana potions, blue HUD bar)
 - ✅ Knockback on hit (weapon-class-specific force, monsters stop at walls)
 - ✅ Invincibility frames (500ms after damage, flashing visual)
 - ✅ Dodge/roll (SHIFT key, afterimage trail, brief i-frames)
 - ✅ Combo system (chain attacks within 500ms for up to 2.0x damage)
 - ✅ Charged attacks (hold SPACE for up to 2.5x damage + extra knockback)
 - ✅ Shop buy system
-- ✅ HUD (health, gold, weapon)
+- ✅ HUD (health, mana, gold, weapon)
 - ✅ Quest system (hardcoded + LLM-generated dynamic quests)
 - ✅ Story-arc quests (multi-quest narrative arcs with LLM, boss finale, arc progress in quest log)
 - ✅ NPC personality-driven quest generation (each NPC has distinct quest themes/tone)

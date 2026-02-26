@@ -7,7 +7,8 @@ export class EquipmentSystem {
     this.equipment = {
       weapon: null,
       armor: null,
-      shield: null
+      shield: null,
+      spellbook: null
     };
   }
 

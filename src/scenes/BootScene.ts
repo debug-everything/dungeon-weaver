@@ -132,6 +132,9 @@ export class BootScene extends Phaser.Scene {
     // Generate shield placeholder sprites
     this.generateShieldSprites();
 
+    // Generate staff sprites
+    this.generateStaffSprites();
+
     // Generate spell book sprites
     this.generateSpellBookSprites();
   }
@@ -178,6 +181,59 @@ export class BootScene extends Phaser.Scene {
     });
   }
 
+  private generateStaffSprites(): void {
+    // Fire Staff — brown rod with orange gem
+    this.drawArmor('weapon_staff_fire', (ctx) => {
+      // Rod
+      ctx.fillStyle = '#6B3E1C';
+      ctx.fillRect(7, 4, 2, 11);
+      ctx.fillStyle = '#8B5E3C';
+      ctx.fillRect(6, 14, 4, 1);
+      // Gem holder
+      ctx.fillStyle = '#555555';
+      ctx.fillRect(6, 3, 4, 2);
+      // Gem
+      ctx.fillStyle = '#FF6600';
+      ctx.fillRect(6, 1, 4, 3);
+      ctx.fillStyle = '#FFAA00';
+      ctx.fillRect(7, 2, 2, 1);
+    });
+
+    // Storm Staff — grey rod with blue gem
+    this.drawArmor('weapon_staff_storm', (ctx) => {
+      // Rod
+      ctx.fillStyle = '#555555';
+      ctx.fillRect(7, 4, 2, 11);
+      ctx.fillStyle = '#777777';
+      ctx.fillRect(6, 14, 4, 1);
+      // Gem holder
+      ctx.fillStyle = '#444444';
+      ctx.fillRect(6, 3, 4, 2);
+      // Gem
+      ctx.fillStyle = '#4488FF';
+      ctx.fillRect(6, 1, 4, 3);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(7, 2, 2, 1);
+    });
+
+    // Frost Staff — pale rod with cyan gem
+    this.drawArmor('weapon_staff_frost', (ctx) => {
+      // Rod
+      ctx.fillStyle = '#7799AA';
+      ctx.fillRect(7, 4, 2, 11);
+      ctx.fillStyle = '#99BBCC';
+      ctx.fillRect(6, 14, 4, 1);
+      // Gem holder
+      ctx.fillStyle = '#556677';
+      ctx.fillRect(6, 3, 4, 2);
+      // Gem
+      ctx.fillStyle = '#88DDFF';
+      ctx.fillRect(6, 1, 4, 3);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(7, 2, 2, 1);
+    });
+  }
+
   private generateSpellBookSprites(): void {
     // Fireball tome — red/orange book
     this.drawArmor('spell_fireball', (ctx) => {
@@ -217,6 +273,28 @@ export class BootScene extends Phaser.Scene {
       ctx.fillRect(7, 6, 2, 1);
       ctx.fillStyle = '#4488FF';
       ctx.fillRect(7, 7, 2, 2);
+    });
+
+    // Frost tome — ice-blue book
+    this.drawArmor('spell_frost', (ctx) => {
+      // Book body
+      ctx.fillStyle = '#2A6B8B';
+      ctx.fillRect(3, 2, 10, 12);
+      // Spine
+      ctx.fillStyle = '#1A4A5C';
+      ctx.fillRect(3, 2, 2, 12);
+      // Pages
+      ctx.fillStyle = '#F5DEB3';
+      ctx.fillRect(5, 3, 7, 10);
+      // Snowflake/ice crystal symbol
+      ctx.fillStyle = '#88DDFF';
+      ctx.fillRect(8, 5, 1, 5);
+      ctx.fillRect(6, 7, 5, 1);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(7, 6, 1, 1);
+      ctx.fillRect(9, 6, 1, 1);
+      ctx.fillRect(7, 8, 1, 1);
+      ctx.fillRect(9, 8, 1, 1);
     });
   }
 

@@ -13,7 +13,8 @@ export class InventorySystem {
     this.equipment = {
       weapon: null,
       armor: null,
-      shield: null
+      shield: null,
+      spellbook: null
     };
   }
 
@@ -158,12 +159,20 @@ export class InventorySystem {
     return defense;
   }
 
-  isSpellWeapon(): boolean {
-    return this.getWeaponClass() === 'spell';
+  getEquippedSpellbook(): Item | null {
+    return this.equipment.spellbook;
   }
 
   getSpellType(): SpellType | undefined {
-    return this.equipment.weapon?.stats.spellType;
+    return this.equipment.spellbook?.stats.spellType;
+  }
+
+  getStaffElement(): SpellType | undefined {
+    const weapon = this.equipment.weapon;
+    if (weapon?.stats.weaponClass === 'staff') {
+      return weapon.stats.element;
+    }
+    return undefined;
   }
 
   getEquippedArmor(): Item | null {
