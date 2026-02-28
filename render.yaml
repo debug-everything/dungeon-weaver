@@ -11,7 +11,7 @@ services:
       - key: PORT
         value: "4201"
       - key: DATABASE_PATH
-        value: /data/game.db
+        value: ./data/game.db
       - key: LLM_ENABLED
         value: true
         sync: true
@@ -26,7 +26,3 @@ services:
       - key: STORY_ARC_DAILY_MAX
         value: 5
         sync: true
-    disk:
-      name: dungeon-data
-      mountPath: /data
-      sizeGB: 1
