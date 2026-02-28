@@ -3,7 +3,7 @@ services:
     name: dungeon-rpg-ai
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npx vite build && cd server && npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
