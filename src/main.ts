@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './config/constants';
 import { BootScene } from './scenes/BootScene';
+import { SplashScene } from './scenes/SplashScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
@@ -30,7 +31,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene, MapScene, QuestLogScene, NarratorScene, LevelUpScene, TerminalScene],
+  scene: [BootScene, SplashScene, MenuScene, GameScene, UIScene, InventoryScene, ShopScene, NPCInteractionScene, QuestDialogScene, MapScene, QuestLogScene, NarratorScene, LevelUpScene, TerminalScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

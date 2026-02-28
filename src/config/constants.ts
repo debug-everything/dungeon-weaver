@@ -105,6 +105,7 @@ export const CHARGE_MIN_TIME = 200;
 
 export const SCENE_KEYS = {
   BOOT: 'BootScene',
+  SPLASH: 'SplashScene',
   MENU: 'MenuScene',
   GAME: 'GameScene',
   UI: 'UIScene',
