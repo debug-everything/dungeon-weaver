@@ -202,6 +202,37 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 - **Arc boss** (story-arc final quest): red name label `#ff4444`, boosted stats (2.5x multiplier)
 - Story-arc boss quests can use any boss-only monster type (demon, ogre, tentacle, necromancer, elemental_lord)
 
+### Boss Attack Patterns
+All 5 boss monsters have a 2-phase system. At 50% HP they enter phase 2 ("ENRAGED!" floating text, red flash, camera shake). Phase 2 boosts speed and reduces cooldowns.
+
+| Boss | Abilities | Phase 2 Speed | Phase 2 Cooldown | Details |
+|------|-----------|---------------|------------------|---------|
+| Necromancer | summon, barrage | 1.2x | 0.7x | Summons 2 zombie runts; 3-spread skull_bolt |
+| Tentacle Horror | slam, charge | 1.3x | 0.75x | Slam radius 50px; charge at 250 speed |
+| Ogre | slam, charge | 1.4x | 0.8x | Slam radius 40px; charge at 200 speed |
+| Demon Lord | teleport, barrage | 1.2x | 0.65x | Blinks behind player; 5-spread fire_bolt |
+| Elemental Lord | summon, barrage | 1.2x | 0.7x | Summons 2 goo elementals; 5-spread energy_orb |
+
+**Ability types:**
+- **Slam**: 300ms wind-up ring, AOE damage + knockback within radius
+- **Summon**: Spawn N minions near boss (cap: maxMonsters), purple flash VFX
+- **Charge**: Dash toward player at high speed for 400ms, afterimage trail, melee hit on arrival
+- **Teleport**: Blink 60px behind player, purple flash at old and new position
+- **Barrage**: Fire N spread projectiles in an arc (±30° for 3, ±40° for 5)
+
+Shared ability cooldown: 5s base, reduced in phase 2 by cooldown multiplier.
+
+### Monster Spawner Nests
+Destructible bone pile objects ("nests") placed in ~30% of non-safe, non-boss rooms. Wall-adjacent placement, tinted by family color.
+
+- **HP**: Tier 1: 20, Tier 2: 30, Tier 3: 40
+- **Spawn rate**: One monster every 8s (only when player is in the room)
+- **Max alive**: 3 monsters per spawner
+- **XP reward**: Tier 1: 15, Tier 2: 20, Tier 3: 25
+- **Damageable by**: melee attacks and spell projectiles
+- **On destroy**: bone scatter particles, XP award; spawned monsters persist
+- **Family tints**: undead=gray, beast=green, orc=tan, demon=red, elemental=blue, dark_knight=purple
+
 ### Monster Tier System
 Tiers unlock new monster families as the player completes story arcs:
 - **Tier 1** (0 arcs completed): Undead + Beast

@@ -169,9 +169,9 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) with colored name labels
 - [x] Family-based room spawning (all monsters in a room from same family)
 - [x] 32x32 sprite support for large boss monsters (tentacle, ogre)
-- [ ] Ranged enemy attacks
-- [ ] Boss attack patterns
-- [ ] Monster spawners/nests
+- [x] Ranged enemy attacks (5 monsters: skeleton, orc shaman, imp, necromancer, elemental lord)
+- [x] Boss attack patterns (2-phase system, 5 boss-specific ability sets, ENRAGED! at 50% HP)
+- [x] Monster spawner nests (destructible bone piles, ~30% rooms, family-tinted, periodic monster spawning)
 
 ### Armor System ✅
 - [x] 5 outfit armors (Peasant, Spy, Wizard, Barbarian, Knight) with single "armor" equipment slot

@@ -136,6 +136,16 @@ export const MONSTERS: Record<string, MonsterData> = {
       preferredRange: 100,
       meleeRange: 26,
       rangedCooldown: 1400
+    },
+    bossPattern: {
+      phase2Threshold: 0.5,
+      phase2SpeedMultiplier: 1.2,
+      phase2CooldownMultiplier: 0.7,
+      abilities: ['summon', 'barrage'],
+      summonType: 'monster_zombie_small',
+      summonCount: 2,
+      barrageCount: 3,
+      barrageStyle: 'skull_bolt'
     }
   },
 
@@ -217,7 +227,15 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'armor_barbarian', chance: 0.1 }
     ],
     bossOnly: true,
-    spriteSize: { width: 32, height: 32 }
+    spriteSize: { width: 32, height: 32 },
+    bossPattern: {
+      phase2Threshold: 0.5,
+      phase2SpeedMultiplier: 1.3,
+      phase2CooldownMultiplier: 0.75,
+      abilities: ['slam', 'charge'],
+      slamRadius: 50,
+      chargeSpeed: 250
+    }
   },
 
   // ── Orc Family ──
@@ -376,7 +394,15 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'armor_knight', chance: 0.1 }
     ],
     bossOnly: true,
-    spriteSize: { width: 32, height: 32 }
+    spriteSize: { width: 32, height: 32 },
+    bossPattern: {
+      phase2Threshold: 0.5,
+      phase2SpeedMultiplier: 1.4,
+      phase2CooldownMultiplier: 0.8,
+      abilities: ['slam', 'charge'],
+      slamRadius: 40,
+      chargeSpeed: 200
+    }
   },
 
   // ── Demon Family ──
@@ -469,7 +495,15 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'armor_knight', chance: 0.15 },
       { itemId: 'armor_shield_golden', chance: 0.1 }
     ],
-    bossOnly: true
+    bossOnly: true,
+    bossPattern: {
+      phase2Threshold: 0.5,
+      phase2SpeedMultiplier: 1.2,
+      phase2CooldownMultiplier: 0.65,
+      abilities: ['teleport', 'barrage'],
+      barrageCount: 5,
+      barrageStyle: 'fire_bolt'
+    }
   },
 
   // ── Elemental Family ──
@@ -636,6 +670,16 @@ export const MONSTERS: Record<string, MonsterData> = {
       preferredRange: 100,
       meleeRange: 28,
       rangedCooldown: 1300
+    },
+    bossPattern: {
+      phase2Threshold: 0.5,
+      phase2SpeedMultiplier: 1.2,
+      phase2CooldownMultiplier: 0.7,
+      abilities: ['summon', 'barrage'],
+      summonType: 'monster_elemental_goo',
+      summonCount: 2,
+      barrageCount: 5,
+      barrageStyle: 'energy_orb'
     }
   },
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { MonsterData, MonsterState } from '../types';
-import { SCALE, TILE_SIZE, EVENTS } from '../config/constants';
+import { MonsterData, MonsterState, BossPhase } from '../types';
+import { SCALE, TILE_SIZE, EVENTS, BOSS_ABILITY_BASE_COOLDOWN } from '../config/constants';
 import { FogOfWarSystem } from '../systems/FogOfWarSystem';
 import { getItem } from '../data/items';
 
@@ -21,12 +21,20 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private nameText: Phaser.GameObjects.Text | null = null;
   private fogSystem: FogOfWarSystem | null = null;
 
+  // Boss phase system
+  public bossPhase: BossPhase = 1;
+  private lastAbilityTime: number = 0;
+  private phase2Applied: boolean = false;
+  private isCharging: boolean = false;
+  private currentSpeed: number;
+
   constructor(scene: Phaser.Scene, x: number, y: number, data: MonsterData) {
     super(scene, x, y, data.sprite);
 
     this.monsterData = data;
     this.health = data.health;
     this.maxHealth = data.health;
+    this.currentSpeed = data.speed;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -188,6 +196,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     if (this.isKnockedBack) return;
+    if (this.isCharging) return; // Don't override charge velocity
 
     if (!this.target || !this.target.active) {
       this.setMonsterState('idle');
@@ -234,6 +243,147 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       this.setMonsterState('idle');
       this.idle();
     }
+
+    // Boss ability system
+    if (this.monsterData.bossPattern && this.target && hasLOS && this.monsterState !== 'idle') {
+      this.updateBossAbilities(time);
+    }
+  }
+
+  private getAbilityCooldown(): number {
+    const pattern = this.monsterData.bossPattern!;
+    const baseCooldown = BOSS_ABILITY_BASE_COOLDOWN;
+    return this.bossPhase === 2 ? baseCooldown * pattern.phase2CooldownMultiplier : baseCooldown;
+  }
+
+  private updateBossAbilities(time: number): void {
+    const pattern = this.monsterData.bossPattern!;
+    if (!this.target) return;
+
+    const cooldown = this.getAbilityCooldown();
+    if (time - this.lastAbilityTime < cooldown) return;
+
+    // Pick a random ability
+    const ability = Phaser.Utils.Array.GetRandom(pattern.abilities);
+    this.lastAbilityTime = time;
+
+    switch (ability) {
+      case 'slam':
+        this.performSlam(pattern.slamRadius ?? 40);
+        break;
+      case 'summon':
+        this.performSummon(pattern.summonType ?? 'monster_zombie_small', pattern.summonCount ?? 2);
+        break;
+      case 'charge':
+        this.performCharge(pattern.chargeSpeed ?? 200);
+        break;
+      case 'teleport':
+        this.performTeleport();
+        break;
+      case 'barrage':
+        this.performBarrage(pattern.barrageCount ?? 3, pattern.barrageStyle ?? 'fire_bolt');
+        break;
+    }
+  }
+
+  private performSlam(radius: number): void {
+    // Brief wind-up pause
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(0, 0);
+
+    this.scene.events.emit('boss-slam', {
+      x: this.x,
+      y: this.y,
+      radius,
+      damage: this.monsterData.damage * 1.5,
+      monster: this
+    });
+  }
+
+  private performSummon(summonType: string, count: number): void {
+    this.scene.events.emit('boss-summon', {
+      x: this.x,
+      y: this.y,
+      summonType,
+      count,
+      monster: this
+    });
+  }
+
+  private performCharge(chargeSpeed: number): void {
+    if (!this.target || this.isCharging) return;
+    this.isCharging = true;
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+
+    body.setVelocity(
+      Math.cos(angle) * chargeSpeed,
+      Math.sin(angle) * chargeSpeed
+    );
+
+    this.scene.events.emit('boss-charge', { monster: this });
+
+    // End charge after 400ms
+    this.scene.time.delayedCall(400, () => {
+      this.isCharging = false;
+      // Emit melee attack on arrival
+      if (this.active && this.target) {
+        this.scene.events.emit('monster-attack', {
+          monster: this,
+          damage: Math.floor(this.monsterData.damage * 1.5)
+        });
+      }
+    });
+  }
+
+  private performTeleport(): void {
+    if (!this.target) return;
+
+    const oldX = this.x;
+    const oldY = this.y;
+
+    // Teleport 60px behind the player (opposite of player's facing)
+    const angle = Phaser.Math.Angle.Between(this.target.x, this.target.y, this.x, this.y);
+    // Reverse angle to go behind player
+    const behindAngle = angle + Math.PI;
+    const newX = this.target.x + Math.cos(behindAngle) * 60;
+    const newY = this.target.y + Math.sin(behindAngle) * 60;
+
+    this.setPosition(newX, newY);
+
+    this.scene.events.emit('boss-teleport', {
+      oldX, oldY,
+      newX, newY,
+      monster: this
+    });
+  }
+
+  private performBarrage(count: number, style: string): void {
+    if (!this.target) return;
+
+    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+    const spreadAngle = count <= 3 ? Math.PI / 6 : Math.PI * 2 / 9; // ±30° for 3, ±40° for 5
+    const ranged = this.monsterData.ranged;
+
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0 : (i / (count - 1)) * 2 - 1; // -1 to 1
+      const angle = baseAngle + t * spreadAngle;
+
+      this.scene.events.emit('monster-ranged-attack', {
+        originX: this.x,
+        originY: this.y,
+        directionRad: angle,
+        speed: ranged?.projectileSpeed ?? 180,
+        range: ranged?.projectileRange ?? 180,
+        damage: ranged?.projectileDamage ?? this.monsterData.damage,
+        style
+      });
+    }
+
+    // Visual feedback
+    this.setTint(0xff66ff);
+    this.scene.time.delayedCall(200, () => this.clearTint());
   }
 
   private setMonsterState(newState: MonsterState): void {
@@ -252,8 +402,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
 
     body.setVelocity(
-      Math.cos(angle) * this.monsterData.speed,
-      Math.sin(angle) * this.monsterData.speed
+      Math.cos(angle) * this.currentSpeed,
+      Math.sin(angle) * this.currentSpeed
     );
 
     // Face direction of movement
@@ -268,8 +418,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     // Move away from player at 70% speed
     body.setVelocity(
-      Math.cos(angle) * this.monsterData.speed * 0.7,
-      Math.sin(angle) * this.monsterData.speed * 0.7
+      Math.cos(angle) * this.currentSpeed * 0.7,
+      Math.sin(angle) * this.currentSpeed * 0.7
     );
 
     // Face the player while retreating
@@ -353,9 +503,49 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => damageText.destroy()
     });
 
+    // Boss phase 2 transition
+    const pattern = this.monsterData.bossPattern;
+    if (pattern && !this.phase2Applied && this.health > 0 &&
+        this.health / this.maxHealth <= pattern.phase2Threshold) {
+      this.enterPhase2();
+    }
+
     if (this.health <= 0) {
       this.die();
     }
+  }
+
+  private enterPhase2(): void {
+    const pattern = this.monsterData.bossPattern!;
+    this.bossPhase = 2;
+    this.phase2Applied = true;
+    this.currentSpeed = this.monsterData.speed * pattern.phase2SpeedMultiplier;
+
+    // Red flash
+    this.setTint(0xff0000);
+    this.scene.time.delayedCall(300, () => this.clearTint());
+
+    // Camera shake
+    this.scene.cameras.main.shake(300, 0.01);
+
+    // Floating "ENRAGED!" text
+    const enrageText = this.scene.add.text(this.x, this.y - 40, 'ENRAGED!', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ff2222',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(1001);
+
+    this.scene.tweens.add({
+      targets: enrageText,
+      y: this.y - 70,
+      alpha: 0,
+      scale: 1.5,
+      duration: 1200,
+      ease: 'Power2',
+      onComplete: () => enrageText.destroy()
+    });
   }
 
   private die(): void {
@@ -384,7 +574,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    this.scene.events.emit(EVENTS.MONSTER_KILLED, this.monsterData, this.x, this.y);
+    this.scene.events.emit(EVENTS.MONSTER_KILLED, this.monsterData, this.x, this.y, this);
   }
 
   private dropLoot(): void {

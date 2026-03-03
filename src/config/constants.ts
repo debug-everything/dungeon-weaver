@@ -140,6 +140,24 @@ export const MONSTER_TIER_FAMILIES: Record<MonsterTier, MonsterFamily[]> = {
 };
 export const BOSS_LABEL_COLORS = { miniBoss: '#ffaa00', arcBoss: '#ff4444' };
 
+// Boss ability system
+export const BOSS_ABILITY_BASE_COOLDOWN = 5000; // ms between abilities
+
+// Monster spawners/nests
+export const SPAWNER_HP: Record<MonsterTier, number> = { 1: 20, 2: 30, 3: 40 };
+export const SPAWNER_SPAWN_COOLDOWN = 8000;
+export const SPAWNER_MAX_SPAWNED = 3;
+export const SPAWNER_CHANCE = 0.3;
+export const SPAWNER_XP: Record<MonsterTier, number> = { 1: 15, 2: 20, 3: 25 };
+export const SPAWNER_FAMILY_TINTS: Record<string, number> = {
+  undead: 0xaaaaaa,
+  beast: 0x66cc66,
+  orc: 0xccaa77,
+  demon: 0xff4444,
+  elemental: 0x4488ff,
+  dark_knight: 0xaa44ff
+};
+
 export const EVENTS = {
   PLAYER_HEALTH_CHANGED: 'player-health-changed',
   PLAYER_GOLD_CHANGED: 'player-gold-changed',

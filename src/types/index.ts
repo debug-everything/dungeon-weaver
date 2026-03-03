@@ -82,6 +82,7 @@ export interface MonsterData {
   bossOnly?: boolean;
   spriteSize?: { width: number; height: number };
   ranged?: MonsterRangedData;
+  bossPattern?: BossPatternData;
 }
 
 export interface LootEntry {
@@ -267,6 +268,37 @@ export interface StoryArcInfo {
   status: 'active' | 'completed';
   nextQuestNpcId: string | null;
   nextQuestReady: boolean;
+}
+
+// Boss attack pattern types
+export type BossPhase = 1 | 2;
+export type BossAbility = 'slam' | 'summon' | 'charge' | 'teleport' | 'barrage';
+
+export interface BossPatternData {
+  phase2Threshold: number;          // HP fraction to trigger phase 2 (e.g. 0.5)
+  phase2SpeedMultiplier: number;    // speed boost in phase 2
+  phase2CooldownMultiplier: number; // faster attacks in phase 2
+  abilities: BossAbility[];
+  slamRadius?: number;
+  summonType?: string;              // monster ID to summon (e.g. 'monster_zombie_small')
+  summonCount?: number;
+  chargeSpeed?: number;
+  barrageCount?: number;
+  barrageStyle?: MonsterProjectileStyle;
+}
+
+// Monster spawner/nest types
+export interface SpawnerData {
+  x: number;
+  y: number;              // tile coords
+  roomIndex: number;
+  health: number;
+  maxHealth: number;
+  monsterFamily: MonsterFamily;
+  spawnCooldown: number;
+  lastSpawnTime: number;
+  maxSpawned: number;
+  livingCount: number;    // currently alive from this spawner
 }
 
 export interface QuestMapIndicator {

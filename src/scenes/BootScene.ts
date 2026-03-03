@@ -119,6 +119,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('chest_open_empty', 'assets/items/chest_open_empty.png');
     this.load.image('chest_open_full', 'assets/items/chest_open_full.png');
 
+    // Load spawner/nest
+    this.load.image('spawner_nest', 'assets/items/skull.png');
+
     // Load UI elements
     this.load.image('box', 'assets/items/box.png');
 

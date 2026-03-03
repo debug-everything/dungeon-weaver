@@ -157,7 +157,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - `INVENTORY_SLOTS`: 20
 - `INTERACTION_DISTANCE`: 32
 
-## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e + 2f + 3a)
+## Current Features (Phase 1 + 2a + 2b + 2c + 2d + 2e + 2f + 3a + 3a-boss)
 - ✅ BSP dungeon generation (rot.js Digger + mission graph, room clearing, locked boss door)
 - ✅ 28 monster types with AI across 6 families (undead, beast, orc, demon, elemental, dark_knight)
 - ✅ 3 NPC merchants
@@ -203,6 +203,8 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ LevelUpScene (stat allocation overlay with keyboard/mouse/gamepad support)
 - ✅ Tab navigation between player overlay screens (TAB key cycles Inventory → Quests → Map → Stats)
 - ✅ Ranged enemy attacks (5 monsters: skeleton, orc shaman, imp, necromancer, elemental lord — projectile + retreat AI)
+- ✅ Boss attack patterns (2-phase system: all 5 bosses gain abilities at 50% HP — slam, summon, charge, teleport, barrage)
+- ✅ Monster spawner nests (destructible bone piles in ~30% of rooms, periodically spawn monsters until destroyed, family-tinted)
 
 ## Planned Features (See PRD.md)
 - Phase 3b: Skills, character classes

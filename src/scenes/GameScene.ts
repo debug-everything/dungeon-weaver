@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier, SPELL_COLORS } from '../config/constants';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier, SPELL_COLORS, SPAWNER_HP, SPAWNER_SPAWN_COOLDOWN, SPAWNER_MAX_SPAWNED, SPAWNER_CHANCE, SPAWNER_XP, SPAWNER_FAMILY_TINTS } from '../config/constants';
 import type { SpellType } from '../types';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
-import { DungeonRoom, NPCData, ChestData, MonsterFamily, MonsterData } from '../types';
+import { DungeonRoom, NPCData, ChestData, MonsterFamily, MonsterData, SpawnerData } from '../types';
 import type { NarratorStyle } from './NarratorScene';
 import { MONSTERS, getNonBossMonstersByFamily, getBossMonsters } from '../data/monsters';
 import { NPCS } from '../data/npcs';
@@ -81,6 +81,14 @@ export class GameScene extends Phaser.Scene {
   private spellProjectiles: SpellProjectile[] = [];
   private monsterProjectiles: MonsterProjectile[] = [];
 
+  // Spawner/nest system
+  private spawnerSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
+  private spawnerData: Map<string, SpawnerData> = new Map();
+  private spawnerHealthBars: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private spawnerMonsterMap: Map<Monster, string> = new Map();
+  // Room family assignments (for spawner family consistency)
+  private roomFamilies: Map<number, MonsterFamily> = new Map();
+
   constructor() {
     super({ key: SCENE_KEYS.GAME });
   }
@@ -104,6 +112,11 @@ export class GameScene extends Phaser.Scene {
     this.narratorActive = false;
     this.spellProjectiles = [];
     this.monsterProjectiles = [];
+    this.spawnerSprites = new Map();
+    this.spawnerData = new Map();
+    this.spawnerHealthBars = new Map();
+    this.spawnerMonsterMap = new Map();
+    this.roomFamilies = new Map();
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -137,6 +150,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.monsters, this.monsters);
     this.physics.add.collider(this.player, this.chests);
     this.physics.add.collider(this.monsters, this.chests);
+    // Spawner colliders added after spawnSpawners()
 
     // Spawn NPCs in safe room (first room)
     this.spawnNPCs();
@@ -146,6 +160,9 @@ export class GameScene extends Phaser.Scene {
 
     // Spawn monsters in other rooms
     this.spawnMonsters();
+
+    // Spawn monster nests/spawners
+    this.spawnSpawners();
 
     // Respawn timer - replenish monsters every 15 seconds
     this.respawnTimer = this.time.addEvent({
@@ -300,6 +317,7 @@ export class GameScene extends Phaser.Scene {
 
       // Pick one family for this room (thematic consistency)
       const roomFamily = Phaser.Utils.Array.GetRandom(allowedFamilies) as MonsterFamily;
+      this.roomFamilies.set(i, roomFamily);
       const roomPool = getNonBossMonstersByFamily(roomFamily);
 
       for (let j = 0; j < monsterCount; j++) {
@@ -675,6 +693,19 @@ export class GameScene extends Phaser.Scene {
           this.player.combat.createHitEffect(m.x, m.y);
         }
       });
+
+      // Check spawner hits (melee)
+      for (const [key, sprite] of this.spawnerSprites) {
+        if (!sprite.active) continue;
+        const dist = Phaser.Math.Distance.Between(attackData.originX, attackData.originY, sprite.x, sprite.y);
+        if (dist <= attackData.radius + 12) {
+          if (!this.fogSystem.hasLineOfSightWorld(
+            attackData.originX, attackData.originY, sprite.x, sprite.y, scaledTileForLOS
+          )) continue;
+          this.damageSpawner(key, attackData.damage.damage);
+          this.player.combat.createHitEffect(sprite.x, sprite.y);
+        }
+      }
     });
 
     // Player spell attack (projectile-based)
@@ -717,14 +748,43 @@ export class GameScene extends Phaser.Scene {
       this.createMonsterProjectile(data);
     });
 
-    // Track monster kills for room clearing + boss defeated + XP award
-    this.events.on(EVENTS.MONSTER_KILLED, (monsterData: MonsterData, worldX: number, worldY: number) => {
+    // Boss ability: slam (AOE damage around boss)
+    this.events.on('boss-slam', (data: { x: number; y: number; radius: number; damage: number; monster: Monster }) => {
+      this.handleBossSlam(data);
+    });
+
+    // Boss ability: summon minions
+    this.events.on('boss-summon', (data: { x: number; y: number; summonType: string; count: number; monster: Monster }) => {
+      this.handleBossSummon(data);
+    });
+
+    // Boss ability: charge (afterimage trail)
+    this.events.on('boss-charge', (data: { monster: Monster }) => {
+      this.createChargeAfterimage(data.monster);
+    });
+
+    // Boss ability: teleport (purple flash VFX)
+    this.events.on('boss-teleport', (data: { oldX: number; oldY: number; newX: number; newY: number; monster: Monster }) => {
+      this.createTeleportEffect(data.oldX, data.oldY, data.newX, data.newY);
+    });
+
+    // Track monster kills for room clearing + boss defeated + XP award + spawner tracking
+    this.events.on(EVENTS.MONSTER_KILLED, (monsterData: MonsterData, worldX: number, worldY: number, monsterInstance?: Monster) => {
       this.onMonsterKilled(worldX, worldY);
       if (monsterData?.xpReward) {
         this.player.addXP(monsterData.xpReward);
       }
       if (monsterData?.bossOnly) {
         this.events.emit(EVENTS.BOSS_DEFEATED);
+      }
+      // Track spawner monster deaths
+      if (monsterInstance) {
+        const spawnerKey = this.spawnerMonsterMap.get(monsterInstance);
+        if (spawnerKey) {
+          const sd = this.spawnerData.get(spawnerKey);
+          if (sd) sd.livingCount--;
+          this.spawnerMonsterMap.delete(monsterInstance);
+        }
       }
     });
 
@@ -1343,6 +1403,9 @@ export class GameScene extends Phaser.Scene {
     this.updateSpellProjectiles();
     this.updateMonsterProjectiles();
 
+    // Update spawners
+    this.updateSpawners(time);
+
     // Update NPC quest indicators (throttled to every 500ms)
     if (time - this.lastIndicatorUpdate > 500) {
       this.lastIndicatorUpdate = time;
@@ -1639,7 +1702,23 @@ export class GameScene extends Phaser.Scene {
       if (hitMonster) {
         this.onSpellHitMonster(proj, hitMonster);
         this.destroySpellProjectile(i);
+        continue;
       }
+
+      // Check spawner collision (spell projectiles)
+      let hitSpawner = false;
+      for (const [key, sprite] of this.spawnerSprites) {
+        if (!sprite.active) continue;
+        const dist = Phaser.Math.Distance.Between(proj.x, proj.y, sprite.x, sprite.y);
+        if (dist <= 12) {
+          this.damageSpawner(key, proj.damage.damage);
+          this.createSpellImpactEffect(sprite.x, sprite.y, proj.spellType);
+          this.destroySpellProjectile(i);
+          hitSpawner = true;
+          break;
+        }
+      }
+      if (hitSpawner) continue;
     }
   }
 
@@ -2013,5 +2092,415 @@ export class GameScene extends Phaser.Scene {
     const proj = this.monsterProjectiles[index];
     proj.graphics.destroy();
     this.monsterProjectiles.splice(index, 1);
+  }
+
+  // --- Boss Ability Handlers ---
+
+  private handleBossSlam(data: { x: number; y: number; radius: number; damage: number; monster: Monster }): void {
+    const { x, y, radius, damage } = data;
+
+    // Wind-up: pulsing ring (300ms)
+    const windUp = this.add.graphics();
+    windUp.setDepth(15);
+    let pulseScale = 0;
+    const pulseTimer = this.time.addEvent({
+      delay: 30,
+      repeat: 9,
+      callback: () => {
+        windUp.clear();
+        pulseScale += 0.1;
+        windUp.lineStyle(2, 0xff4444, 0.6 * pulseScale);
+        windUp.strokeCircle(x, y, radius * pulseScale);
+      }
+    });
+
+    // After wind-up, burst and deal damage
+    this.time.delayedCall(300, () => {
+      pulseTimer.destroy();
+      windUp.destroy();
+
+      // Burst effect
+      const burst = this.add.graphics();
+      burst.setDepth(15);
+      burst.fillStyle(0xff2222, 0.4);
+      burst.fillCircle(x, y, radius);
+      burst.lineStyle(3, 0xff0000, 0.8);
+      burst.strokeCircle(x, y, radius);
+
+      this.tweens.add({
+        targets: burst,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => burst.destroy()
+      });
+
+      // Camera shake
+      this.cameras.main.shake(200, 0.008);
+
+      // Check player hit
+      const distToPlayer = Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y);
+      if (distToPlayer <= radius) {
+        const result = this.player.combat.calculateMonsterDamage(
+          damage,
+          this.player.inventory.getTotalDefense()
+        );
+        this.player.takeDamage(result.damage);
+        // Knockback away from slam center
+        const angle = Math.atan2(this.player.y - y, this.player.x - x);
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        body.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+      }
+    });
+  }
+
+  private handleBossSummon(data: { x: number; y: number; summonType: string; count: number; monster: Monster }): void {
+    const livingMonsters = this.monsters.getChildren().filter(m => m.active).length;
+    if (livingMonsters >= this.maxMonsters) return;
+
+    const monsterData = MONSTERS[data.summonType];
+    if (!monsterData) return;
+
+    const scaledTile = TILE_SIZE * SCALE;
+
+    // Summon VFX at boss position
+    const summonFlash = this.add.graphics();
+    summonFlash.setDepth(15);
+    summonFlash.fillStyle(0xaa44ff, 0.5);
+    summonFlash.fillCircle(data.x, data.y, 30);
+    this.tweens.add({
+      targets: summonFlash,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => summonFlash.destroy()
+    });
+
+    for (let i = 0; i < data.count && livingMonsters + i < this.maxMonsters; i++) {
+      // Find floor tile near boss
+      const angle = (Math.PI * 2 / data.count) * i;
+      const spawnX = data.x + Math.cos(angle) * 40;
+      const spawnY = data.y + Math.sin(angle) * 40;
+
+      // Verify spawn position is on floor
+      const tileX = Math.floor(spawnX / scaledTile);
+      const tileY = Math.floor(spawnY / scaledTile);
+      if (this.dungeon[tileY]?.[tileX] !== 0 && this.dungeon[tileY]?.[tileX] !== 3) continue;
+
+      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      monster.setTarget(this.player);
+      monster.setFogSystem(this.fogSystem);
+      this.monsters.add(monster);
+
+      // Spawn-in VFX
+      monster.setAlpha(0);
+      this.tweens.add({
+        targets: monster,
+        alpha: 1,
+        duration: 300
+      });
+    }
+  }
+
+  private createChargeAfterimage(monster: Monster): void {
+    // Create afterimage trail for 400ms
+    const trailTimer = this.time.addEvent({
+      delay: 60,
+      repeat: 6,
+      callback: () => {
+        if (!monster.active) return;
+        const ghost = this.add.image(monster.x, monster.y, monster.monsterData.sprite);
+        ghost.setScale(monster.scaleX);
+        ghost.setAlpha(0.4);
+        ghost.setTint(0xff4444);
+        ghost.setDepth(4);
+        this.tweens.add({
+          targets: ghost,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => ghost.destroy()
+        });
+      }
+    });
+  }
+
+  private createTeleportEffect(oldX: number, oldY: number, newX: number, newY: number): void {
+    // Purple flash at old position
+    const flashOld = this.add.graphics();
+    flashOld.setDepth(15);
+    flashOld.fillStyle(0xaa44ff, 0.6);
+    flashOld.fillCircle(oldX, oldY, 20);
+    this.tweens.add({
+      targets: flashOld,
+      alpha: 0,
+      scale: 2,
+      duration: 300,
+      onComplete: () => flashOld.destroy()
+    });
+
+    // Purple flash at new position
+    const flashNew = this.add.graphics();
+    flashNew.setDepth(15);
+    flashNew.fillStyle(0xaa44ff, 0.8);
+    flashNew.fillCircle(newX, newY, 20);
+    this.tweens.add({
+      targets: flashNew,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => flashNew.destroy()
+    });
+  }
+
+  // --- Spawner/Nest System ---
+
+  private spawnSpawners(): void {
+    const scaledTile = TILE_SIZE * SCALE;
+
+    for (let i = 1; i < this.rooms.length; i++) {
+      const room = this.rooms[i];
+      // Skip safe room and boss room
+      if (room.roomType === 'start' || room.isBossRoom || i === this.rooms.length - 1) continue;
+
+      // 30% chance per eligible room
+      if (Math.random() > SPAWNER_CHANCE) continue;
+
+      // Get wall-adjacent tiles for placement
+      const candidates = this.getWallAdjacentTiles(room);
+      if (candidates.length === 0) continue;
+
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      const { tx, ty } = pick;
+      const key = `${tx},${ty}`;
+
+      // Skip if already occupied by chest
+      if (this.chestSprites.has(key)) continue;
+
+      const family = this.roomFamilies.get(i) ?? 'undead';
+      const hp = SPAWNER_HP[this.currentTier];
+
+      const worldX = tx * scaledTile + scaledTile / 2;
+      const worldY = ty * scaledTile + scaledTile / 2;
+
+      const sprite = this.physics.add.staticImage(worldX, worldY, 'spawner_nest');
+      sprite.setScale(SCALE);
+      sprite.setDepth(1);
+      sprite.setTint(SPAWNER_FAMILY_TINTS[family] ?? 0xffffff);
+      sprite.refreshBody();
+
+      this.spawnerSprites.set(key, sprite);
+
+      const data: SpawnerData = {
+        x: tx,
+        y: ty,
+        roomIndex: i,
+        health: hp,
+        maxHealth: hp,
+        monsterFamily: family,
+        spawnCooldown: SPAWNER_SPAWN_COOLDOWN,
+        lastSpawnTime: 0,
+        maxSpawned: SPAWNER_MAX_SPAWNED,
+        livingCount: 0
+      };
+      this.spawnerData.set(key, data);
+
+      // Health bar
+      const healthBar = this.add.graphics();
+      healthBar.setDepth(100);
+      this.spawnerHealthBars.set(key, healthBar);
+      this.updateSpawnerHealthBar(key);
+    }
+  }
+
+  private updateSpawnerHealthBar(key: string): void {
+    const data = this.spawnerData.get(key);
+    const sprite = this.spawnerSprites.get(key);
+    const bar = this.spawnerHealthBars.get(key);
+    if (!data || !sprite || !bar) return;
+
+    bar.clear();
+    const barWidth = 24;
+    const barHeight = 3;
+    const x = sprite.x - barWidth / 2;
+    const y = sprite.y - 18;
+
+    bar.fillStyle(0x333333);
+    bar.fillRect(x, y, barWidth, barHeight);
+
+    const percent = data.health / data.maxHealth;
+    const color = percent > 0.5 ? 0x00ff00 : percent > 0.25 ? 0xffff00 : 0xff0000;
+    bar.fillStyle(color);
+    bar.fillRect(x, y, barWidth * percent, barHeight);
+  }
+
+  private damageSpawner(key: string, amount: number): void {
+    const data = this.spawnerData.get(key);
+    const sprite = this.spawnerSprites.get(key);
+    if (!data || !sprite) return;
+
+    data.health -= amount;
+
+    // Flash white
+    sprite.setTint(0xffffff);
+    this.time.delayedCall(80, () => {
+      if (sprite.active) {
+        sprite.setTint(SPAWNER_FAMILY_TINTS[data.monsterFamily] ?? 0xffffff);
+      }
+    });
+
+    // Damage number
+    const damageText = this.add.text(sprite.x, sprite.y - 15, `-${amount}`, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(1000);
+
+    this.tweens.add({
+      targets: damageText,
+      y: sprite.y - 35,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => damageText.destroy()
+    });
+
+    this.updateSpawnerHealthBar(key);
+
+    if (data.health <= 0) {
+      this.destroySpawner(key);
+    }
+  }
+
+  private destroySpawner(key: string): void {
+    const data = this.spawnerData.get(key);
+    const sprite = this.spawnerSprites.get(key);
+    const bar = this.spawnerHealthBars.get(key);
+
+    if (sprite) {
+      // Bone scatter particles
+      for (let i = 0; i < 8; i++) {
+        const particle = this.add.circle(sprite.x, sprite.y, 2, 0xccccaa, 0.8);
+        particle.setDepth(16);
+        const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.5;
+        const distance = 10 + Math.random() * 12;
+        this.tweens.add({
+          targets: particle,
+          x: sprite.x + Math.cos(angle) * distance,
+          y: sprite.y + Math.sin(angle) * distance,
+          alpha: 0,
+          duration: 400,
+          ease: 'Power2',
+          onComplete: () => particle.destroy()
+        });
+      }
+
+      // XP reward
+      const xp = SPAWNER_XP[this.currentTier];
+      this.player.addXP(xp);
+
+      // Floating XP text
+      const xpText = this.add.text(sprite.x, sprite.y, `+${xp} XP`, {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#aaddff',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(1000);
+
+      this.tweens.add({
+        targets: xpText,
+        y: sprite.y - 30,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => xpText.destroy()
+      });
+
+      sprite.destroy();
+    }
+
+    bar?.destroy();
+
+    this.spawnerSprites.delete(key);
+    this.spawnerData.delete(key);
+    this.spawnerHealthBars.delete(key);
+
+    // Don't clean up spawnerMonsterMap — existing monsters persist
+  }
+
+  private updateSpawners(time: number): void {
+    const scaledTile = TILE_SIZE * SCALE;
+    const playerTileX = Math.floor(this.player.x / scaledTile);
+    const playerTileY = Math.floor(this.player.y / scaledTile);
+
+    // Find player's current room
+    let playerRoomIdx = -1;
+    for (let i = 0; i < this.rooms.length; i++) {
+      const r = this.rooms[i];
+      if (playerTileX >= r.x && playerTileX < r.x + r.width &&
+          playerTileY >= r.y && playerTileY < r.y + r.height) {
+        playerRoomIdx = i;
+        break;
+      }
+    }
+
+    for (const [key, data] of this.spawnerData) {
+      const sprite = this.spawnerSprites.get(key);
+      if (!sprite || !sprite.active) continue;
+
+      // Spawner visibility (fog of war)
+      if (this.fogSystem) {
+        const visible = this.fogSystem.isVisible(data.x, data.y);
+        sprite.setVisible(visible);
+        const bar = this.spawnerHealthBars.get(key);
+        if (bar) bar.setVisible(visible);
+      }
+
+      // Only spawn monsters when player is in the same room
+      if (data.roomIndex !== playerRoomIdx) continue;
+
+      // Check if can spawn
+      if (data.livingCount >= data.maxSpawned) continue;
+      if (time - data.lastSpawnTime < data.spawnCooldown) continue;
+
+      // Check total monster count
+      const livingMonsters = this.monsters.getChildren().filter(m => m.active).length;
+      if (livingMonsters >= this.maxMonsters) continue;
+
+      data.lastSpawnTime = time;
+
+      // Pick a non-boss monster from this spawner's family
+      const pool = getNonBossMonstersByFamily(data.monsterFamily);
+      if (pool.length === 0) continue;
+      const monsterData = Phaser.Utils.Array.GetRandom(pool);
+
+      // Spawn near the spawner
+      const spawnX = sprite.x + (Math.random() - 0.5) * 40;
+      const spawnY = sprite.y + (Math.random() - 0.5) * 40;
+
+      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      monster.setTarget(this.player);
+      monster.setFogSystem(this.fogSystem);
+      this.monsters.add(monster);
+
+      // Track for death counting
+      this.spawnerMonsterMap.set(monster, key);
+      data.livingCount++;
+
+      // Visual pulse on spawner
+      if (sprite.active) {
+        sprite.setTint(0xffffff);
+        this.time.delayedCall(150, () => {
+          if (sprite.active) {
+            sprite.setTint(SPAWNER_FAMILY_TINTS[data.monsterFamily] ?? 0xffffff);
+          }
+        });
+      }
+
+      // Spawn-in effect on monster
+      monster.setAlpha(0);
+      this.tweens.add({
+        targets: monster,
+        alpha: 1,
+        duration: 300
+      });
+    }
   }
 }
