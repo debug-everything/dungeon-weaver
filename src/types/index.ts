@@ -49,7 +49,19 @@ export type MonsterType = 'zombie' | 'zombie_small' | 'zombie_green' | 'zombie_t
   | 'elemental_goo' | 'elemental_fire' | 'elemental_water' | 'elemental_air' | 'elemental_earth' | 'elemental_plant' | 'elemental_gold' | 'elemental_lord'
   | 'dark_knight';
 export type MonsterFamily = 'undead' | 'beast' | 'orc' | 'demon' | 'elemental' | 'dark_knight';
-export type MonsterState = 'idle' | 'chasing' | 'attacking' | 'dead';
+export type MonsterState = 'idle' | 'chasing' | 'attacking' | 'retreating' | 'dead';
+
+export type MonsterProjectileStyle = 'bone_arrow' | 'poison_bolt' | 'fire_bolt' | 'skull_bolt' | 'energy_orb';
+
+export interface MonsterRangedData {
+  projectileSpeed: number;
+  projectileRange: number;
+  projectileDamage: number;
+  projectileStyle: MonsterProjectileStyle;
+  preferredRange: number;
+  meleeRange: number;
+  rangedCooldown: number;
+}
 
 export interface MonsterData {
   id: string;
@@ -69,6 +81,7 @@ export interface MonsterData {
   nameColor?: string;
   bossOnly?: boolean;
   spriteSize?: { width: number; height: number };
+  ranged?: MonsterRangedData;
 }
 
 export interface LootEntry {

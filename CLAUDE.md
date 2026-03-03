@@ -202,6 +202,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ XP bar + level display in HUD
 - ✅ LevelUpScene (stat allocation overlay with keyboard/mouse/gamepad support)
 - ✅ Tab navigation between player overlay screens (TAB key cycles Inventory → Quests → Map → Stats)
+- ✅ Ranged enemy attacks (5 monsters: skeleton, orc shaman, imp, necromancer, elemental lord — projectile + retreat AI)
 
 ## Planned Features (See PRD.md)
 - Phase 3b: Skills, character classes

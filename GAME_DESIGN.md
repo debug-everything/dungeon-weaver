@@ -118,8 +118,8 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 | Zombie Runt | `zombie_small` | `monster_zombie_small` | 8 | 2 | 35 | 80 | 6 | 1-5 | No |
 | Plague Zombie | `zombie_green` | `monster_zombie_green` | 20 | 4 | 38 | 100 | 14 | 3-10 | No |
 | Hulking Zombie | `zombie_tall` | `monster_zombie_tall` | 30 | 5 | 30 | 90 | 20 | 5-15 | No |
-| Skeleton | `skelet` | `monster_skelet` | 12 | 4 | 60 | 120 | 15 | 5-12 | No |
-| Necromancer | `necromancer` | `monster_necromancer` | 70 | 9 | 50 | 170 | 100 | 40-80 | Boss |
+| Skeleton | `skelet` | `monster_skelet` | 12 | 4 | 60 | 140 | 15 | 5-12 | No (Ranged) |
+| Necromancer | `necromancer` | `monster_necromancer` | 70 | 9 | 50 | 180 | 100 | 40-80 | Boss (Ranged) |
 
 #### Beast Family (Tier 1)
 
@@ -138,7 +138,7 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 | Orc Warrior | `orc` | `monster_orc` | 25 | 6 | 55 | 110 | 25 | 10-25 | No |
 | Armored Orc | `orc_armored` | `monster_orc_armored` | 35 | 7 | 45 | 110 | 30 | 12-28 | No |
 | Masked Orc | `orc_masked` | `monster_orc_masked` | 28 | 8 | 65 | 130 | 28 | 10-25 | No |
-| Orc Shaman | `orc_shaman` | `monster_orc_shaman` | 22 | 6 | 50 | 140 | 25 | 10-22 | No |
+| Orc Shaman | `orc_shaman` | `monster_orc_shaman` | 22 | 6 | 50 | 150 | 25 | 10-22 | No (Ranged) |
 | Orc Veteran | `orc_veteran` | `monster_orc_veteran` | 40 | 9 | 50 | 120 | 35 | 15-35 | No |
 | Ogre | `ogre` | `monster_ogre` | 90 | 12 | 40 | 160 | 120 | 60-120 | Boss (32x32) |
 
@@ -146,7 +146,7 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 
 | Type | ID | Sprite | HP | DMG | Speed | Detect | XP | Gold | Boss? |
 |------|----|--------|----|-----|-------|--------|----|------|-------|
-| Imp | `imp` | `monster_imp` | 10 | 3 | 85 | 130 | 12 | 5-12 | No |
+| Imp | `imp` | `monster_imp` | 10 | 3 | 85 | 140 | 12 | 5-12 | No (Ranged) |
 | Chort | `chort` | `monster_chort` | 30 | 7 | 65 | 140 | 30 | 15-30 | No |
 | Bies | `bies` | `monster_bies` | 45 | 8 | 60 | 150 | 40 | 20-40 | No |
 | Demon Lord | `demon` | `monster_demon` | 75 | 10 | 70 | 180 | 100 | 50-100 | Boss |
@@ -162,7 +162,7 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 | Earth Elemental | `elemental_earth` | `monster_elemental_earth` | 40 | 7 | 35 | 100 | 30 | 12-25 | No |
 | Plant Elemental | `elemental_plant` | `monster_elemental_plant` | 22 | 4 | 50 | 110 | 18 | 6-14 | No |
 | Gold Elemental | `elemental_gold` | `monster_elemental_gold` | 50 | 9 | 45 | 120 | 45 | 30-60 | No |
-| Elemental Lord | `elemental_lord` | `npc_wizzard` | 85 | 11 | 55 | 170 | 110 | 50-100 | Boss |
+| Elemental Lord | `elemental_lord` | `npc_wizzard` | 85 | 11 | 55 | 180 | 110 | 50-100 | Boss (Ranged) |
 
 #### Dark Knight Family (Tier 3)
 
@@ -171,11 +171,31 @@ Staffs are blunt melee weapons with lower damage than swords (6-8 range). They u
 | Dark Knight | `dark_knight` | `monster_dark_knight` | 55 | 10 | 55 | 140 | 50 | 25-50 | No |
 
 ### AI Behavior
-- **States:** Idle, Chasing, Attacking
+- **States:** Idle, Chasing, Attacking, Retreating
 - Monsters detect player within their detect range and begin chasing
 - Each monster type has its own attack range and cooldown
 - Boss-only monsters (necromancer, tentacle, ogre, demon, elemental_lord) never spawn from respawns
 - **Knockback:** When hit, monsters are pushed away from the player for 150ms. AI is paused during knockback. Knockback force varies by weapon class (dagger=20, sword=40, staff=50, hammer=80, katana=30). Arcade physics wall colliders prevent monsters from being pushed through walls.
+
+### Ranged Attacks
+5 monsters have ranged projectile attacks. Ranged monsters use a hybrid AI: they fire projectiles at preferred range, retreat when the player closes in, and fall back to melee when cornered.
+
+| Monster | Style | Proj DMG | Cooldown | Preferred Range | Melee Range |
+|---------|-------|----------|----------|-----------------|-------------|
+| Skeleton | bone_arrow (white) | 3 | 1500ms | 80 | 22 |
+| Orc Shaman | poison_bolt (green) | 5 | 1800ms | 70 | 24 |
+| Imp | fire_bolt (orange) | 2 | 1200ms | 60 | 16 |
+| Necromancer (boss) | skull_bolt (purple) | 8 | 1400ms | 100 | 26 |
+| Elemental Lord (boss) | energy_orb (cyan) | 9 | 1300ms | 100 | 28 |
+
+**Ranged AI Priority** (requires line-of-sight):
+1. `dist ≤ meleeRange` → melee attack
+2. `dist ≤ meleeRange × 1.5` → retreat (move away at 70% speed, face player)
+3. `dist ≤ attackRange` → ranged attack (stop, fire projectile)
+4. `dist ≤ detectRange` → chase
+5. else → idle
+
+**Projectile behavior:** Graphics-only visuals (no sprite assets), wall collision via tile lookup, player hit radius 12px, defense reduction applied, dodge/i-frames work automatically.
 
 ### Boss Labels
 - **Mini-boss** (dungeon boss room): orange name label `#ffaa00`

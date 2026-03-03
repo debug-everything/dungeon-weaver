@@ -52,6 +52,16 @@ export const SPELL_COLORS: Record<string, { primary: number; secondary: number; 
   frost:     { primary: 0x88ddff, secondary: 0xffffff, trail: 0x44aadd }
 };
 
+// Monster projectile colors (visually distinct from player spell colors)
+import type { MonsterProjectileStyle } from '../types';
+export const MONSTER_PROJECTILE_COLORS: Record<MonsterProjectileStyle, { primary: number; secondary: number; trail: number }> = {
+  bone_arrow:  { primary: 0xddddcc, secondary: 0xffffff, trail: 0xaaaaaa },
+  poison_bolt: { primary: 0x44cc22, secondary: 0x88ff44, trail: 0x226611 },
+  fire_bolt:   { primary: 0xff8800, secondary: 0xffcc00, trail: 0xcc4400 },
+  skull_bolt:  { primary: 0xaa44ff, secondary: 0xdd88ff, trail: 0x662299 },
+  energy_orb:  { primary: 0x00dddd, secondary: 0x88ffff, trail: 0x008888 },
+};
+
 // Chests
 export const CHESTS_PER_ROOM = { min: 0, max: 2 };
 export const CHEST_GOLD = { min: 5, max: 30 };

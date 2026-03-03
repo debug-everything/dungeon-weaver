@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS, EVENTS, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, SCALE } from '../config/constants';
 import type { Player } from '../entities/Player';
 import type { DungeonRoom } from '../types';
+import { MONSTERS } from '../data/monsters';
 
 type CommandHandler = (args: string[]) => string;
 
@@ -40,6 +41,31 @@ export class TerminalScene extends Phaser.Scene {
         const worldY = room.centerY * TILE_SIZE * SCALE;
         this.player.setPosition(worldX, worldY);
         return 'Teleported home';
+      },
+      spawn: (args) => {
+        const monsterId = args[0] ? `monster_${args[0]}` : '';
+        const monsterData = MONSTERS[monsterId];
+        if (!monsterData) {
+          const ids = Object.keys(MONSTERS).map(k => k.replace('monster_', '')).join(', ');
+          return `Unknown monster. Available: ${ids}`;
+        }
+        const count = args.length > 1 ? Math.min(parseInt(args[1], 10) || 1, 5) : 1;
+        const gameScene = this.scene.get(SCENE_KEYS.GAME);
+        gameScene.events.emit('debug-spawn-monster', { monsterData, count });
+        return `Spawned ${count}x ${monsterData.name}`;
+      },
+      heal: () => {
+        this.player.heal(this.player.maxHealth);
+        return 'Fully healed';
+      },
+      xp: (args) => {
+        const amount = args.length > 0 ? parseInt(args[0], 10) : 100;
+        if (isNaN(amount)) return 'Invalid amount';
+        this.player.addXP(amount);
+        return `+${amount} XP`;
+      },
+      help: () => {
+        return 'gold [n], home, spawn <id> [n], heal, xp [n]';
       }
     };
 

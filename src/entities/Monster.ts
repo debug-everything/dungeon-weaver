@@ -12,6 +12,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
   private monsterState: MonsterState = 'idle';
   private target: Phaser.Physics.Arcade.Sprite | null = null;
   private lastAttackTime: number = 0;
+  private lastRangedAttackTime: number = 0;
   private healthBar: Phaser.GameObjects.Graphics | null = null;
   private isKnockedBack: boolean = false;
   private isFrozen: boolean = false;
@@ -200,9 +201,30 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     // Require line-of-sight for detection — monsters can't see through walls/doors
     const hasLOS = this.hasLOSToTarget();
+    const ranged = this.monsterData.ranged;
 
-    // State machine
-    if (hasLOS && distanceToTarget <= this.monsterData.attackRange) {
+    // State machine — ranged-aware if monster has ranged config
+    if (ranged && hasLOS) {
+      if (distanceToTarget <= ranged.meleeRange) {
+        // Too close — melee attack
+        this.setMonsterState('attacking');
+        this.performAttack(time);
+      } else if (distanceToTarget <= ranged.meleeRange * 1.5) {
+        // Uncomfortably close — retreat
+        this.setMonsterState('retreating');
+        this.retreat();
+      } else if (distanceToTarget <= this.monsterData.attackRange) {
+        // In ranged attack zone — fire projectile
+        this.performRangedAttack(time);
+      } else if (distanceToTarget <= this.monsterData.detectRange) {
+        // Detected but out of range — close to preferred range
+        this.setMonsterState('chasing');
+        this.chaseTarget();
+      } else {
+        this.setMonsterState('idle');
+        this.idle();
+      }
+    } else if (hasLOS && distanceToTarget <= this.monsterData.attackRange) {
       this.setMonsterState('attacking');
       this.performAttack(time);
     } else if (hasLOS && distanceToTarget <= this.monsterData.detectRange) {
@@ -236,6 +258,57 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
     // Face direction of movement
     this.setFlipX(this.target.x < this.x);
+  }
+
+  private retreat(): void {
+    if (!this.target) return;
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const angle = Phaser.Math.Angle.Between(this.target.x, this.target.y, this.x, this.y);
+
+    // Move away from player at 70% speed
+    body.setVelocity(
+      Math.cos(angle) * this.monsterData.speed * 0.7,
+      Math.sin(angle) * this.monsterData.speed * 0.7
+    );
+
+    // Face the player while retreating
+    this.setFlipX(this.target.x < this.x);
+  }
+
+  private performRangedAttack(time: number): void {
+    if (!this.target) return;
+    const ranged = this.monsterData.ranged!;
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(0);
+
+    // Face the player
+    this.setFlipX(this.target.x < this.x);
+
+    if (time - this.lastRangedAttackTime >= ranged.rangedCooldown) {
+      this.lastRangedAttackTime = time;
+      this.setMonsterState('attacking');
+
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+
+      this.scene.events.emit('monster-ranged-attack', {
+        originX: this.x,
+        originY: this.y,
+        directionRad: angle,
+        speed: ranged.projectileSpeed,
+        range: ranged.projectileRange,
+        damage: ranged.projectileDamage,
+        style: ranged.projectileStyle
+      });
+
+      // Visual attack feedback
+      this.setTint(0xff66ff);
+      this.scene.time.delayedCall(100, () => this.clearTint());
+    } else {
+      this.setMonsterState('chasing');
+      // Strafe slightly while waiting for cooldown
+    }
   }
 
   private performAttack(time: number): void {

@@ -16,6 +16,9 @@ import { generateDungeon as generateBSPDungeon } from '../systems/DungeonGenerat
 import { saveGame, checkLLMEnabled, getArcStatus, SaveGamePayload, SaveData } from '../services/ApiClient';
 import { StoryArcInfo } from '../types';
 
+import type { MonsterProjectileStyle } from '../types';
+import { MONSTER_PROJECTILE_COLORS } from '../config/constants';
+
 interface SpellProjectile {
   graphics: Phaser.GameObjects.Graphics;
   x: number;
@@ -30,6 +33,20 @@ interface SpellProjectile {
   damage: { damage: number; isCritical: boolean };
   aoe: number;
   trailTimer: Phaser.Time.TimerEvent;
+}
+
+interface MonsterProjectile {
+  graphics: Phaser.GameObjects.Graphics;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  directionRad: number;
+  originX: number;
+  originY: number;
+  range: number;
+  damage: number;
+  style: MonsterProjectileStyle;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -62,6 +79,7 @@ export class GameScene extends Phaser.Scene {
   private bossRoomEntered: boolean = false;
   private narratorActive: boolean = false;
   private spellProjectiles: SpellProjectile[] = [];
+  private monsterProjectiles: MonsterProjectile[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -85,6 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.bossRoomEntered = false;
     this.narratorActive = false;
     this.spellProjectiles = [];
+    this.monsterProjectiles = [];
     this.floors = this.add.group();
     this.monsters = this.add.group();
     this.npcs = this.add.group();
@@ -690,6 +709,14 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Monster ranged attack — spawn projectile
+    this.events.on('monster-ranged-attack', (data: {
+      originX: number; originY: number; directionRad: number;
+      speed: number; range: number; damage: number; style: MonsterProjectileStyle;
+    }) => {
+      this.createMonsterProjectile(data);
+    });
+
     // Track monster kills for room clearing + boss defeated + XP award
     this.events.on(EVENTS.MONSTER_KILLED, (monsterData: MonsterData, worldX: number, worldY: number) => {
       this.onMonsterKilled(worldX, worldY);
@@ -975,6 +1002,44 @@ export class GameScene extends Phaser.Scene {
     this.events.on(EVENTS.CLOSE_TERMINAL, () => {
       this.scene.stop(SCENE_KEYS.TERMINAL);
       if (this.input.keyboard) this.input.keyboard.enabled = true;
+    });
+
+    // Debug: spawn monster in player's current room
+    this.events.on('debug-spawn-monster', (data: { monsterData: MonsterData; count: number }) => {
+      const scaledTile = TILE_SIZE * SCALE;
+      const pTileX = Math.floor(this.player.x / scaledTile);
+      const pTileY = Math.floor(this.player.y / scaledTile);
+
+      // Find the room the player is in
+      const room = this.rooms.find(r =>
+        pTileX >= r.x && pTileX < r.x + r.width &&
+        pTileY >= r.y && pTileY < r.y + r.height
+      );
+
+      for (let i = 0; i < data.count; i++) {
+        let spawnX: number, spawnY: number;
+        if (room) {
+          // Pick a random floor tile inside the room
+          let attempts = 0;
+          let tx: number, ty: number;
+          do {
+            tx = Phaser.Math.Between(room.x + 1, room.x + room.width - 2);
+            ty = Phaser.Math.Between(room.y + 1, room.y + room.height - 2);
+            attempts++;
+          } while (this.dungeon[ty]?.[tx] !== 0 && attempts < 20);
+          spawnX = tx * scaledTile + scaledTile / 2;
+          spawnY = ty * scaledTile + scaledTile / 2;
+        } else {
+          // Fallback: spawn near player
+          spawnX = this.player.x + 40 + (Math.random() - 0.5) * 40;
+          spawnY = this.player.y + 40 + (Math.random() - 0.5) * 40;
+        }
+
+        const monster = new Monster(this, spawnX, spawnY, data.monsterData);
+        monster.setTarget(this.player);
+        monster.setFogSystem(this.fogSystem);
+        this.monsters.add(monster);
+      }
     });
 
     // Player died
@@ -1276,6 +1341,7 @@ export class GameScene extends Phaser.Scene {
 
     // Update spell projectiles
     this.updateSpellProjectiles();
+    this.updateMonsterProjectiles();
 
     // Update NPC quest indicators (throttled to every 500ms)
     if (time - this.lastIndicatorUpdate > 500) {
@@ -1764,5 +1830,188 @@ export class GameScene extends Phaser.Scene {
     proj.trailTimer.destroy();
     proj.graphics.destroy();
     this.spellProjectiles.splice(index, 1);
+  }
+
+  // --- Monster Projectile System ---
+
+  private createMonsterProjectile(data: {
+    originX: number; originY: number; directionRad: number;
+    speed: number; range: number; damage: number; style: MonsterProjectileStyle;
+  }): void {
+    const graphics = this.add.graphics();
+    graphics.setDepth(15);
+
+    this.drawMonsterProjectileGraphics(graphics, 0, 0, data.style, data.directionRad);
+
+    const vx = Math.cos(data.directionRad) * data.speed;
+    const vy = Math.sin(data.directionRad) * data.speed;
+
+    this.monsterProjectiles.push({
+      graphics,
+      x: data.originX,
+      y: data.originY,
+      vx,
+      vy,
+      directionRad: data.directionRad,
+      originX: data.originX,
+      originY: data.originY,
+      range: data.range,
+      damage: data.damage,
+      style: data.style
+    });
+  }
+
+  private drawMonsterProjectileGraphics(
+    graphics: Phaser.GameObjects.Graphics, x: number, y: number,
+    style: MonsterProjectileStyle, dirRad: number
+  ): void {
+    graphics.clear();
+    const colors = MONSTER_PROJECTILE_COLORS[style];
+    const dirX = Math.cos(dirRad);
+    const dirY = Math.sin(dirRad);
+    const perpX = -Math.sin(dirRad);
+    const perpY = Math.cos(dirRad);
+
+    switch (style) {
+      case 'bone_arrow':
+        // Narrow pointed arrow shape
+        graphics.fillStyle(colors.primary, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(x + dirX * 6, y + dirY * 6);
+        graphics.lineTo(x + perpX * 2, y + perpY * 2);
+        graphics.lineTo(x - dirX * 4, y - dirY * 4);
+        graphics.lineTo(x - perpX * 2, y - perpY * 2);
+        graphics.closePath();
+        graphics.fillPath();
+        graphics.fillStyle(colors.secondary, 0.8);
+        graphics.fillCircle(x + dirX * 5, y + dirY * 5, 1.5);
+        break;
+
+      case 'poison_bolt':
+        // Glowing green blob
+        graphics.fillStyle(colors.trail, 0.3);
+        graphics.fillCircle(x, y, 7);
+        graphics.fillStyle(colors.primary, 0.8);
+        graphics.fillCircle(x, y, 4);
+        graphics.fillStyle(colors.secondary, 0.9);
+        graphics.fillCircle(x + dirX * 2, y + dirY * 2, 2);
+        break;
+
+      case 'fire_bolt':
+        // Small fireball
+        graphics.fillStyle(colors.trail, 0.3);
+        graphics.fillCircle(x, y, 6);
+        graphics.fillStyle(colors.primary, 0.9);
+        graphics.fillCircle(x, y, 4);
+        graphics.fillStyle(colors.secondary, 1);
+        graphics.fillCircle(x + dirX * 2, y + dirY * 2, 2);
+        break;
+
+      case 'skull_bolt':
+        // Purple skull-like orb
+        graphics.fillStyle(colors.trail, 0.3);
+        graphics.fillCircle(x, y, 8);
+        graphics.fillStyle(colors.primary, 0.85);
+        graphics.fillCircle(x, y, 5);
+        // "Eye" dots
+        graphics.fillStyle(colors.secondary, 0.9);
+        graphics.fillCircle(x + perpX * 2, y + perpY * 2, 1.5);
+        graphics.fillCircle(x - perpX * 2, y - perpY * 2, 1.5);
+        break;
+
+      case 'energy_orb':
+        // Pulsing cyan orb with ring
+        const pulse = 0.8 + Math.random() * 0.2;
+        graphics.fillStyle(colors.trail, 0.25);
+        graphics.fillCircle(x, y, 9 * pulse);
+        graphics.lineStyle(1, colors.secondary, 0.6);
+        graphics.strokeCircle(x, y, 7 * pulse);
+        graphics.fillStyle(colors.primary, 0.9);
+        graphics.fillCircle(x, y, 4);
+        graphics.fillStyle(colors.secondary, 1);
+        graphics.fillCircle(x, y, 2);
+        break;
+    }
+  }
+
+  private updateMonsterProjectiles(): void {
+    const dt = this.game.loop.delta / 1000;
+    const scaledTile = TILE_SIZE * SCALE;
+
+    for (let i = this.monsterProjectiles.length - 1; i >= 0; i--) {
+      const proj = this.monsterProjectiles[i];
+
+      // Move
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+      proj.graphics.setPosition(proj.x, proj.y);
+
+      // Redraw for animated styles
+      if (proj.style === 'energy_orb' || proj.style === 'skull_bolt') {
+        this.drawMonsterProjectileGraphics(proj.graphics, 0, 0, proj.style, proj.directionRad);
+      }
+
+      // Check max range
+      const traveled = Phaser.Math.Distance.Between(proj.originX, proj.originY, proj.x, proj.y);
+      if (traveled >= proj.range) {
+        this.destroyMonsterProjectile(i);
+        continue;
+      }
+
+      // Check wall collision
+      const tileX = Math.floor(proj.x / scaledTile);
+      const tileY = Math.floor(proj.y / scaledTile);
+      if (tileX < 0 || tileX >= DUNGEON_WIDTH || tileY < 0 || tileY >= DUNGEON_HEIGHT ||
+          this.dungeon[tileY]?.[tileX] === 1 || this.dungeon[tileY]?.[tileX] === 2 || this.dungeon[tileY]?.[tileX] === 4) {
+        this.createMonsterProjectileImpact(proj.x, proj.y, proj.style);
+        this.destroyMonsterProjectile(i);
+        continue;
+      }
+
+      // Check player collision (distance-based, radius ~12px)
+      const distToPlayer = Phaser.Math.Distance.Between(proj.x, proj.y, this.player.x, this.player.y);
+      if (distToPlayer <= 12) {
+        this.onMonsterProjectileHitPlayer(proj);
+        this.createMonsterProjectileImpact(proj.x, proj.y, proj.style);
+        this.destroyMonsterProjectile(i);
+      }
+    }
+  }
+
+  private onMonsterProjectileHitPlayer(proj: MonsterProjectile): void {
+    const result = this.player.combat.calculateMonsterDamage(
+      proj.damage,
+      this.player.inventory.getTotalDefense()
+    );
+    this.player.takeDamage(result.damage);
+  }
+
+  private createMonsterProjectileImpact(x: number, y: number, style: MonsterProjectileStyle): void {
+    const colors = MONSTER_PROJECTILE_COLORS[style];
+    const particleCount = 6;
+    for (let i = 0; i < particleCount; i++) {
+      const particle = this.add.circle(x, y, 2, colors.primary, 0.7);
+      particle.setDepth(16);
+
+      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.5;
+      const distance = 8 + Math.random() * 6;
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0,
+        duration: 200,
+        ease: 'Power2',
+        onComplete: () => particle.destroy()
+      });
+    }
+  }
+
+  private destroyMonsterProjectile(index: number): void {
+    const proj = this.monsterProjectiles[index];
+    proj.graphics.destroy();
+    this.monsterProjectiles.splice(index, 1);
   }
 }

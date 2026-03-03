@@ -88,16 +88,25 @@ export const MONSTERS: Record<string, MonsterData> = {
     health: 12,
     damage: 4,
     speed: 60,
-    attackRange: 22,
+    attackRange: 100,
     attackCooldown: 1000,
-    detectRange: 120,
+    detectRange: 140,
     xpReward: 15,
     goldDrop: { min: 5, max: 12 },
     lootTable: [
       { itemId: 'flask_red', chance: 0.15 },
       { itemId: 'weapon_sword_rusty', chance: 0.08 },
       { itemId: 'armor_peasant', chance: 0.05 }
-    ]
+    ],
+    ranged: {
+      projectileSpeed: 160,
+      projectileRange: 140,
+      projectileDamage: 3,
+      projectileStyle: 'bone_arrow',
+      preferredRange: 80,
+      meleeRange: 22,
+      rangedCooldown: 1500
+    }
   },
   monster_necromancer: {
     id: 'monster_necromancer',
@@ -108,9 +117,9 @@ export const MONSTERS: Record<string, MonsterData> = {
     health: 70,
     damage: 9,
     speed: 50,
-    attackRange: 26,
+    attackRange: 130,
     attackCooldown: 1000,
-    detectRange: 170,
+    detectRange: 180,
     xpReward: 100,
     goldDrop: { min: 40, max: 80 },
     lootTable: [
@@ -118,7 +127,16 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'weapon_sword_silver', chance: 0.15 },
       { itemId: 'armor_wizard', chance: 0.1 }
     ],
-    bossOnly: true
+    bossOnly: true,
+    ranged: {
+      projectileSpeed: 180,
+      projectileRange: 180,
+      projectileDamage: 8,
+      projectileStyle: 'skull_bolt',
+      preferredRange: 100,
+      meleeRange: 26,
+      rangedCooldown: 1400
+    }
   },
 
   // ── Beast Family ──
@@ -295,16 +313,25 @@ export const MONSTERS: Record<string, MonsterData> = {
     health: 22,
     damage: 6,
     speed: 50,
-    attackRange: 24,
+    attackRange: 110,
     attackCooldown: 1100,
-    detectRange: 140,
+    detectRange: 150,
     xpReward: 25,
     goldDrop: { min: 10, max: 22 },
     lootTable: [
       { itemId: 'flask_red', chance: 0.2 },
       { itemId: 'flask_blue', chance: 0.1 },
       { itemId: 'flask_green', chance: 0.08 }
-    ]
+    ],
+    ranged: {
+      projectileSpeed: 140,
+      projectileRange: 140,
+      projectileDamage: 5,
+      projectileStyle: 'poison_bolt',
+      preferredRange: 70,
+      meleeRange: 24,
+      rangedCooldown: 1800
+    }
   },
   monster_orc_veteran: {
     id: 'monster_orc_veteran',
@@ -362,15 +389,24 @@ export const MONSTERS: Record<string, MonsterData> = {
     health: 10,
     damage: 3,
     speed: 85,
-    attackRange: 16,
+    attackRange: 90,
     attackCooldown: 800,
-    detectRange: 130,
+    detectRange: 140,
     xpReward: 12,
     goldDrop: { min: 5, max: 12 },
     lootTable: [
       { itemId: 'flask_red', chance: 0.2 },
       { itemId: 'flask_yellow', chance: 0.05 }
-    ]
+    ],
+    ranged: {
+      projectileSpeed: 180,
+      projectileRange: 120,
+      projectileDamage: 2,
+      projectileStyle: 'fire_bolt',
+      preferredRange: 60,
+      meleeRange: 16,
+      rangedCooldown: 1200
+    }
   },
   monster_chort: {
     id: 'monster_chort',
@@ -580,9 +616,9 @@ export const MONSTERS: Record<string, MonsterData> = {
     health: 85,
     damage: 11,
     speed: 55,
-    attackRange: 28,
+    attackRange: 130,
     attackCooldown: 950,
-    detectRange: 170,
+    detectRange: 180,
     xpReward: 110,
     goldDrop: { min: 50, max: 100 },
     lootTable: [
@@ -591,7 +627,16 @@ export const MONSTERS: Record<string, MonsterData> = {
       { itemId: 'armor_wizard', chance: 0.15 },
       { itemId: 'armor_shield_golden', chance: 0.1 }
     ],
-    bossOnly: true
+    bossOnly: true,
+    ranged: {
+      projectileSpeed: 200,
+      projectileRange: 180,
+      projectileDamage: 9,
+      projectileStyle: 'energy_orb',
+      preferredRange: 100,
+      meleeRange: 28,
+      rangedCooldown: 1300
+    }
   },
 
   // ── Dark Knight Family ──
