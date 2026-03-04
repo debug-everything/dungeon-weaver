@@ -196,6 +196,20 @@ export class InventorySystem {
     this.scene.events.emit(EVENTS.INVENTORY_CHANGED, this.items);
   }
 
+  exportState(): { items: (InventoryItem | null)[]; equipment: Equipment } {
+    return {
+      items: JSON.parse(JSON.stringify(this.items)),
+      equipment: JSON.parse(JSON.stringify(this.equipment))
+    };
+  }
+
+  restoreState(items: (InventoryItem | null)[], equipment: Equipment): void {
+    this.items = items;
+    this.equipment = equipment;
+    this.emitChange();
+    this.scene.events.emit(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.equipment);
+  }
+
   moveItem(fromIndex: number, toIndex: number): void {
     if (fromIndex === toIndex) return;
     if (fromIndex < 0 || fromIndex >= INVENTORY_SLOTS) return;

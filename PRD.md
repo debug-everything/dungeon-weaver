@@ -209,10 +209,12 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [x] Arc-aware NPC quest indicators (shows "!" on NPC assigned to next arc quest)
 - [x] Quest completion notification flow (client → server → auto-generate next arc quest)
 - [x] Improved chest placement (wall-adjacent, corner-weighted, door-avoidant)
+- [x] Arc-boss integration (arc boss quests place boss in floor's boss room, thematic unlock message)
+- [x] LLM status indicator in HUD (shows AI connection state)
 
 ### Dungeon Improvements
-- [ ] Multiple dungeon floors/levels
-- [ ] Stairs/ladders between floors
+- [x] Multiple dungeon floors/levels
+- [x] Stairs/ladders between floors
 - [ ] Locked doors requiring keys
 - [ ] Secret rooms
 - [x] Treasure chests with loot
@@ -379,7 +381,7 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 
 ### Phase 2+ Success
 - [ ] 30+ minutes of gameplay content
-- [ ] 3+ dungeon floors
+- [x] 3+ dungeon floors
 - [x] 28 monster types across 6 families
 - [ ] 50+ items
 - [ ] Player retention through progression

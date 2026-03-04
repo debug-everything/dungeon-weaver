@@ -21,6 +21,8 @@ export class UIScene extends Phaser.Scene {
   private xpBar!: Phaser.GameObjects.Graphics;
   private xpText!: Phaser.GameObjects.Text;
   private statPointsBadge!: Phaser.GameObjects.Text;
+  private floorText!: Phaser.GameObjects.Text;
+  private llmStatusText!: Phaser.GameObjects.Text;
 
   private currentHealth: number = 100;
   private maxHealth: number = 100;
@@ -132,6 +134,24 @@ export class UIScene extends Phaser.Scene {
       fontSize: '16px'
     }).setOrigin(0, 0.5);
 
+    // Floor indicator
+    this.floorText = this.add.text(GAME_WIDTH - 30, 54, 'Floor 1', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#88bbff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(1, 0);
+
+    // LLM status indicator (bottom-right, near controls)
+    this.llmStatusText = this.add.text(GAME_WIDTH - 10, GAME_HEIGHT - 30, '◆ AI', {
+      fontSize: '9px',
+      fontFamily: 'monospace',
+      color: '#444444',
+      stroke: '#000000',
+      strokeThickness: 1
+    }).setOrigin(1, 0.5);
+
     // Equipped weapon display
     const weaponBg = this.add.rectangle(20, GAME_HEIGHT - 60, 140, 50, 0x333333, 0.8);
     weaponBg.setOrigin(0);
@@ -186,6 +206,8 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on(EVENTS.XP_GAINED, this.onXPGained, this);
     gameScene.events.on(EVENTS.LEVEL_UP, this.onLevelUp, this);
     gameScene.events.on(EVENTS.STATS_CHANGED, this.onStatsChanged, this);
+    gameScene.events.on(EVENTS.FLOOR_CHANGED, this.onFloorChanged, this);
+    gameScene.events.on(EVENTS.LLM_STATUS_CHANGED, this.onLLMStatusChanged, this);
 
     // Clean up on scene shutdown
     this.events.on('shutdown', () => {
@@ -201,6 +223,8 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.off(EVENTS.XP_GAINED, this.onXPGained, this);
       gameScene.events.off(EVENTS.LEVEL_UP, this.onLevelUp, this);
       gameScene.events.off(EVENTS.STATS_CHANGED, this.onStatsChanged, this);
+      gameScene.events.off(EVENTS.FLOOR_CHANGED, this.onFloorChanged, this);
+      gameScene.events.off(EVENTS.LLM_STATUS_CHANGED, this.onLLMStatusChanged, this);
     });
   }
 
@@ -379,6 +403,20 @@ export class UIScene extends Phaser.Scene {
       this.statPointsBadge.setVisible(true);
     } else {
       this.statPointsBadge.setVisible(false);
+    }
+  }
+
+  private onFloorChanged(floor: number): void {
+    this.floorText.setText(`Floor ${floor}`);
+  }
+
+  private onLLMStatusChanged(enabled: boolean): void {
+    if (enabled) {
+      this.llmStatusText.setText('✦ AI');
+      this.llmStatusText.setColor('#44ddaa');
+    } else {
+      this.llmStatusText.setText('◇ AI');
+      this.llmStatusText.setColor('#444444');
     }
   }
 

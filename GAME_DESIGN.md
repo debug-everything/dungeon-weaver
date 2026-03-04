@@ -233,6 +233,22 @@ Destructible bone pile objects ("nests") placed in ~30% of non-safe, non-boss ro
 - **On destroy**: bone scatter particles, XP award; spawned monsters persist
 - **Family tints**: undead=gray, beast=green, orc=tan, demon=red, elemental=blue, dark_knight=purple
 
+### Multi-Floor Dungeon
+The game uses a 3-floor descent system (configurable via `TOTAL_FLOORS`). Each floor generates a fresh dungeon.
+
+- **Progression**: One-way — defeating the floor boss reveals stairs, interact with E to descend
+- **Player state carries**: health, mana, gold, inventory, equipment, level, XP, stats, active quests
+- **Monster scaling per floor**:
+  | Floor | HP Multiplier | Damage Multiplier |
+  |-------|--------------|-------------------|
+  | 1     | 1.0x         | 1.0x              |
+  | 2     | 1.3x         | 1.3x              |
+  | 3     | 1.7x         | 1.6x              |
+- **Stairs**: Appear in boss room after boss is killed. Uses `stairs_mid.png` sprite with pulsing glow and "Floor N" label. Notification says "Press E to descend."
+- **NPCs**: Present on every floor (safe room always has merchants)
+- **Save system**: Floor state only lives in memory during a run (no save/load across floors)
+- **Arc-boss integration**: When a story arc boss quest is active, the arc's boss monster spawns in the boss room. Non-boss quest targets go in regular rooms. When no arc is active (LLM off), a random tier-appropriate boss is used. Unlock message includes arc boss name when applicable.
+
 ### Monster Tier System
 Tiers unlock new monster families as the player completes story arcs:
 - **Tier 1** (0 arcs completed): Undead + Beast

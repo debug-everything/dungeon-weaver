@@ -26,6 +26,7 @@ interface MapSceneData {
   npcs: MapNPC[];
   monsters: MapMonster[];
   questSystem?: QuestSystem;
+  currentFloor?: number;
 }
 
 const MAP_TILE_SIZE = 12;
@@ -52,7 +53,8 @@ export class MapScene extends Phaser.Scene {
     this.createTabBar();
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 38, 'DUNGEON MAP', {
+    const floorNum = this.mapData.currentFloor || 1;
+    this.add.text(GAME_WIDTH / 2, 38, `DUNGEON MAP - FLOOR ${floorNum}`, {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#c9a227'

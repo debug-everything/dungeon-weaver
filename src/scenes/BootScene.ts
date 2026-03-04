@@ -122,6 +122,9 @@ export class BootScene extends Phaser.Scene {
     // Load spawner/nest
     this.load.image('spawner_nest', 'assets/items/skull.png');
 
+    // Load stairs
+    this.load.image('stairs_down', 'assets/items/stairs_mid.png');
+
     // Load UI elements
     this.load.image('box', 'assets/items/box.png');
 

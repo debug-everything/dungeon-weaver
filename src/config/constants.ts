@@ -113,6 +113,16 @@ export const COMBO_DAMAGE_MULTIPLIERS = [1.0, 1.2, 1.5, 1.8, 2.0];
 export const CHARGE_TIME = 800;
 export const CHARGE_MIN_TIME = 200;
 
+// Multi-floor dungeon
+export const TOTAL_FLOORS = 3;
+export const FLOOR_SCALING: Record<number, { hp: number; damage: number }> = {
+  1: { hp: 1.0, damage: 1.0 },
+  2: { hp: 1.3, damage: 1.3 },
+  3: { hp: 1.7, damage: 1.6 },
+  4: { hp: 2.1, damage: 2.0 },
+  5: { hp: 2.5, damage: 2.5 },
+};
+
 export const SCENE_KEYS = {
   BOOT: 'BootScene',
   SPLASH: 'SplashScene',
@@ -195,5 +205,7 @@ export const EVENTS = {
   PLAYER_MANA_CHANGED: 'player-mana-changed',
   PLAYER_SPELL: 'player-spell',
   OPEN_TERMINAL: 'open-terminal',
-  CLOSE_TERMINAL: 'close-terminal'
+  CLOSE_TERMINAL: 'close-terminal',
+  FLOOR_CHANGED: 'floor-changed',
+  LLM_STATUS_CHANGED: 'llm-status-changed'
 } as const;

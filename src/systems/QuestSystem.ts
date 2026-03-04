@@ -220,6 +220,36 @@ export class QuestSystem {
     }
   }
 
+  exportState(): { definitions: QuestDefinition[]; states: QuestState[] } {
+    const definitions: QuestDefinition[] = [];
+    const states: QuestState[] = [];
+    for (const [questId, state] of this.questStates) {
+      // Only export active/completed quests (not turned_in or available)
+      if (state.status !== 'active' && state.status !== 'completed') continue;
+      const def = this.quests.get(questId);
+      if (def) {
+        const defCopy = JSON.parse(JSON.stringify(def)) as QuestDefinition;
+        const stateCopy = JSON.parse(JSON.stringify(state)) as QuestState;
+        // Clear targetRoom since room coords are invalid on new floor
+        delete stateCopy.targetRoom;
+        definitions.push(defCopy);
+        states.push(stateCopy);
+      }
+    }
+    return { definitions, states };
+  }
+
+  importState(definitions: QuestDefinition[], states: QuestState[]): void {
+    for (let i = 0; i < definitions.length; i++) {
+      const def = definitions[i];
+      const state = states[i];
+      if (!def || !state) continue;
+      this.quests.set(def.id, def);
+      this.questStates.set(def.id, state);
+    }
+    this.scene.events.emit(EVENTS.QUEST_LOG_CHANGED);
+  }
+
   private onMonsterKilled(monsterData: MonsterData): void {
     for (const [questId, state] of this.questStates) {
       if (state.status !== 'active') continue;

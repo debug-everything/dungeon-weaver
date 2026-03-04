@@ -142,6 +142,17 @@ export class FogOfWarSystem {
     this.lastPlayerTileY = -1;
   }
 
+  /** Reveal the entire map (debug). Sets all non-wall floor tiles to visible. */
+  revealAll(): void {
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.dungeon[y][x] !== 1) {
+          this.grid[y][x] = 'visible';
+        }
+      }
+    }
+  }
+
   isVisible(x: number, y: number): boolean {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
     return this.grid[y][x] === 'visible';

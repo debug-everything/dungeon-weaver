@@ -205,6 +205,10 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Ranged enemy attacks (5 monsters: skeleton, orc shaman, imp, necromancer, elemental lord — projectile + retreat AI)
 - ✅ Boss attack patterns (2-phase system: all 5 bosses gain abilities at 50% HP — slam, summon, charge, teleport, barrage)
 - ✅ Monster spawner nests (destructible bone piles in ~30% of rooms, periodically spawn monsters until destroyed, family-tinted)
+- ✅ Multi-floor dungeon (3 floors per run, stairs appear after boss defeat, one-way descent, player state carries between floors, monster HP/damage scale per floor)
+- ✅ Arc-boss integration (story arc boss quests place the arc boss in the floor's boss room, thematic unlock message)
+- ✅ LLM status indicator (HUD shows AI connection status: green sparkle when connected, gray when offline)
+- ✅ Debug: `reveal` command in terminal to remove fog of war
 
 ## Planned Features (See PRD.md)
 - Phase 3b: Skills, character classes

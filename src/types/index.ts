@@ -301,6 +301,20 @@ export interface SpawnerData {
   livingCount: number;    // currently alive from this spawner
 }
 
+export interface FloorTransitionData {
+  targetFloor: number;
+  playerState: {
+    health: number; maxHealth: number;
+    mana: number; maxMana: number;
+    gold: number;
+    level: number; xp: number;
+    stats: PlayerStats; statPoints: number;
+  };
+  inventoryState: { items: (InventoryItem | null)[]; equipment: Equipment };
+  questData: { definitions: QuestDefinition[]; states: QuestState[] };
+  currentTier: 1 | 2 | 3;
+}
+
 export interface QuestMapIndicator {
   questId: string;
   questName: string;

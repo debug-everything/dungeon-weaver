@@ -8,7 +8,7 @@ import {
   SPELL_PROJECTILE_SPEED,
   MANA_REGEN_BASE, MANA_REGEN_PER_INT, MANA_REGEN_TICK
 } from '../config/constants';
-import { PlayerStats } from '../types';
+import { PlayerStats, FloorTransitionData } from '../types';
 import { InventorySystem } from '../systems/InventorySystem';
 import { CombatSystem } from '../systems/CombatSystem';
 
@@ -994,6 +994,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const range = nextThreshold - prevThreshold;
     if (range <= 0) return 1;
     return (this.xp - prevThreshold) / range;
+  }
+
+  restoreFromTransition(data: FloorTransitionData): void {
+    const ps = data.playerState;
+    this.health = ps.health;
+    this.maxHealth = ps.maxHealth;
+    this.mana = ps.mana;
+    this.maxMana = ps.maxMana;
+    this.gold = ps.gold;
+    this.level = ps.level;
+    this.xp = ps.xp;
+    this.stats = { ...ps.stats };
+    this.statPoints = ps.statPoints;
+
+    // Restore inventory and equipment
+    this.inventory.restoreState(data.inventoryState.items, data.inventoryState.equipment);
+
+    // Emit updated state to UI
+    this.scene.events.emit(EVENTS.PLAYER_HEALTH_CHANGED, this.health, this.maxHealth);
+    this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
+    this.scene.events.emit(EVENTS.PLAYER_GOLD_CHANGED, this.gold);
+    this.scene.events.emit(EVENTS.STATS_CHANGED, this.stats, this.statPoints);
+    const xpToNext = this.level < MAX_LEVEL ? XP_PER_LEVEL[this.level] : this.xp;
+    this.scene.events.emit(EVENTS.XP_GAINED, this.xp, xpToNext, this.level);
   }
 
   getInteractionPoint(): { x: number; y: number } {

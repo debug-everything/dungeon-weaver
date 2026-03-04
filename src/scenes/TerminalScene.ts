@@ -3,6 +3,7 @@ import { SCENE_KEYS, EVENTS, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, SCALE } from '.
 import type { Player } from '../entities/Player';
 import type { DungeonRoom } from '../types';
 import { MONSTERS } from '../data/monsters';
+import { GameScene } from './GameScene';
 
 type CommandHandler = (args: string[]) => string;
 
@@ -64,8 +65,22 @@ export class TerminalScene extends Phaser.Scene {
         this.player.addXP(amount);
         return `+${amount} XP`;
       },
+      floor: (args) => {
+        const target = args.length > 0 ? parseInt(args[0], 10) : 0;
+        if (isNaN(target) || target < 1) return 'Usage: floor <n>';
+        const gameScene = this.scene.get(SCENE_KEYS.GAME) as GameScene;
+        this.time.delayedCall(100, () => {
+          gameScene.transitionToNextFloor(target);
+        });
+        return `Warping to floor ${target}...`;
+      },
+      reveal: () => {
+        const gameScene = this.scene.get(SCENE_KEYS.GAME);
+        gameScene.events.emit('debug-reveal-map');
+        return 'Map revealed';
+      },
       help: () => {
-        return 'gold [n], home, spawn <id> [n], heal, xp [n]';
+        return 'gold [n], home, spawn <id> [n], heal, xp [n], floor [n], reveal';
       }
     };
 

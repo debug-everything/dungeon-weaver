@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier, SPELL_COLORS, SPAWNER_HP, SPAWNER_SPAWN_COOLDOWN, SPAWNER_MAX_SPAWNED, SPAWNER_CHANCE, SPAWNER_XP, SPAWNER_FAMILY_TINTS } from '../config/constants';
-import type { SpellType } from '../types';
+import { SCENE_KEYS, TILE_SIZE, SCALE, DUNGEON_WIDTH, DUNGEON_HEIGHT, EVENTS, INTERACTION_DISTANCE, VISIBILITY_RADIUS, CHESTS_PER_ROOM, CHEST_GOLD, CHEST_LOOT_TABLE, ROOMS_TO_CLEAR_FOR_BOSS, MONSTER_TIER_FAMILIES, BOSS_LABEL_COLORS, MonsterTier, SPELL_COLORS, SPAWNER_HP, SPAWNER_SPAWN_COOLDOWN, SPAWNER_MAX_SPAWNED, SPAWNER_CHANCE, SPAWNER_XP, SPAWNER_FAMILY_TINTS, TOTAL_FLOORS, FLOOR_SCALING } from '../config/constants';
+import type { SpellType, FloorTransitionData } from '../types';
 import { Player } from '../entities/Player';
 import { Monster } from '../entities/Monster';
 import { NPC } from '../entities/NPC';
@@ -81,6 +81,15 @@ export class GameScene extends Phaser.Scene {
   private spellProjectiles: SpellProjectile[] = [];
   private monsterProjectiles: MonsterProjectile[] = [];
 
+  // Multi-floor system
+  private currentFloor: number = 1;
+  private floorTransitionData: FloorTransitionData | null = null;
+  private stairsSprite: Phaser.GameObjects.Image | null = null;
+  private transitioning: boolean = false;
+
+  // LLM status
+  private llmEnabled: boolean = false;
+
   // Spawner/nest system
   private spawnerSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
   private spawnerData: Map<string, SpawnerData> = new Map();
@@ -93,7 +102,22 @@ export class GameScene extends Phaser.Scene {
     super({ key: SCENE_KEYS.GAME });
   }
 
+  init(data?: { floorTransition?: FloorTransitionData }): void {
+    console.log('[GameScene] init called, data:', data ? JSON.stringify({ hasFloorTransition: !!data.floorTransition, targetFloor: data.floorTransition?.targetFloor }) : 'none');
+    if (data?.floorTransition) {
+      this.floorTransitionData = data.floorTransition;
+      this.currentFloor = data.floorTransition.targetFloor;
+    } else {
+      this.floorTransitionData = null;
+      this.currentFloor = 1;
+    }
+    this.stairsSprite = null;
+    this.transitioning = false;
+    console.log('[GameScene] init done, currentFloor:', this.currentFloor);
+  }
+
   create(): void {
+    console.log('[GameScene] create called, currentFloor:', this.currentFloor, 'hasTransitionData:', !!this.floorTransitionData);
     this.isPaused = false;
 
     // Initialize groups
@@ -137,6 +161,12 @@ export class GameScene extends Phaser.Scene {
       startRoom.centerY * TILE_SIZE * SCALE
     );
 
+    // Restore player state from floor transition
+    if (this.floorTransitionData) {
+      this.player.restoreFromTransition(this.floorTransitionData);
+      this.currentTier = this.floorTransitionData.currentTier;
+    }
+
     // Setup camera
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(1.5);
@@ -177,27 +207,42 @@ export class GameScene extends Phaser.Scene {
 
     // Only register hardcoded quests if LLM is unavailable (fallback)
     checkLLMEnabled().then(llmEnabled => {
+      this.llmEnabled = llmEnabled;
+      this.events.emit(EVENTS.LLM_STATUS_CHANGED, llmEnabled);
       if (!llmEnabled) {
         for (const quest of Object.values(QUESTS)) {
           this.questSystem.registerQuest(quest);
         }
       }
     }).catch(() => {
+      this.llmEnabled = false;
+      this.events.emit(EVENTS.LLM_STATUS_CHANGED, false);
       // Backend unreachable — use hardcoded quests
       for (const quest of Object.values(QUESTS)) {
         this.questSystem.registerQuest(quest);
       }
     });
 
-    // Fetch tier from arc status
-    getArcStatus().then(raw => {
-      if (raw && typeof raw === 'object' && 'tier' in (raw as Record<string, unknown>)) {
-        const tier = (raw as Record<string, unknown>).tier as number;
-        if (tier >= 1 && tier <= 3) {
-          this.currentTier = tier as MonsterTier;
+    // Restore quest state from floor transition
+    if (this.floorTransitionData) {
+      this.questSystem.importState(
+        this.floorTransitionData.questData.definitions,
+        this.floorTransitionData.questData.states
+      );
+      this.floorTransitionData = null;
+    }
+
+    // Fetch tier from arc status (only on floor 1, otherwise tier comes from transition data)
+    if (this.currentFloor === 1) {
+      getArcStatus().then(raw => {
+        if (raw && typeof raw === 'object' && 'tier' in (raw as Record<string, unknown>)) {
+          const tier = (raw as Record<string, unknown>).tier as number;
+          if (tier >= 1 && tier <= 3) {
+            this.currentTier = tier as MonsterTier;
+          }
         }
-      }
-    }).catch(() => {});
+      }).catch(() => {});
+    }
 
     // Setup event listeners
     this.setupEventListeners();
@@ -212,6 +257,18 @@ export class GameScene extends Phaser.Scene {
     const initTileY = Math.floor(this.player.y / scaledTile);
     this.fogSystem.update(initTileX, initTileY);
     this.updateFogRendering();
+
+    // On floor transitions, relaunch UI
+    if (this.currentFloor > 1) {
+      this.scene.launch(SCENE_KEYS.UI);
+      // Re-enable keyboard input in case it was left disabled
+      if (this.input.keyboard) this.input.keyboard.enabled = true;
+    }
+
+    // Emit floor change event (deferred so UI has time to set up listeners)
+    this.time.delayedCall(0, () => {
+      this.events.emit(EVENTS.FLOOR_CHANGED, this.currentFloor);
+    });
   }
 
   private generateDungeon(): void {
@@ -340,7 +397,8 @@ export class GameScene extends Phaser.Scene {
         const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
         const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;
 
-        const monster = new Monster(this, spawnX, spawnY, monsterData);
+        const scaledData = this.scaleMonsterForFloor(monsterData);
+        const monster = new Monster(this, spawnX, spawnY, scaledData);
         monster.setTarget(this.player);
         monster.setFogSystem(this.fogSystem);
         this.monsters.add(monster);
@@ -548,6 +606,7 @@ export class GameScene extends Phaser.Scene {
   /**
    * Spawn guaranteed monsters and chests for a newly accepted quest.
    * Ensures kill targets and collect items exist in the dungeon immediately.
+   * Boss-only kill targets are placed in the boss room as the arc boss.
    */
   private spawnQuestTargets(questId: string): void {
     const def = this.questSystem.getQuestDefinition(questId);
@@ -567,17 +626,30 @@ export class GameScene extends Phaser.Scene {
     }
     if (!targetRoom) return;
 
+    const bossRoom = this.rooms[this.rooms.length - 1];
+
     for (const obj of def.objectives) {
       if (obj.type === 'kill') {
-        // Spawn required number of target monsters in the target room
+        // Spawn required number of target monsters
         const monsterKey = `monster_${obj.target}`;
         const monsterData = MONSTERS[monsterKey];
         if (!monsterData) continue;
 
+        // Boss-only monsters go in the boss room as the arc boss
+        const isBossTarget = monsterData.bossOnly === true;
+        const spawnRoom = isBossTarget && bossRoom ? bossRoom : targetRoom;
+
+        if (isBossTarget && bossRoom) {
+          // Override quest target room to boss room for map indicator
+          state.targetRoom = { x: bossRoom.x, y: bossRoom.y, width: bossRoom.width, height: bossRoom.height };
+          this.questSystem.getQuestState(questId)!.targetRoom = state.targetRoom;
+        }
+
         for (let i = 0; i < obj.requiredCount; i++) {
-          const spawnX = Phaser.Math.Between(targetRoom.x + 1, targetRoom.x + targetRoom.width - 2) * TILE_SIZE * SCALE;
-          const spawnY = Phaser.Math.Between(targetRoom.y + 1, targetRoom.y + targetRoom.height - 2) * TILE_SIZE * SCALE;
-          const monster = new Monster(this, spawnX, spawnY, monsterData);
+          const spawnX = Phaser.Math.Between(spawnRoom.x + 1, spawnRoom.x + spawnRoom.width - 2) * TILE_SIZE * SCALE;
+          const spawnY = Phaser.Math.Between(spawnRoom.y + 1, spawnRoom.y + spawnRoom.height - 2) * TILE_SIZE * SCALE;
+          const scaledData = this.scaleMonsterForFloor(monsterData);
+          const monster = new Monster(this, spawnX, spawnY, scaledData);
           monster.setTarget(this.player);
           monster.setFogSystem(this.fogSystem);
           this.monsters.add(monster);
@@ -655,7 +727,8 @@ export class GameScene extends Phaser.Scene {
       const spawnX = Phaser.Math.Between(room.x + 1, room.x + room.width - 2) * TILE_SIZE * SCALE;
       const spawnY = Phaser.Math.Between(room.y + 1, room.y + room.height - 2) * TILE_SIZE * SCALE;
 
-      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      const scaledData = this.scaleMonsterForFloor(monsterData);
+      const monster = new Monster(this, spawnX, spawnY, scaledData);
       monster.setTarget(this.player);
       monster.setFogSystem(this.fogSystem);
       this.monsters.add(monster);
@@ -854,6 +927,14 @@ export class GameScene extends Phaser.Scene {
           break;
         }
       }
+
+      // Check stairs interaction
+      if (this.stairsSprite) {
+        const dist = Phaser.Math.Distance.Between(interactPoint.x, interactPoint.y, this.stairsSprite.x, this.stairsSprite.y);
+        if (dist <= INTERACTION_DISTANCE) {
+          this.transitionToNextFloor();
+        }
+      }
     });
 
     // Open inventory
@@ -936,6 +1017,7 @@ export class GameScene extends Phaser.Scene {
         fogSystem: this.fogSystem,
         playerX: this.player.x,
         playerY: this.player.y,
+        currentFloor: this.currentFloor,
         npcs: this.npcs.getChildren().map((n: Phaser.GameObjects.GameObject) => {
           const npc = n as NPC;
           return { x: npc.x, y: npc.y, name: npc.npcData.name };
@@ -997,10 +1079,17 @@ export class GameScene extends Phaser.Scene {
       if (lines) this.launchNarrator(lines, 'boss');
     });
 
-    // Narrator: boss defeated
+    // Narrator: boss defeated + stairs spawning
     this.events.on(EVENTS.BOSS_DEFEATED, () => {
       const lines = this.findActiveNarrationLines('onBossDefeat');
       if (lines) this.launchNarrator(lines, 'boss');
+
+      // Spawn stairs to next floor
+      if (this.currentFloor < TOTAL_FLOORS) {
+        this.time.delayedCall(1500, () => {
+          this.spawnStairs();
+        });
+      }
     });
 
     // Narrator closed
@@ -1095,11 +1184,18 @@ export class GameScene extends Phaser.Scene {
           spawnY = this.player.y + 40 + (Math.random() - 0.5) * 40;
         }
 
-        const monster = new Monster(this, spawnX, spawnY, data.monsterData);
+        const scaledData = this.scaleMonsterForFloor(data.monsterData);
+        const monster = new Monster(this, spawnX, spawnY, scaledData);
         monster.setTarget(this.player);
         monster.setFogSystem(this.fogSystem);
         this.monsters.add(monster);
       }
+    });
+
+    // Debug: reveal entire map
+    this.events.on('debug-reveal-map', () => {
+      this.fogSystem.revealAll();
+      this.updateFogRendering();
     });
 
     // Player died
@@ -1166,6 +1262,111 @@ export class GameScene extends Phaser.Scene {
   getPlayer(): Player { return this.player; }
   getNPCs(): Phaser.GameObjects.Group { return this.npcs; }
   getMonsters(): Phaser.GameObjects.Group { return this.monsters; }
+  getCurrentFloor(): number { return this.currentFloor; }
+
+  private scaleMonsterForFloor(data: MonsterData): MonsterData {
+    const scaling = FLOOR_SCALING[this.currentFloor] || FLOOR_SCALING[1];
+    if (scaling.hp === 1.0 && scaling.damage === 1.0) return data;
+    return {
+      ...data,
+      health: Math.round(data.health * scaling.hp),
+      damage: Math.round(data.damage * scaling.damage),
+      xpReward: Math.round(data.xpReward * scaling.hp),
+      goldDrop: {
+        min: Math.round(data.goldDrop.min * scaling.hp),
+        max: Math.round(data.goldDrop.max * scaling.hp)
+      }
+    };
+  }
+
+  private spawnStairs(): void {
+    const bossRoom = this.rooms[this.rooms.length - 1];
+    if (!bossRoom) return;
+
+    const scaledTile = TILE_SIZE * SCALE;
+    const stairsX = bossRoom.centerX * scaledTile;
+    const stairsY = bossRoom.centerY * scaledTile;
+
+    // Glowing ground circle beneath stairs
+    const glow = this.add.graphics();
+    glow.setDepth(1);
+    glow.fillStyle(0x4488ff, 0.3);
+    glow.fillCircle(stairsX, stairsY, 24);
+    glow.lineStyle(2, 0x88bbff, 0.6);
+    glow.strokeCircle(stairsX, stairsY, 24);
+    this.tweens.add({
+      targets: glow,
+      alpha: 0.4,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1
+    });
+
+    this.stairsSprite = this.add.image(stairsX, stairsY, 'stairs_down');
+    this.stairsSprite.setScale(SCALE);
+    this.stairsSprite.setDepth(2);
+
+    // Pulsing glow effect on stairs sprite
+    this.tweens.add({
+      targets: this.stairsSprite,
+      alpha: 0.6,
+      duration: 800,
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Floating label above stairs
+    const label = this.add.text(stairsX, stairsY - 24, `Floor ${this.currentFloor + 1}`, {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#88bbff',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(3);
+    this.tweens.add({
+      targets: label,
+      y: stairsY - 28,
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.showNotification('Stairs have appeared! Press E to descend.');
+  }
+
+  transitionToNextFloor(targetFloor?: number): void {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    const floor = targetFloor || this.currentFloor + 1;
+
+    // Capture all player state
+    const inventoryState = this.player.inventory.exportState();
+    const questData = this.questSystem.exportState();
+
+    const transitionData: FloorTransitionData = {
+      targetFloor: floor,
+      playerState: {
+        health: this.player.health,
+        maxHealth: this.player.maxHealth,
+        mana: this.player.mana,
+        maxMana: this.player.maxMana,
+        gold: this.player.gold,
+        level: this.player.level,
+        xp: this.player.xp,
+        stats: { ...this.player.stats },
+        statPoints: this.player.statPoints
+      },
+      inventoryState,
+      questData,
+      currentTier: this.currentTier as 1 | 2 | 3
+    };
+
+    console.log('[GameScene] transitionToNextFloor: restarting for floor', floor);
+    // Stop UI overlay, then restart GameScene
+    this.scene.stop(SCENE_KEYS.UI);
+    this.scene.restart({ floorTransition: transitionData });
+  }
 
   private openDoor(tileX: number, tileY: number): void {
     const key = `${tileX},${tileY}`;
@@ -1234,7 +1435,26 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    this.showNotification('The sealed doors have been unlocked!');
+    // Check if an arc boss quest is active for a more thematic message
+    const arcBossName = this.getArcBossName();
+    if (arcBossName) {
+      this.showNotification(`The sealed doors have been unlocked! ${arcBossName} awaits...`);
+    } else {
+      this.showNotification('The sealed doors have been unlocked!');
+    }
+  }
+
+  /** Returns the name of the arc boss monster if an active quest targets a bossOnly monster. */
+  private getArcBossName(): string | null {
+    for (const { definition, state } of this.questSystem.getActiveQuests()) {
+      if (state.status !== 'active') continue;
+      for (const obj of definition.objectives) {
+        if (obj.type !== 'kill') continue;
+        const monsterData = MONSTERS[`monster_${obj.target}`];
+        if (monsterData?.bossOnly) return monsterData.name;
+      }
+    }
+    return null;
   }
 
   /** Find which room a world-space position is in, returns room index or -1 */
@@ -2185,7 +2405,8 @@ export class GameScene extends Phaser.Scene {
       const tileY = Math.floor(spawnY / scaledTile);
       if (this.dungeon[tileY]?.[tileX] !== 0 && this.dungeon[tileY]?.[tileX] !== 3) continue;
 
-      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      const scaledData = this.scaleMonsterForFloor(monsterData);
+      const monster = new Monster(this, spawnX, spawnY, scaledData);
       monster.setTarget(this.player);
       monster.setFogSystem(this.fogSystem);
       this.monsters.add(monster);
@@ -2475,7 +2696,8 @@ export class GameScene extends Phaser.Scene {
       const spawnX = sprite.x + (Math.random() - 0.5) * 40;
       const spawnY = sprite.y + (Math.random() - 0.5) * 40;
 
-      const monster = new Monster(this, spawnX, spawnY, monsterData);
+      const scaledData = this.scaleMonsterForFloor(monsterData);
+      const monster = new Monster(this, spawnX, spawnY, scaledData);
       monster.setTarget(this.player);
       monster.setFogSystem(this.fogSystem);
       this.monsters.add(monster);
