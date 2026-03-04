@@ -120,6 +120,278 @@ LLM quests can define variant monsters and items — custom-named versions of ex
 5. `VariantRegistry.injectQuestLoot()` adds collect-objective items to relevant monster loot tables (50% drop chance, matched to kill-objective monster types or all non-boss monsters)
 6. `GameScene.respawnMonsters()` biases 50% of spawns toward active kill quest target types
 
+## AI Workflow Design Patterns
+
+This project showcases five agentic AI design patterns applied to dynamic game content generation. Each pattern is implemented in the quest/story arc pipeline where it provides the most natural value.
+
+### Current State (Baseline)
+The existing system uses single-shot LLM calls with rule-based validation:
+- `generateStoryArc()` → produces arc outline (single call)
+- `generateArcQuest()` → produces individual quest (single call, receives arc context)
+- `questValidator.ts` → rule-based schema validation (no LLM)
+
+The patterns below extend this baseline.
+
+---
+
+### Pattern 1: Prompt Chaining
+**Concept:** Sequential LLM calls where each step's output enriches the next step's input.
+
+**Implementation — Arc Lore Chain:**
+```
+Step 1: Generate story arc outline
+        → { title, theme, questSummaries }
+            ↓ feeds into
+Step 2: Generate world lore fragment grounded in the arc
+        → { locations[], factions[], history, keyArtifact }
+            ↓ feeds into
+Step 3: Generate individual quest (with lore context for grounded names/places)
+        → { quest definition with lore-referenced dialog }
+            ↓ feeds into
+Step 4: Generate narrator script (cinematic lines referencing lore + quest events)
+        → { onComplete, onBossEncounter, onBossDefeat narration }
+```
+
+**Why it matters:** Each step's output makes the next step's output higher quality. Without lore context, quest names feel random. With it, a quest about retrieving the "Shard of Valdris" references the lore's fallen kingdom of Valdris — creating coherence that single-shot generation can't achieve.
+
+**Where in code:**
+- `server/src/services/llmService.ts` — new `generateLoreFragment()` method
+- `server/src/services/storyArcService.ts` — chain lore generation between arc outline and first quest
+- Lore context stored on `StoryArc` object, passed to all subsequent `generateArcQuest()` calls
+
+**Data flow:**
+```
+storyArcService.generateNewArc()
+  → llmService.generateStoryArc()           // Step 1
+  → llmService.generateLoreFragment(arc)     // Step 2 (NEW)
+  → arc.lore = loreResult                    // Store on arc
+  → llmService.generateArcQuest(arc + lore)  // Step 3 (enhanced)
+  → llmService.generateNarration(quest, lore) // Step 4 (NEW, or inline)
+```
+
+---
+
+### Pattern 2: Parallelization
+**Concept:** Multiple independent LLM calls execute simultaneously, results merged.
+
+**Implementation — Quest Enrichment Fan-Out:**
+```
+                    ┌─ Worker A: Generate item flavor text
+                    │   (custom descriptions for variant items)
+Quest definition ───┼─ Worker B: Generate environmental hints
+  (after Step 3)    │   (room descriptions referencing quest theme)
+                    └─ Worker C: Generate NPC banter lines
+                        (idle dialog about the quest for other NPCs)
+                              ↓ merge
+                    Enriched quest + room flavor + NPC banter
+```
+
+**Implementation — Pool Warmup:**
+```
+Floor loads → Promise.all([
+  generateFallbackQuest(npc_merchant),
+  generateFallbackQuest(npc_merchant_2),
+  generateFallbackQuest(npc_sage)
+])
+```
+
+**Why it matters:** Three 2-second LLM calls take 2s in parallel vs 6s sequential. The fan-out pattern is especially useful when enrichment tasks are independent of each other.
+
+**Where in code:**
+- `server/src/services/questPoolService.ts` — parallel pool warmup in `initialize()`
+- `server/src/services/storyArcService.ts` — fan-out enrichment after quest generation
+
+---
+
+### Pattern 3: Routing
+**Concept:** Classify input to select the best prompt template, model, or processing strategy.
+
+**Implementation — Model Routing by Quest Importance:**
+```
+Quest request arrives
+       ↓
+ ┌─────────────────┐
+ │   Route by tier  │
+ └──┬──────────┬───┘
+    │          │
+    ▼          ▼
+ Filler     Boss/Finale
+ quest       quest
+    │          │
+    ▼          ▼
+ Fast/cheap   Capable model
+ model        (higher temp,
+ (gpt-4.1-    more tokens,
+  nano)        gpt-4.1-mini)
+```
+
+**Implementation — Prompt Template Routing by Quest Type:**
+```
+Arc outline says quest type = "investigate"
+       ↓
+ ┌─────────────────────┐
+ │ Select prompt style  │
+ └──┬───┬───┬───┬──────┘
+    │   │   │   │
+    ▼   ▼   ▼   ▼
+ Combat  Mystery  Explore  Trade
+ template template template template
+ (action  (clues,  (hidden  (escort,
+  dialog,  tension, rooms,   barter,
+  battle   reveal)  mapping) negotiate)
+  cries)
+```
+
+**Why it matters:** Not all quests need the same generation budget. A routine kill quest for pool filler doesn't need the same model/tokens as a climactic arc boss finale. Routing saves cost and improves quality where it counts.
+
+**Where in code:**
+- `server/src/services/llmService.ts` — model selection in `callLLM()` based on `questImportance` parameter
+- `server/src/services/llmService.ts` — prompt template registry keyed by quest type
+- `server/src/config.ts` — model config for `LLM_MODEL_FAST` vs `LLM_MODEL`
+
+---
+
+### Pattern 4: Orchestrator-Workers
+**Concept:** A central LLM plans the high-level structure, then dispatches specialized worker LLM calls to fill in details.
+
+**Implementation — Floor Content Orchestrator:**
+```
+Orchestrator LLM: "Plan floor N content"
+  Input: player tier, arc theme, floor number, completed arcs, NPC roster
+  Output: floor content plan
+    {
+      thematicRooms: [{ roomIndex, theme, flavorText }],
+      sideQuestHooks: [{ npcId, hookSummary, questType }],
+      monsterDistribution: { primary: "undead", secondary: "beast" },
+      environmentalStory: "collapsed mine with signs of necromancy"
+    }
+         │
+    ┌────┼────────────┬──────────────┐
+    ▼    ▼            ▼              ▼
+ Worker 1          Worker 2       Worker 3
+ Generate          Generate       Generate
+ main arc          side quest A   room flavor
+ quest (using      (using hook    text batch
+ floor plan)       from plan)     (all themed
+                                  rooms)
+         │              │              │
+         └──────────────┴──────────────┘
+                        ↓
+              Orchestrator merges into
+              coherent floor content
+```
+
+**Why it matters:** Currently, dungeon rooms and quests are disconnected — rooms are procedurally random, quests reference generic locations. The orchestrator creates thematic coherence: a "corrupted mine" floor has mine-themed room descriptions, undead miners as enemies, and quests about clearing the corruption. The player feels like they're exploring a designed world, not random rooms.
+
+**Where in code:**
+- `server/src/services/floorOrchestratorService.ts` — new service
+- `server/src/services/llmService.ts` — new `generateFloorPlan()` and `generateRoomFlavor()` methods
+- `server/src/routes/quests.ts` — new `GET /api/floor/plan/:floorNumber` endpoint
+- Frontend: `GameScene.ts` receives floor plan, applies room themes and flavor text
+
+---
+
+### Pattern 5: Evaluator-Optimizer
+**Concept:** One LLM generates content, another evaluates quality and provides feedback. Loop until quality threshold is met.
+
+**Implementation — Boss Quest Quality Gate:**
+```
+┌─────────────────────────────────────────────────┐
+│                                                  │
+│  Generator LLM                                   │
+│  "Generate boss quest for arc finale"            │
+│       ↓                                          │
+│  Generated quest definition                      │
+│       ↓                                          │
+│  Evaluator LLM                                   │
+│  "Score this boss quest on 5 dimensions"         │
+│       ↓                                          │
+│  Evaluation:                                     │
+│    narrative_coherence: 8/10                      │
+│    dialog_quality: 6/10  ← "Dialog feels generic,│
+│                            lacks dramatic tension │
+│                            for a boss encounter"  │
+│    difficulty_balance: 9/10                       │
+│    creativity: 7/10                               │
+│    npc_voice: 5/10 ← "Aldric sounds like Marcus, │
+│                       needs more scholarly tone"  │
+│       ↓                                          │
+│  Average: 7.0 < threshold (7.5)                  │
+│       ↓                                          │
+│  Feed critique back to Generator                 │
+│  "Improve dialog tension and make Aldric sound   │
+│   more scholarly. Specific issues: ..."          │
+│       ↓                                          │
+│  Generator produces improved version             │
+│       ↓                                          │
+│  Evaluator re-scores: avg 8.2 ≥ 7.5 ✓           │
+│                                                  │
+│  Max iterations: 2 (then accept best scoring)    │
+└─────────────────────────────────────────────────┘
+```
+
+**Why it matters:** Boss quests are the climax of each arc — the player has invested 3+ quests building up to this moment. A generic or incoherent boss quest undermines the entire arc. The evaluator catches quality issues that rule-based validation misses (dialog tone, narrative coherence, dramatic pacing).
+
+**Applied selectively:** Only boss/finale quests go through the evaluator loop. Regular quests use the existing rule-based validator only (cost efficiency — the routing pattern decides which path).
+
+**Where in code:**
+- `server/src/services/llmService.ts` — new `evaluateQuestQuality()` method
+- `server/src/services/storyArcService.ts` — evaluate-optimize loop in `generateNextQuest()` when `isBossQuest === true`
+- Evaluation prompt is much smaller than generation prompt (~50 lines vs ~300)
+- Logs scores and critique for observability
+
+---
+
+### Pattern Integration — Full Pipeline
+
+When all five patterns work together on a boss quest:
+
+```
+1. CHAINING:     Arc outline → Lore fragment → Quest generation → Narration
+2. ROUTING:      Boss quest detected → use capable model + boss prompt template
+3. ORCHESTRATOR: Floor plan provides thematic context to quest generation
+4. GENERATION:   Generator LLM produces boss quest definition
+5. EVALUATION:   Evaluator LLM scores quality, feeds critique back
+6. PARALLEL:     Meanwhile, item flavor + room descriptions generated in parallel
+7. MERGE:        All results assembled into final enriched quest
+```
+
+### Implementation Priority
+
+| Phase | Pattern | Key Files | Depends On |
+|-------|---------|-----------|------------|
+| 1 | Evaluator-Optimizer | `llmService.ts`, `storyArcService.ts` | Nothing (standalone) |
+| 2 | Prompt Chaining | `llmService.ts`, `storyArcService.ts` | Nothing (standalone) |
+| 3 | Parallelization | `questPoolService.ts`, `storyArcService.ts` | Chaining (enrichment fan-out uses chain outputs) |
+| 4 | Routing | `llmService.ts`, `config.ts` | Nothing (standalone, but best after others exist) |
+| 5 | Orchestrator-Workers | New `floorOrchestratorService.ts` | All above (uses routing, chaining, parallelization) |
+
+### Configuration
+
+All pattern behavior is configurable via `server/game.config.json` and environment variables:
+```json
+{
+  "storyArc": { "questsPerArc": 3, "bossQuestEnabled": true },
+  "aiPatterns": {
+    "chainingEnabled": true,
+    "parallelEnrichment": true,
+    "modelRouting": true,
+    "evaluatorEnabled": true,
+    "evaluatorThreshold": 7.5,
+    "evaluatorMaxIterations": 2,
+    "orchestratorEnabled": false
+  }
+}
+```
+```env
+LLM_MODEL=gpt-4.1-mini         # Default / capable model
+LLM_MODEL_FAST=gpt-4.1-nano    # Fast model for filler quests (routing pattern)
+```
+
+Each pattern can be toggled independently. When disabled, the system falls back to the existing single-shot generation behavior.
+
+---
+
 ## Client Architecture
 
 ### Scene Graph

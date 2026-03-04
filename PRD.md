@@ -275,6 +275,18 @@ A top-down dungeon crawler game built with Phaser 3 featuring RPG elements inclu
 - [ ] Class-specific abilities
 - [ ] Class selection at game start
 
+### Phase 3c: AI Workflow Design Patterns
+Showcase five agentic AI patterns in the quest/story arc pipeline. See `ARCHITECTURE.md` § "AI Workflow Design Patterns" for full design.
+
+- [ ] **Evaluator-Optimizer** — LLM evaluator scores boss quest quality (narrative, dialog, creativity, NPC voice), feeds critique back to generator, loops until threshold met (max 2 iterations)
+- [ ] **Prompt Chaining** — Arc outline → world lore fragment → quest generation → narrator script, each step enriching the next
+- [ ] **Parallelization** — Fan-out quest enrichment (item flavor, room descriptions, NPC banter) via `Promise.all()`; parallel NPC pool warmup on floor load
+- [ ] **Routing** — Model routing by quest importance (fast model for filler, capable model for boss); prompt template routing by quest type (combat/mystery/explore/trade)
+- [ ] **Orchestrator-Workers** — Floor content orchestrator plans thematic rooms, monster distribution, side quest hooks; dispatches worker LLMs for individual content pieces
+- [ ] Per-pattern feature flags in `server/game.config.json` (`aiPatterns.*`)
+- [ ] `LLM_MODEL_FAST` env var for routing pattern
+- [ ] Observability: structured logging of pattern execution (scores, timings, routing decisions)
+
 ---
 
 ## Phase 4: World Expansion
