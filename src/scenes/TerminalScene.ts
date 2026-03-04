@@ -79,8 +79,13 @@ export class TerminalScene extends Phaser.Scene {
         gameScene.events.emit('debug-reveal-map');
         return 'Map revealed';
       },
+      descend: () => {
+        const gameScene = this.scene.get(SCENE_KEYS.GAME);
+        gameScene.events.emit('debug-descend');
+        return 'Stairs spawned — press E to descend';
+      },
       help: () => {
-        return 'gold [n], home, spawn <id> [n], heal, xp [n], floor [n], reveal';
+        return 'gold [n], home, spawn <id> [n], heal, xp [n], floor [n], reveal, descend';
       }
     };
 

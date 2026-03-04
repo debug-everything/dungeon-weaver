@@ -65,6 +65,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // Mana regen
   private manaRegenTimer: Phaser.Time.TimerEvent | null = null;
 
+  // Equipment change listener (for cleanup on shutdown)
+  private onEquipChanged!: () => void;
+
   // Gamepad button tracking (for justDown detection)
   private prevGamepadButtons: boolean[] = [];
 
@@ -103,7 +106,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.inventory.addItem('flask_red', 3);
 
     // Listen for equipment changes to update appearance
-    scene.events.on(EVENTS.PLAYER_EQUIPMENT_CHANGED, () => this.updateAppearance());
+    this.onEquipChanged = () => this.updateAppearance();
+    scene.events.on(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipChanged);
+
+    // Clean up listener on scene shutdown (prevents stale refs on scene.restart)
+    scene.events.once('shutdown', () => {
+      scene.events.off(EVENTS.PLAYER_EQUIPMENT_CHANGED, this.onEquipChanged);
+    });
 
     // Setup input
     this.setupInput();

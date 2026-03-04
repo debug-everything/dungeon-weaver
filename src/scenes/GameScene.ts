@@ -118,6 +118,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     console.log('[GameScene] create called, currentFloor:', this.currentFloor, 'hasTransitionData:', !!this.floorTransitionData);
+    try {
     this.isPaused = false;
 
     // Initialize groups
@@ -269,6 +270,11 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => {
       this.events.emit(EVENTS.FLOOR_CHANGED, this.currentFloor);
     });
+
+    console.log('[GameScene] create completed successfully for floor', this.currentFloor);
+    } catch (err) {
+      console.error('[GameScene] FATAL: create() threw an error:', err);
+    }
   }
 
   private generateDungeon(): void {
@@ -1198,6 +1204,16 @@ export class GameScene extends Phaser.Scene {
       this.updateFogRendering();
     });
 
+    // Debug: spawn stairs and teleport player to them
+    this.events.on('debug-descend', () => {
+      if (!this.stairsSprite) {
+        this.spawnStairs();
+      }
+      if (this.stairsSprite) {
+        this.player.setPosition(this.stairsSprite.x, this.stairsSprite.y - 20);
+      }
+    });
+
     // Player died
     this.events.on('player-died', () => {
       this.cameras.main.fade(1000, 0, 0, 0);
@@ -1362,9 +1378,18 @@ export class GameScene extends Phaser.Scene {
       currentTier: this.currentTier as 1 | 2 | 3
     };
 
-    console.log('[GameScene] transitionToNextFloor: restarting for floor', floor);
-    // Stop UI overlay, then restart GameScene
-    this.scene.stop(SCENE_KEYS.UI);
+    console.log('[GameScene] transitionToNextFloor: floor', floor, 'health:', transitionData.playerState.health, 'gold:', transitionData.playerState.gold);
+
+    // Stop all overlay scenes that might be running
+    const overlays = [SCENE_KEYS.UI, SCENE_KEYS.INVENTORY, SCENE_KEYS.QUEST_LOG, SCENE_KEYS.MAP, SCENE_KEYS.LEVEL_UP, SCENE_KEYS.TERMINAL];
+    for (const key of overlays) {
+      if (this.scene.isActive(key)) {
+        console.log('[GameScene] stopping overlay:', key);
+        this.scene.stop(key);
+      }
+    }
+
+    console.log('[GameScene] calling scene.restart()');
     this.scene.restart({ floorTransition: transitionData });
   }
 
