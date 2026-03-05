@@ -259,11 +259,17 @@ export class GameScene extends Phaser.Scene {
     this.fogSystem.update(initTileX, initTileY);
     this.updateFogRendering();
 
-    // On floor transitions, relaunch UI
+    // On floor transitions, relaunch UI and re-emit player state
     if (this.currentFloor > 1) {
       this.scene.launch(SCENE_KEYS.UI);
       // Re-enable keyboard input in case it was left disabled
       if (this.input.keyboard) this.input.keyboard.enabled = true;
+
+      // Re-emit all player state events so UIScene picks up restored values
+      // (restoreFromTransition fired before UIScene was listening)
+      this.time.delayedCall(100, () => {
+        this.player.emitAllState();
+      });
     }
 
     // Emit floor change event (deferred so UI has time to set up listeners)

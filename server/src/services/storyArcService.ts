@@ -1,4 +1,4 @@
-import { generateStoryArc, generateArcQuest, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES } from './llmService.js';
+import { generateStoryArc, generateArcQuest, generateLoreFragment, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
 import { validateQuest } from './questValidator.js';
 import { config, gameConfig } from '../config.js';
 import { llmLogger } from '../logger.js';
@@ -18,6 +18,7 @@ export interface StoryArc {
   currentQuestIndex: number;
   totalQuests: number;
   status: 'active' | 'completed';
+  lore: LoreFragment | null;
 }
 
 export interface ArcStatus {
@@ -120,6 +121,16 @@ class StoryArcService {
           outline.quests[outline.quests.length - 1].questType = 'destroy';
         }
 
+        // Prompt Chaining: generate lore fragment if enabled
+        let lore: LoreFragment | null = null;
+        if (gameConfig.aiPatterns?.chainingEnabled) {
+          try {
+            lore = await generateLoreFragment(outline);
+          } catch (err) {
+            llmLogger.warn({ err }, 'Lore generation failed (non-fatal), proceeding without lore');
+          }
+        }
+
         this.currentArc = {
           id: outline.id,
           title: outline.title,
@@ -130,7 +141,8 @@ class StoryArcService {
           completedQuestIds: [],
           currentQuestIndex: 0,
           totalQuests,
-          status: 'active'
+          status: 'active',
+          lore
         };
 
         this.existingArcIds.push(outline.id);
@@ -174,7 +186,8 @@ class StoryArcService {
           questIndex: idx,
           previousSummaries: this.currentArc.questSummaries.slice(0, idx),
           isBossQuest: isBoss,
-          tier: this.getTier()
+          tier: this.getTier(),
+          lore: this.currentArc.lore ?? undefined
         });
 
         // Force correct NPC

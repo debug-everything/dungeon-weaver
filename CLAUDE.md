@@ -56,7 +56,7 @@ src/
 
 render.yaml                    # Render Blueprint (single web service + disk)
 server/
-├── game.config.json           # Story arc settings (questsPerArc, bossQuestEnabled)
+├── game.config.json           # Story arc + AI pattern settings
 ├── src/
 │   ├── index.ts               # Express app entry point
 │   ├── config.ts              # Environment + game config (port, DB, LLM, arc settings)
@@ -66,7 +66,8 @@ server/
 │   │   └── quests.ts          # /api/quests LLM quest + arc endpoints
 │   ├── services/
 │   │   ├── gameStateService.ts
-│   │   ├── llmService.ts      # OpenAI-compatible LLM wrapper (quests + story arcs)
+│   │   ├── llmService.ts      # OpenAI-compatible LLM wrapper (quests + story arcs + lore)
+│   │   ├── promptTemplates.ts # All LLM prompt text, NPC profiles, tier data
 │   │   ├── storyArcService.ts # Story arc lifecycle (generate, advance, complete)
 │   │   ├── questPoolService.ts # Arc-driven quest serving + fallback per-NPC pools
 │   │   └── questValidator.ts  # Quest schema validation
@@ -208,6 +209,8 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Multi-floor dungeon (3 floors per run, stairs appear after boss defeat, one-way descent, player state carries between floors, monster HP/damage scale per floor)
 - ✅ Arc-boss integration (story arc boss quests place the arc boss in the floor's boss room, thematic unlock message)
 - ✅ LLM status indicator (HUD shows AI connection status: green sparkle when connected, gray when offline)
+- ✅ Prompt template extraction (all LLM prompts in `promptTemplates.ts` for easy review/editing)
+- ✅ Prompt chaining — lore generation (arc outline → lore fragment → lore-enriched quests, gated by `aiPatterns.chainingEnabled`)
 - ✅ Debug: `reveal` command in terminal to remove fog of war
 
 ## Planned Features (See PRD.md)

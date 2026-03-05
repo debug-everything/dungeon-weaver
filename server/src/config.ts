@@ -5,7 +5,12 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Load game config
-function loadGameConfig(): { storyArc: { questsPerArc: number; bossQuestEnabled: boolean } } {
+interface GameConfig {
+  storyArc: { questsPerArc: number; bossQuestEnabled: boolean };
+  aiPatterns?: { chainingEnabled?: boolean };
+}
+
+function loadGameConfig(): GameConfig {
   try {
     const raw = readFileSync(resolve(__dirname, '..', 'game.config.json'), 'utf-8');
     return JSON.parse(raw);

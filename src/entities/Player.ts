@@ -1021,6 +1021,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.inventory.restoreState(data.inventoryState.items, data.inventoryState.equipment);
 
     // Emit updated state to UI
+    this.emitAllState();
+  }
+
+  /** Emit all player state events (health, mana, gold, stats, xp/level) to sync UI */
+  emitAllState(): void {
     this.scene.events.emit(EVENTS.PLAYER_HEALTH_CHANGED, this.health, this.maxHealth);
     this.scene.events.emit(EVENTS.PLAYER_MANA_CHANGED, this.mana, this.maxMana);
     this.scene.events.emit(EVENTS.PLAYER_GOLD_CHANGED, this.gold);

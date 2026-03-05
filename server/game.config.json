@@ -2,5 +2,8 @@
   "storyArc": {
     "questsPerArc": 3,
     "bossQuestEnabled": true
+  },
+  "aiPatterns": {
+    "chainingEnabled": false
   }
 }

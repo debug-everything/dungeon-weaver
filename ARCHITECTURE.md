@@ -27,6 +27,7 @@
 │  Services                                        │
 │  ├── gameStateService  - SQLite CRUD for saves   │
 │  ├── llmService        - OpenAI API wrapper      │
+│  ├── promptTemplates   - All LLM prompt text     │
 │  ├── storyArcService   - Story arc lifecycle     │
 │  ├── questPoolService  - Arc + fallback pools    │
 │  └── questValidator    - Schema validation       │
@@ -52,7 +53,8 @@ The LLM generates dynamic quest definitions organized into coherent **story arcs
 **Story Arc Flow:**
 1. Server starts → `questPoolService.initialize()` → `storyArcService.initialize()`
 2. If LLM enabled: generates a story arc outline (title, theme, N quest summaries, NPC assignments)
-3. First quest in the arc is generated immediately for the assigned NPC
+2b. If `aiPatterns.chainingEnabled`: generates a lore fragment (locations, faction, history, artifact) grounded in the arc theme
+3. First quest in the arc is generated immediately for the assigned NPC (enriched with lore context if available)
 4. Frontend calls `GET /api/quests/available/:npcId` when player interacts with NPC
 5. If NPC matches the current arc quest's assigned NPC, the arc quest is returned
 6. On quest completion (`POST /api/quests/complete`), next arc quest is generated in background
@@ -68,7 +70,7 @@ The LLM generates dynamic quest definitions organized into coherent **story arcs
 
 **Boss Quests:** The final quest in each arc is a boss quest with demon-type enemies, stat multiplier of 2.5+, colored name text (red `#ff4444`), and higher rewards.
 
-**NPC Personality Profiles:** Quest generation includes NPC personality context (`NPC_PROFILES` in `llmService.ts`) that shapes quest themes, dialog tone, and reward types:
+**NPC Personality Profiles:** Quest generation includes NPC personality context (`NPC_PROFILES` in `promptTemplates.ts`) that shapes quest themes, dialog tone, and reward types:
 - **Marcus** — practical, commerce-focused quests (protect trade, recover goods). Favors destroy/recover types.
 - **Elena** — adventurous, artifact-hunting quests (ancient relics, rare finds). Favors investigate/recover types.
 - **Aldric** — scholarly, arcane quests (supernatural research, alchemical ingredients). Favors investigate/destroy types.
@@ -134,40 +136,41 @@ The patterns below extend this baseline.
 
 ---
 
-### Pattern 1: Prompt Chaining
+### Pattern 1: Prompt Chaining ✅ IMPLEMENTED
 **Concept:** Sequential LLM calls where each step's output enriches the next step's input.
 
 **Implementation — Arc Lore Chain:**
 ```
-Step 1: Generate story arc outline
+Step 1: Generate story arc outline          ✅ implemented
         → { title, theme, questSummaries }
             ↓ feeds into
-Step 2: Generate world lore fragment grounded in the arc
-        → { locations[], factions[], history, keyArtifact }
+Step 2: Generate world lore fragment        ✅ implemented
+        → { locations[], faction, history, artifact }
             ↓ feeds into
-Step 3: Generate individual quest (with lore context for grounded names/places)
+Step 3: Generate individual quest           ✅ implemented
+        (with lore context for grounded names/places)
         → { quest definition with lore-referenced dialog }
-            ↓ feeds into
-Step 4: Generate narrator script (cinematic lines referencing lore + quest events)
-        → { onComplete, onBossEncounter, onBossDefeat narration }
 ```
+Narration (onComplete, onBossEncounter, onBossDefeat) is generated inline as part of Step 3 — the lore context enriches narration fields automatically.
 
 **Why it matters:** Each step's output makes the next step's output higher quality. Without lore context, quest names feel random. With it, a quest about retrieving the "Shard of Valdris" references the lore's fallen kingdom of Valdris — creating coherence that single-shot generation can't achieve.
 
 **Where in code:**
-- `server/src/services/llmService.ts` — new `generateLoreFragment()` method
+- `server/src/services/promptTemplates.ts` — `LORE_SYSTEM_PROMPT`, `buildLoreUserPrompt()`, `LoreFragment` interface
+- `server/src/services/llmService.ts` — `generateLoreFragment()` method
 - `server/src/services/storyArcService.ts` — chain lore generation between arc outline and first quest
-- Lore context stored on `StoryArc` object, passed to all subsequent `generateArcQuest()` calls
+- Lore context stored on `StoryArc.lore`, passed to all subsequent `generateArcQuest()` calls via `ArcQuestContext.lore`
 
 **Data flow:**
 ```
 storyArcService.generateNewArc()
-  → llmService.generateStoryArc()           // Step 1
-  → llmService.generateLoreFragment(arc)     // Step 2 (NEW)
+  → llmService.generateStoryArc()           // Step 1: arc outline
+  → llmService.generateLoreFragment(arc)     // Step 2: lore fragment (if chainingEnabled)
   → arc.lore = loreResult                    // Store on arc
-  → llmService.generateArcQuest(arc + lore)  // Step 3 (enhanced)
-  → llmService.generateNarration(quest, lore) // Step 4 (NEW, or inline)
+  → llmService.generateArcQuest(arc + lore)  // Step 3: quest with lore context
 ```
+
+**Feature flag:** `server/game.config.json` → `aiPatterns.chainingEnabled` (default: `false`). When disabled, quests generate without lore context (existing behavior). Lore generation failure is non-fatal — quests proceed without lore.
 
 ---
 
@@ -358,10 +361,10 @@ When all five patterns work together on a boss quest:
 
 ### Implementation Priority
 
-| Phase | Pattern | Key Files | Depends On |
-|-------|---------|-----------|------------|
-| 1 | Evaluator-Optimizer | `llmService.ts`, `storyArcService.ts` | Nothing (standalone) |
-| 2 | Prompt Chaining | `llmService.ts`, `storyArcService.ts` | Nothing (standalone) |
+| Phase | Pattern | Key Files | Status |
+|-------|---------|-----------|--------|
+| 1 | Evaluator-Optimizer | `llmService.ts`, `storyArcService.ts` | Planned |
+| 2 | Prompt Chaining | `promptTemplates.ts`, `llmService.ts`, `storyArcService.ts` | ✅ Implemented |
 | 3 | Parallelization | `questPoolService.ts`, `storyArcService.ts` | Chaining (enrichment fan-out uses chain outputs) |
 | 4 | Routing | `llmService.ts`, `config.ts` | Nothing (standalone, but best after others exist) |
 | 5 | Orchestrator-Workers | New `floorOrchestratorService.ts` | All above (uses routing, chaining, parallelization) |

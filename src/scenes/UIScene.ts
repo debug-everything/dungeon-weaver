@@ -366,6 +366,7 @@ export class UIScene extends Phaser.Scene {
     this.currentXP = xp;
     this.currentXPToNext = xpToNext;
     this.currentLevel = level;
+    this.levelText.setText(`Lv.${level}`);
 
     this.updateXPBar();
 
