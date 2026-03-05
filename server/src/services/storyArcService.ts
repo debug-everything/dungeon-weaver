@@ -1,4 +1,4 @@
-import { generateStoryArc, generateArcQuest, generateLoreFragment, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
+import { generateStoryArc, generateArcQuest, generateLoreFragment, evaluateQuestQuality, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
 import { validateQuest } from './questValidator.js';
 import { config, gameConfig } from '../config.js';
 import { llmLogger } from '../logger.js';
@@ -15,6 +15,7 @@ export interface StoryArc {
   npcAssignments: string[];
   questTypes: string[];
   completedQuestIds: string[];
+  completedQuestDetails: string[];
   currentQuestIndex: number;
   totalQuests: number;
   status: 'active' | 'completed';
@@ -139,6 +140,7 @@ class StoryArcService {
           npcAssignments: outline.quests.map(q => q.npcId),
           questTypes: outline.quests.map(q => q.questType),
           completedQuestIds: [],
+          completedQuestDetails: [],
           currentQuestIndex: 0,
           totalQuests,
           status: 'active',
@@ -169,6 +171,13 @@ class StoryArcService {
     const idx = this.currentArc.currentQuestIndex;
     const isBoss = gameConfig.storyArc.bossQuestEnabled && idx === this.currentArc.totalQuests - 1;
 
+    // Use enriched completed quest details when available, falling back to bare summaries
+    const previousSummaries = this.currentArc.completedQuestDetails.length > 0
+      ? this.currentArc.completedQuestDetails
+      : this.currentArc.questSummaries.slice(0, idx);
+
+    let lastCritique: string | undefined;
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const quest = await generateArcQuest({
@@ -184,10 +193,11 @@ class StoryArcService {
             }))
           },
           questIndex: idx,
-          previousSummaries: this.currentArc.questSummaries.slice(0, idx),
+          previousSummaries,
           isBossQuest: isBoss,
           tier: this.getTier(),
-          lore: this.currentArc.lore ?? undefined
+          lore: this.currentArc.lore ?? undefined,
+          critique: lastCritique
         });
 
         // Force correct NPC
@@ -216,11 +226,55 @@ class StoryArcService {
           }
         }
 
+        // Evaluator-Optimizer: score quest quality and retry if below threshold
+        if (gameConfig.aiPatterns?.evaluatorEnabled) {
+          try {
+            const npcProfile = NPC_PROFILES[quest.npcId];
+            const evaluation = await evaluateQuestQuality(quest, {
+              arcTitle: this.currentArc.title,
+              arcTheme: this.currentArc.theme,
+              lore: this.currentArc.lore,
+              previousSummaries,
+              npcPersonality: npcProfile?.personality ?? '',
+              isBossQuest: isBoss
+            });
+
+            const threshold = gameConfig.aiPatterns.evaluatorThreshold ?? 7.0;
+            const maxEvalRetries = gameConfig.aiPatterns.evaluatorMaxRetries ?? 1;
+
+            if (evaluation.average < threshold && attempt < maxEvalRetries) {
+              llmLogger.info('Quest below threshold (%s < %s), retrying with critique...', evaluation.average.toFixed(1), threshold.toFixed(1));
+              lastCritique = evaluation.critique;
+              continue;
+            }
+          } catch (err) {
+            llmLogger.warn({ err }, 'Quest evaluation failed (non-fatal), accepting quest as-is');
+          }
+        }
+
+        // Capture enriched quest detail for future context
+        const detail = `Quest "${quest.name}": ${quest.description} (NPC: ${NPC_PROFILES[quest.npcId]?.name ?? quest.npcId}, ` +
+          `variant monsters: ${quest.variants?.monsters?.map(m => m.name).join(', ') || 'none'}, ` +
+          `variant items: ${quest.variants?.items?.map(i => i.name).join(', ') || 'none'})`;
+        this.currentArc.completedQuestDetails.push(detail);
+
         this.currentQuest = quest;
         this.existingQuestIds.push(quest.id);
         this.generating = false;
 
-        llmLogger.info('Arc quest %d/%d generated: "%s" for NPC "%s" (boss=%s)',
+        llmLogger.info({
+          questSummary: {
+            id: quest.id,
+            name: quest.name,
+            type: quest.type,
+            npcId: quest.npcId,
+            description: quest.description,
+            intro: quest.intro,
+            variantMonsters: quest.variants?.monsters?.map(m => m.name),
+            variantItems: quest.variants?.items?.map(i => i.name),
+            narration: quest.narration
+          }
+        }, 'Arc quest %d/%d generated: "%s" for NPC "%s" (boss=%s)',
           idx + 1, this.currentArc.totalQuests, quest.name, quest.npcId, isBoss);
         return true;
       } catch (err) {

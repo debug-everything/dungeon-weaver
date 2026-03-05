@@ -4,6 +4,9 @@
     "bossQuestEnabled": true
   },
   "aiPatterns": {
-    "chainingEnabled": false
+    "chainingEnabled": true,
+    "evaluatorEnabled": true,
+    "evaluatorThreshold": 7.0,
+    "evaluatorMaxRetries": 1
   }
 }

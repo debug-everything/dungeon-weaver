@@ -211,6 +211,9 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ LLM status indicator (HUD shows AI connection status: green sparkle when connected, gray when offline)
 - ✅ Prompt template extraction (all LLM prompts in `promptTemplates.ts` for easy review/editing)
 - ✅ Prompt chaining — lore generation (arc outline → lore fragment → lore-enriched quests, gated by `aiPatterns.chainingEnabled`)
+- ✅ Evaluator-Optimizer — quest quality scoring on 5 narrative dimensions with critique-driven retry (gated by `aiPatterns.evaluatorEnabled`)
+- ✅ Arc coherence rules — explicit instructions for lore references, NPC voice, continuity, and dialog specificity
+- ✅ Enriched quest context — completed quest details (variant names, NPC names) passed to subsequent quest generation
 - ✅ Debug: `reveal` command in terminal to remove fog of war
 
 ## Planned Features (See PRD.md)

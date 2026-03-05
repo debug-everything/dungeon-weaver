@@ -7,7 +7,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Load game config
 interface GameConfig {
   storyArc: { questsPerArc: number; bossQuestEnabled: boolean };
-  aiPatterns?: { chainingEnabled?: boolean };
+  aiPatterns?: {
+    chainingEnabled?: boolean;
+    evaluatorEnabled?: boolean;
+    evaluatorThreshold?: number;
+    evaluatorMaxRetries?: number;
+  };
 }
 
 function loadGameConfig(): GameConfig {

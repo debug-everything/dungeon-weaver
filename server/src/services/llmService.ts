@@ -11,6 +11,8 @@ import {
   buildStandaloneQuestUserPrompt,
   LORE_SYSTEM_PROMPT,
   buildLoreUserPrompt,
+  EVALUATOR_SYSTEM_PROMPT,
+  buildEvaluatorUserPrompt,
   LoreFragment
 } from './promptTemplates.js';
 
@@ -97,6 +99,7 @@ export interface ArcQuestContext {
   isBossQuest: boolean;
   tier?: number;
   lore?: LoreFragment;
+  critique?: string;
 }
 
 let client: OpenAI | null = null;
@@ -197,7 +200,7 @@ export async function generateStoryArc(questCount: number, existingArcIds: strin
 }
 
 export async function generateArcQuest(context: ArcQuestContext): Promise<GeneratedQuestDefinition> {
-  const userPrompt = buildArcQuestUserPrompt(context, context.lore);
+  const userPrompt = buildArcQuestUserPrompt(context, context.lore, context.critique);
   const tier = context.tier ?? 1;
   const questInfo = context.arc.quests[context.questIndex];
 
@@ -230,6 +233,68 @@ function isValidLore(obj: unknown): obj is LoreFragment {
   return true;
 }
 
+// ── Quest evaluation (Evaluator-Optimizer pattern) ──
+
+export interface QuestEvaluation {
+  scores: {
+    arc_coherence: number;
+    lore_integration: number;
+    continuity: number;
+    npc_voice: number;
+    dialog_specificity: number;
+  };
+  average: number;
+  critique: string;
+}
+
+function isValidEvaluation(obj: unknown): obj is QuestEvaluation {
+  if (!obj || typeof obj !== 'object') return false;
+  const eval_ = obj as Record<string, unknown>;
+
+  if (!eval_.scores || typeof eval_.scores !== 'object') return false;
+  const scores = eval_.scores as Record<string, unknown>;
+  const dimensions = ['arc_coherence', 'lore_integration', 'continuity', 'npc_voice', 'dialog_specificity'];
+  for (const dim of dimensions) {
+    if (typeof scores[dim] !== 'number' || scores[dim] < 1 || scores[dim] > 10) return false;
+  }
+
+  if (typeof eval_.average !== 'number') return false;
+  if (typeof eval_.critique !== 'string') return false;
+
+  return true;
+}
+
+export async function evaluateQuestQuality(
+  quest: GeneratedQuestDefinition,
+  context: {
+    arcTitle: string;
+    arcTheme: string;
+    lore: LoreFragment | null;
+    previousSummaries: string[];
+    npcPersonality: string;
+    isBossQuest: boolean;
+  }
+): Promise<QuestEvaluation> {
+  const userPrompt = buildEvaluatorUserPrompt(quest, context);
+
+  llmLogger.info('Evaluating quest quality for "%s"...', quest.name);
+  const raw = await callLLM(EVALUATOR_SYSTEM_PROMPT, userPrompt, 500, 0.3);
+  const parsed = JSON.parse(raw);
+
+  if (!isValidEvaluation(parsed)) {
+    throw new Error('Invalid evaluation response: missing or malformed fields');
+  }
+
+  // Recalculate average to ensure consistency
+  const scores = parsed.scores;
+  parsed.average = (scores.arc_coherence + scores.lore_integration + scores.continuity + scores.npc_voice + scores.dialog_specificity) / 5;
+
+  llmLogger.info({ avg: parsed.average, scores }, 'Quest evaluation for "%s"', quest.name);
+  return parsed;
+}
+
+// ── Lore generation (Prompt Chaining step) ──
+
 export async function generateLoreFragment(arc: StoryArcOutline): Promise<LoreFragment> {
   llmLogger.info('Generating lore fragment for arc "%s"...', arc.title);
   const raw = await callLLM(LORE_SYSTEM_PROMPT, buildLoreUserPrompt(arc), 500, 0.8);
@@ -239,7 +304,7 @@ export async function generateLoreFragment(arc: StoryArcOutline): Promise<LoreFr
     throw new Error('Invalid lore fragment: missing required fields');
   }
 
-  llmLogger.info('Lore generated: %d locations, faction "%s", artifact "%s"',
+  llmLogger.info({ lore: parsed }, 'Lore generated: %d locations, faction "%s", artifact "%s"',
     parsed.locations.length, parsed.faction.name, parsed.artifact.name);
   return parsed;
 }

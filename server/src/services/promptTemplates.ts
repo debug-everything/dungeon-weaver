@@ -309,7 +309,7 @@ export function buildArcQuestUserPrompt(context: {
   previousSummaries: string[];
   isBossQuest: boolean;
   existingQuestIds: string[];
-}, lore?: LoreFragment): string {
+}, lore?: LoreFragment, critique?: string): string {
   const questInfo = context.arc.quests[context.questIndex];
   const npcProfile = NPC_PROFILES[questInfo.npcId];
   const npcName = npcProfile?.name ?? questInfo.npcId;
@@ -360,7 +360,14 @@ Requirements:
 - Use creative, evocative names for variant monsters/items (not generic)
 - Include 2-4 intro lines for atmospheric storytelling
 
-Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.${loreSection}`;
+Avoid these existing quest IDs: ${context.existingQuestIds.join(', ') || 'none'}.${loreSection}
+
+## ARC COHERENCE RULES (CRITICAL — these are scored by a quality evaluator)
+1. REFERENCE THE ARC: Dialog and narration MUST mention the arc title theme or keywords.
+2. REFERENCE LORE: If world lore is provided above, at least 2 dialog nodes must reference a named location, the faction, or the artifact by name.
+3. BUILD ON PREVIOUS QUESTS: If previous quest summaries are listed, the NPC must acknowledge or reference at least one prior event, discovery, or enemy.
+4. NPC VOICE: Dialog must match the assigned NPC's personality. Marcus is blunt and commercial; Elena is excited and curious; Aldric is scholarly and cryptic.
+5. DIALOG SPECIFICITY: Every dialog line must be specific to THIS quest's events, targets, and stakes — no generic filler.${critique ? `\n\n## QUALITY FEEDBACK FROM REVIEWER (address these issues)\n${critique}` : ''}`;
 }
 
 // ─── STANDALONE QUEST USER PROMPT ───────────────────────
@@ -417,4 +424,74 @@ ARC TITLE: "${arc.title}"
 ARC THEME: ${arc.theme}
 
 Create interconnected lore elements (locations, faction, history, artifact) that enrich quests in this arc. The lore should feel organic to the arc's theme and provide concrete names and places that quest dialog can reference.`;
+}
+
+// ─── QUEST EVALUATOR PROMPTS (Evaluator-Optimizer pattern) ──
+
+export const EVALUATOR_SYSTEM_PROMPT = `You are a quality evaluator for a dungeon crawler RPG's quest content. Score a generated quest on narrative quality dimensions.
+
+You will receive:
+- The generated quest JSON
+- The story arc context (title, theme, lore, previous quests)
+- The NPC personality profile
+
+Score each dimension 1-10 and provide a brief critique for any dimension scoring below 8.
+
+## SCORING DIMENSIONS
+
+1. **arc_coherence** (1-10): Does the quest's dialog, intro, and narration reference the arc's title/theme? Do names, events, and motivations connect to the overarching narrative?
+
+2. **lore_integration** (1-10): If lore was provided, does the quest reference specific named locations, the faction, the artifact, or historical events? Score 10 if no lore was provided (not applicable). Score 1-3 if lore was provided but completely ignored.
+
+3. **continuity** (1-10): Does the quest build on previous quests in the arc? Does the NPC acknowledge prior events or discoveries? Score 8+ for first quest in an arc (no prior context needed).
+
+4. **npc_voice** (1-10): Does the dialog match the NPC's defined personality? Is the tone consistent with their character description?
+
+5. **dialog_specificity** (1-10): Is the dialog specific to THIS quest's events, targets, and stakes? Or is it generic filler that could apply to any quest?
+
+## OUTPUT FORMAT (JSON only)
+{
+  "scores": {
+    "arc_coherence": number,
+    "lore_integration": number,
+    "continuity": number,
+    "npc_voice": number,
+    "dialog_specificity": number
+  },
+  "average": number,
+  "critique": string
+}
+
+The "critique" field should be 2-4 sentences. Name specific missing references, generic dialog lines, or voice mismatches. Be actionable.
+
+Respond with ONLY the JSON object.`;
+
+export function buildEvaluatorUserPrompt(quest: object, context: {
+  arcTitle: string;
+  arcTheme: string;
+  lore: LoreFragment | null;
+  previousSummaries: string[];
+  npcPersonality: string;
+  isBossQuest: boolean;
+}): string {
+  const loreSection = context.lore
+    ? `\nWORLD LORE PROVIDED TO GENERATOR:\n- Locations: ${context.lore.locations.map(l => `"${l.name}"`).join(', ')}\n- Faction: "${context.lore.faction.name}"\n- Artifact: "${context.lore.artifact.name}"\n- History: ${context.lore.history}`
+    : '\nNo world lore was provided.';
+
+  const prevSection = context.previousSummaries.length > 0
+    ? `\nPREVIOUS QUESTS IN ARC:\n${context.previousSummaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+    : '\nThis is the first quest in the arc (no previous context).';
+
+  return `Evaluate this generated quest for narrative quality.
+
+ARC TITLE: "${context.arcTitle}"
+ARC THEME: ${context.arcTheme}
+${loreSection}
+${prevSection}
+
+NPC PERSONALITY: ${context.npcPersonality}
+IS BOSS QUEST: ${context.isBossQuest}
+
+GENERATED QUEST:
+${JSON.stringify(quest, null, 2)}`;
 }

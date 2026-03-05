@@ -294,54 +294,65 @@ Orchestrator LLM: "Plan floor N content"
 
 ---
 
-### Pattern 5: Evaluator-Optimizer
+### Pattern 5: Evaluator-Optimizer ✅ IMPLEMENTED
 **Concept:** One LLM generates content, another evaluates quality and provides feedback. Loop until quality threshold is met.
 
-**Implementation — Boss Quest Quality Gate:**
+**Implementation — Arc Quest Quality Gate:**
 ```
 ┌─────────────────────────────────────────────────┐
 │                                                  │
 │  Generator LLM                                   │
-│  "Generate boss quest for arc finale"            │
+│  "Generate arc quest with coherence rules"       │
 │       ↓                                          │
 │  Generated quest definition                      │
 │       ↓                                          │
 │  Evaluator LLM                                   │
-│  "Score this boss quest on 5 dimensions"         │
+│  "Score this quest on 5 dimensions"              │
 │       ↓                                          │
 │  Evaluation:                                     │
-│    narrative_coherence: 8/10                      │
-│    dialog_quality: 6/10  ← "Dialog feels generic,│
-│                            lacks dramatic tension │
-│                            for a boss encounter"  │
-│    difficulty_balance: 9/10                       │
-│    creativity: 7/10                               │
+│    arc_coherence: 8/10                            │
+│    lore_integration: 6/10  ← "Lore faction name  │
+│                              never referenced"    │
+│    continuity: 9/10                               │
 │    npc_voice: 5/10 ← "Aldric sounds like Marcus, │
 │                       needs more scholarly tone"  │
+│    dialog_specificity: 7/10                       │
 │       ↓                                          │
-│  Average: 7.0 < threshold (7.5)                  │
+│  Average: 7.0 < threshold (7.0)                  │
 │       ↓                                          │
 │  Feed critique back to Generator                 │
-│  "Improve dialog tension and make Aldric sound   │
-│   more scholarly. Specific issues: ..."          │
+│  "Reference the faction by name. Make Aldric     │
+│   sound more scholarly. Specific issues: ..."    │
 │       ↓                                          │
 │  Generator produces improved version             │
 │       ↓                                          │
-│  Evaluator re-scores: avg 8.2 ≥ 7.5 ✓           │
+│  Evaluator re-scores: avg 8.2 ≥ 7.0 ✓           │
 │                                                  │
-│  Max iterations: 2 (then accept best scoring)    │
+│  Max retries: 1 (configurable, then accept)      │
 └─────────────────────────────────────────────────┘
 ```
 
-**Why it matters:** Boss quests are the climax of each arc — the player has invested 3+ quests building up to this moment. A generic or incoherent boss quest undermines the entire arc. The evaluator catches quality issues that rule-based validation misses (dialog tone, narrative coherence, dramatic pacing).
+**Why it matters:** Quests often fail to reference the arc's lore, theme, or previous quest events. The evaluator scores 5 narrative dimensions (arc_coherence, lore_integration, continuity, npc_voice, dialog_specificity) and feeds actionable critique back for retry.
 
-**Applied selectively:** Only boss/finale quests go through the evaluator loop. Regular quests use the existing rule-based validator only (cost efficiency — the routing pattern decides which path).
+**Applied to all arc quests** (not just boss quests), since incoherence affects the whole arc. Threshold and retry count are configurable.
+
+**Scoring dimensions:**
+1. `arc_coherence` — does dialog reference the arc title/theme?
+2. `lore_integration` — are named locations, faction, artifact mentioned? (10 if no lore provided)
+3. `continuity` — does the NPC acknowledge prior quest events? (8+ for first quest)
+4. `npc_voice` — does dialog match NPC personality?
+5. `dialog_specificity` — is dialog specific to this quest, not generic filler?
 
 **Where in code:**
-- `server/src/services/llmService.ts` — new `evaluateQuestQuality()` method
-- `server/src/services/storyArcService.ts` — evaluate-optimize loop in `generateNextQuest()` when `isBossQuest === true`
-- Evaluation prompt is much smaller than generation prompt (~50 lines vs ~300)
-- Logs scores and critique for observability
+- `server/src/services/promptTemplates.ts` — `EVALUATOR_SYSTEM_PROMPT`, `buildEvaluatorUserPrompt()`, coherence rules in `buildArcQuestUserPrompt()`
+- `server/src/services/llmService.ts` — `evaluateQuestQuality()`, `QuestEvaluation` interface
+- `server/src/services/storyArcService.ts` — evaluate-optimize loop in `generateNextQuest()`, critique injection via `ArcQuestContext.critique`
+- Enriched `completedQuestDetails` on `StoryArc` captures variant names, NPC names for richer context
+- Logs evaluation scores and critique for observability
+
+**Cost:** +1 small LLM call per quest (~500 tokens). If retry needed: +1 generation + +1 evaluation. Worst case: 3 generations + 2 evaluations. Evaluation failure is non-fatal — quest accepted as-is.
+
+**Feature flag:** `server/game.config.json` → `aiPatterns.evaluatorEnabled` (default: `true`), `evaluatorThreshold` (default: `7.0`), `evaluatorMaxRetries` (default: `1`).
 
 ---
 
@@ -363,7 +374,7 @@ When all five patterns work together on a boss quest:
 
 | Phase | Pattern | Key Files | Status |
 |-------|---------|-----------|--------|
-| 1 | Evaluator-Optimizer | `llmService.ts`, `storyArcService.ts` | Planned |
+| 1 | Evaluator-Optimizer | `llmService.ts`, `promptTemplates.ts`, `storyArcService.ts` | ✅ Implemented |
 | 2 | Prompt Chaining | `promptTemplates.ts`, `llmService.ts`, `storyArcService.ts` | ✅ Implemented |
 | 3 | Parallelization | `questPoolService.ts`, `storyArcService.ts` | Chaining (enrichment fan-out uses chain outputs) |
 | 4 | Routing | `llmService.ts`, `config.ts` | Nothing (standalone, but best after others exist) |
@@ -380,8 +391,8 @@ All pattern behavior is configurable via `server/game.config.json` and environme
     "parallelEnrichment": true,
     "modelRouting": true,
     "evaluatorEnabled": true,
-    "evaluatorThreshold": 7.5,
-    "evaluatorMaxIterations": 2,
+    "evaluatorThreshold": 7.0,
+    "evaluatorMaxRetries": 1,
     "orchestratorEnabled": false
   }
 }
