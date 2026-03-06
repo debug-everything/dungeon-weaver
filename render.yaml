@@ -23,6 +23,9 @@ services:
       - key: LLM_MODEL
         value: gpt-4.1-mini
         sync: true
+      - key: LLM_MODEL_FAST
+        value: gpt-4.1-nano
+        sync: true
       - key: STORY_ARC_DAILY_MAX
         value: 5
         sync: true
