@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../config/constants';
 
-export type NarratorStyle = 'narrator' | 'boss';
+export type NarratorStyle = 'narrator' | 'boss' | 'lore';
 
 interface NarratorData {
   lines: string[];
@@ -33,7 +33,7 @@ export class NarratorScene extends Phaser.Scene {
   private autoAdvanceTimer: Phaser.Time.TimerEvent | null = null;
 
   // Input
-  private spaceKey!: Phaser.Input.Keyboard.Key;
+  private eKey!: Phaser.Input.Keyboard.Key;
   private enterKey!: Phaser.Input.Keyboard.Key;
   private prevGamepadA: boolean = false;
 
@@ -70,8 +70,8 @@ export class NarratorScene extends Phaser.Scene {
 
     const stripHeight = Math.floor(GAME_HEIGHT * 0.22);
     const stripY = GAME_HEIGHT - stripHeight;
-    const borderColor = this.style === 'boss' ? 0xcc3333 : 0xd4a853;
-    const textColor = this.style === 'boss' ? '#cc3333' : '#d4a853';
+    const borderColor = this.style === 'boss' ? 0xcc3333 : this.style === 'lore' ? 0xcc88ff : 0xd4a853;
+    const textColor = this.style === 'boss' ? '#cc3333' : this.style === 'lore' ? '#cc88ff' : '#d4a853';
     const fontStyle = this.style === 'boss' ? 'bold' : 'italic';
 
     // Dark strip backdrop
@@ -96,15 +96,15 @@ export class NarratorScene extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5).setDepth(202);
 
-    // [SPACE] hint
-    this.hintText = this.add.text(GAME_WIDTH - 20, stripY + stripHeight - 14, '[SPACE]', {
+    // [E] hint
+    this.hintText = this.add.text(GAME_WIDTH - 20, stripY + stripHeight - 14, '[E]', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#888888'
     }).setOrigin(1, 1).setDepth(202).setAlpha(0);
 
     // Input keys
-    this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
 
     // Start first line
@@ -206,8 +206,8 @@ export class NarratorScene extends Phaser.Scene {
   }
 
   update(): void {
-    // Keyboard: SPACE or ENTER
-    const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+    // Keyboard: E or ENTER
+    const ePressed = Phaser.Input.Keyboard.JustDown(this.eKey);
     const enterPressed = Phaser.Input.Keyboard.JustDown(this.enterKey);
 
     // Gamepad: A button
@@ -219,7 +219,7 @@ export class NarratorScene extends Phaser.Scene {
       this.prevGamepadA = aDown;
     }
 
-    if (spacePressed || enterPressed || gamepadAPressed) {
+    if (ePressed || enterPressed || gamepadAPressed) {
       if (!this.typewriterDone) {
         this.completeTypewriter();
       } else {

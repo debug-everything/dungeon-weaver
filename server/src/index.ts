@@ -7,6 +7,7 @@ import { logger, llmLogger } from './logger.js';
 import { gameStateRouter } from './routes/gameState.js';
 import { questsRouter } from './routes/quests.js';
 import { questPoolService } from './services/questPoolService.js';
+import { debugRouter } from './routes/debug.js';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(express.json({ limit: '10mb' }));
 // Routes
 app.use('/api/saves', gameStateRouter);
 app.use('/api/quests', questsRouter);
+app.use('/api/debug', debugRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -27,7 +29,14 @@ if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '../../dist');
   app.use(express.static(distPath));
-  app.get('*', (_req, res) => {
+  app.get('*', (req, res) => {
+    // Serve .html files directly if they exist, otherwise fall back to SPA
+    if (req.path.endsWith('.html')) {
+      const htmlFile = path.join(distPath, req.path);
+      return res.sendFile(htmlFile, (err) => {
+        if (err) res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

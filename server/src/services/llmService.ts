@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { config } from '../config.js';
+import { config, gameConfig } from '../config.js';
 import { llmLogger } from '../logger.js';
 import {
   NPC_PROFILES,
@@ -102,6 +102,19 @@ export interface ArcQuestContext {
   critique?: string;
 }
 
+// ── Call metadata (for debug console) ──
+
+export interface CallMeta {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  model: string;
+  elapsedMs: number;
+}
+
+let lastCallMeta: CallMeta | null = null;
+export function getLastCallMeta(): CallMeta | null { return lastCallMeta; }
+
 let client: OpenAI | null = null;
 let supportsJsonMode: boolean | null = null;
 
@@ -115,18 +128,27 @@ function getClient(): OpenAI {
   return client;
 }
 
+// ── Model routing ──
+
+function resolveModel(importance: 'fast' | 'capable'): string {
+  if (!gameConfig.aiPatterns?.routingEnabled) return config.llm.model;
+  return importance === 'fast' ? config.llm.modelFast : config.llm.model;
+}
+
 // ── Shared LLM call helper ──
 
-async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: number = 3000, temperature: number = 0.7): Promise<string> {
+async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: number = 3000, temperature: number = 0.7, model?: string): Promise<string> {
+  const startTime = Date.now();
   const openai = getClient();
+  const useModel = model ?? config.llm.model;
 
-  llmLogger.info('API call starting - model: %s, baseURL: %s, json_mode: %s', config.llm.model, config.llm.baseURL, supportsJsonMode !== false);
+  llmLogger.info('API call starting - model: %s, baseURL: %s, json_mode: %s', useModel, config.llm.baseURL, supportsJsonMode !== false);
 
   let response;
   if (supportsJsonMode !== false) {
     try {
       response = await openai.chat.completions.create({
-        model: config.llm.model,
+        model: useModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -145,7 +167,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
         supportsJsonMode = false;
         llmLogger.info('JSON mode not supported by provider - falling back to prompt-based JSON');
         response = await openai.chat.completions.create({
-          model: config.llm.model,
+          model: useModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -159,7 +181,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
     }
   } else {
     response = await openai.chat.completions.create({
-      model: config.llm.model,
+      model: useModel,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -170,6 +192,13 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
   }
 
   const usage = response.usage;
+  lastCallMeta = {
+    promptTokens: usage?.prompt_tokens ?? 0,
+    completionTokens: usage?.completion_tokens ?? 0,
+    totalTokens: usage?.total_tokens ?? 0,
+    model: useModel,
+    elapsedMs: Date.now() - startTime
+  };
   llmLogger.info('API call completed - tokens: %d prompt, %d completion, %d total', usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0, usage?.total_tokens ?? 0);
 
   const content = response.choices[0]?.message?.content;
@@ -185,7 +214,7 @@ async function callLLM(systemPrompt: string, userPrompt: string, maxTokens: numb
 export async function generateQuestDefinition(context: QuestGenerationContext): Promise<GeneratedQuestDefinition> {
   const tier = context.tier ?? 1;
   const userPrompt = buildStandaloneQuestUserPrompt(context);
-  const raw = await callLLM(buildQuestSystemPrompt(tier, false), userPrompt);
+  const raw = await callLLM(buildQuestSystemPrompt(tier, false), userPrompt, 3000, 0.7, resolveModel('fast'));
   return JSON.parse(raw) as GeneratedQuestDefinition;
 }
 
@@ -195,7 +224,7 @@ export async function generateStoryArc(questCount: number, existingArcIds: strin
   const userPrompt = buildArcOutlineUserPrompt(questCount, existingArcIds, previousTitles);
 
   llmLogger.info('Generating story arc outline (%d quests)...', questCount);
-  const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500, 0.9);
+  const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500, 0.9, resolveModel('capable'));
   return JSON.parse(raw) as StoryArcOutline;
 }
 
@@ -205,7 +234,7 @@ export async function generateArcQuest(context: ArcQuestContext): Promise<Genera
   const questInfo = context.arc.quests[context.questIndex];
 
   llmLogger.info('Generating arc quest %d/%d for NPC "%s" (boss=%s, tier=%d)...', context.questIndex + 1, context.arc.quests.length, questInfo.npcId, context.isBossQuest, tier);
-  const raw = await callLLM(buildQuestSystemPrompt(tier, context.isBossQuest), userPrompt);
+  const raw = await callLLM(buildQuestSystemPrompt(tier, context.isBossQuest), userPrompt, 3000, 0.7, resolveModel('capable'));
   return JSON.parse(raw) as GeneratedQuestDefinition;
 }
 
@@ -278,7 +307,7 @@ export async function evaluateQuestQuality(
   const userPrompt = buildEvaluatorUserPrompt(quest, context);
 
   llmLogger.info('Evaluating quest quality for "%s"...', quest.name);
-  const raw = await callLLM(EVALUATOR_SYSTEM_PROMPT, userPrompt, 500, 0.3);
+  const raw = await callLLM(EVALUATOR_SYSTEM_PROMPT, userPrompt, 500, 0.3, resolveModel('fast'));
   const parsed = JSON.parse(raw);
 
   if (!isValidEvaluation(parsed)) {
@@ -297,7 +326,7 @@ export async function evaluateQuestQuality(
 
 export async function generateLoreFragment(arc: StoryArcOutline): Promise<LoreFragment> {
   llmLogger.info('Generating lore fragment for arc "%s"...', arc.title);
-  const raw = await callLLM(LORE_SYSTEM_PROMPT, buildLoreUserPrompt(arc), 500, 0.8);
+  const raw = await callLLM(LORE_SYSTEM_PROMPT, buildLoreUserPrompt(arc), 500, 0.8, resolveModel('capable'));
   const parsed = JSON.parse(raw);
 
   if (!isValidLore(parsed)) {

@@ -1069,6 +1069,28 @@ export class GameScene extends Phaser.Scene {
     this.events.on(EVENTS.QUEST_ACCEPTED, (questId: string) => {
       this.arcNextQuestNpcId = null;
       this.spawnQuestTargets(questId);
+
+      // Lore narration on first arc quest accept
+      getArcStatus().then(raw => {
+        if (!raw || typeof raw !== 'object') return;
+        const info = raw as StoryArcInfo;
+        if (info.currentQuestIndex === 0 && info.lore) {
+          const lore = info.lore;
+          const lines: string[] = [];
+          if (lore.faction) {
+            lines.push(`Whispers tell of the ${lore.faction.name} — ${lore.faction.description}`);
+          }
+          if (lore.artifact) {
+            lines.push(`Legends speak of the ${lore.artifact.name} — ${lore.artifact.description}`);
+          }
+          if (lore.history) {
+            lines.push(lore.history);
+          }
+          if (lines.length > 0) {
+            this.launchNarrator(lines, 'lore');
+          }
+        }
+      }).catch(() => {});
     });
 
     // Quick save (F5)
@@ -1107,6 +1129,7 @@ export class GameScene extends Phaser.Scene {
     // Narrator closed
     this.events.on(EVENTS.CLOSE_NARRATOR, () => {
       this.narratorActive = false;
+      this.resumeGame();
     });
 
     // Level up VFX + auto-open stat allocation
@@ -1268,6 +1291,7 @@ export class GameScene extends Phaser.Scene {
   private launchNarrator(lines: string[], style: NarratorStyle): void {
     if (this.isPaused || this.narratorActive) return;
     this.narratorActive = true;
+    this.pauseGame();
     this.scene.launch(SCENE_KEYS.NARRATOR, { lines, style });
   }
 

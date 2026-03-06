@@ -212,6 +212,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Prompt template extraction (all LLM prompts in `promptTemplates.ts` for easy review/editing)
 - ✅ Prompt chaining — lore generation (arc outline → lore fragment → lore-enriched quests, gated by `aiPatterns.chainingEnabled`)
 - ✅ Evaluator-Optimizer — quest quality scoring on 5 narrative dimensions with critique-driven retry (gated by `aiPatterns.evaluatorEnabled`)
+- ✅ Model routing — fast model (`LLM_MODEL_FAST`) for pool fillers + evaluator, capable model (`LLM_MODEL`) for arc quests + lore (gated by `aiPatterns.routingEnabled`)
 - ✅ Arc coherence rules — explicit instructions for lore references, NPC voice, continuity, and dialog specificity
 - ✅ Enriched quest context — completed quest details (variant names, NPC names) passed to subsequent quest generation
 - ✅ Debug: `reveal` command in terminal to remove fog of war
@@ -229,7 +230,8 @@ The backend supports LLM-powered dynamic quest generation via any OpenAI-compati
 LLM_ENABLED=true           # Master switch (must be "true" to activate)
 LLM_API_KEY=your-key       # Required alongside LLM_ENABLED
 LLM_BASE_URL=https://...   # OpenAI-compatible endpoint
-LLM_MODEL=gpt-4.1-mini     # Model name (default; gpt-4.1-nano for lower cost)
+LLM_MODEL=gpt-4.1-mini     # Capable model (default; used for arc quests, lore)
+LLM_MODEL_FAST=gpt-4.1-nano # Fast/cheap model (used for pool fillers, evaluator)
 STORY_ARC_DAILY_MAX=5      # Max story arcs generated per day (default: 5)
 ```
 

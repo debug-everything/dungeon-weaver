@@ -260,6 +260,13 @@ export interface QuestState {
   targetRoom?: { x: number; y: number; width: number; height: number };
 }
 
+export interface LoreFragment {
+  locations: { name: string; description: string }[];
+  faction: { name: string; description: string };
+  history: string;
+  artifact: { name: string; description: string };
+}
+
 export interface StoryArcInfo {
   id: string;
   title: string;
@@ -268,6 +275,8 @@ export interface StoryArcInfo {
   status: 'active' | 'completed';
   nextQuestNpcId: string | null;
   nextQuestReady: boolean;
+  arcQuestIds: string[];
+  lore?: LoreFragment;
 }
 
 // Boss attack pattern types

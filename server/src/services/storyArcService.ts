@@ -34,6 +34,8 @@ export interface ArcStatus {
   tier: number;
   dailyArcsUsed: number;
   dailyArcsMax: number;
+  arcQuestIds: string[];
+  lore: LoreFragment | null;
 }
 
 class StoryArcService {
@@ -383,10 +385,12 @@ class StoryArcService {
       status: this.currentArc.status,
       nextQuestNpcId: this.getNextQuestNpcId(),
       nextQuestReady: this.currentQuest !== null,
+      arcQuestIds: [...this.existingQuestIds],
       completedArcCount: this.completedArcCount,
       tier: this.getTier(),
       dailyArcsUsed: this.dailyArcCount,
-      dailyArcsMax: config.storyArcDailyMax
+      dailyArcsMax: config.storyArcDailyMax,
+      lore: this.currentArc.lore
     };
   }
 

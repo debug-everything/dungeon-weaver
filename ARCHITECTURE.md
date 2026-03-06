@@ -83,6 +83,7 @@ LLM_ENABLED=true           # Master switch (default: false)
 LLM_API_KEY=your-key       # Required for LLM to work
 LLM_BASE_URL=https://...   # OpenAI-compatible endpoint (default: OpenAI)
 LLM_MODEL=gpt-4.1-mini     # Model name (default: gpt-4.1-mini)
+LLM_MODEL_FAST=gpt-4.1-nano # Fast/cheap model for low-importance calls (routing pattern)
 ```
 
 ### API Endpoints
@@ -206,7 +207,7 @@ Floor loads → Promise.all([
 
 ---
 
-### Pattern 3: Routing
+### Pattern 3: Routing ✅ IMPLEMENTED (Model Routing)
 **Concept:** Classify input to select the best prompt template, model, or processing strategy.
 
 **Implementation — Model Routing by Quest Importance:**
@@ -247,10 +248,21 @@ Arc outline says quest type = "investigate"
 
 **Why it matters:** Not all quests need the same generation budget. A routine kill quest for pool filler doesn't need the same model/tokens as a climactic arc boss finale. Routing saves cost and improves quality where it counts.
 
+**Routing table:**
+| LLM Call | Importance | Model | Rationale |
+|----------|-----------|-------|-----------|
+| `generateQuestDefinition` (standalone pool filler) | Low | Fast | Disposable fallback quests |
+| `evaluateQuestQuality` | Low | Fast | Small output (~500 tokens), scoring task |
+| `generateStoryArc` (arc outline) | High | Capable | Sets narrative direction for entire arc |
+| `generateArcQuest` (arc quest) | High | Capable | Player-facing content with coherence requirements |
+| `generateLoreFragment` | High | Capable | Enriches all subsequent quests |
+
 **Where in code:**
-- `server/src/services/llmService.ts` — model selection in `callLLM()` based on `questImportance` parameter
-- `server/src/services/llmService.ts` — prompt template registry keyed by quest type
-- `server/src/config.ts` — model config for `LLM_MODEL_FAST` vs `LLM_MODEL`
+- `server/src/services/llmService.ts` — `resolveModel()` helper selects model based on importance, `callLLM()` accepts optional `model` parameter
+- `server/src/config.ts` — `config.llm.modelFast` reads `LLM_MODEL_FAST` env var
+- `server/game.config.json` — `aiPatterns.routingEnabled` feature flag
+
+**Graceful fallback:** If `LLM_MODEL_FAST` not set, falls back to `LLM_MODEL`. If `routingEnabled` is `false`, all calls use `LLM_MODEL`.
 
 ---
 
@@ -376,8 +388,8 @@ When all five patterns work together on a boss quest:
 |-------|---------|-----------|--------|
 | 1 | Evaluator-Optimizer | `llmService.ts`, `promptTemplates.ts`, `storyArcService.ts` | ✅ Implemented |
 | 2 | Prompt Chaining | `promptTemplates.ts`, `llmService.ts`, `storyArcService.ts` | ✅ Implemented |
-| 3 | Parallelization | `questPoolService.ts`, `storyArcService.ts` | Chaining (enrichment fan-out uses chain outputs) |
-| 4 | Routing | `llmService.ts`, `config.ts` | Nothing (standalone, but best after others exist) |
+| 3 | Routing | `llmService.ts`, `config.ts` | ✅ Implemented (model routing by quest importance) |
+| 4 | Parallelization | `questPoolService.ts`, `storyArcService.ts` | Chaining (enrichment fan-out uses chain outputs) |
 | 5 | Orchestrator-Workers | New `floorOrchestratorService.ts` | All above (uses routing, chaining, parallelization) |
 
 ### Configuration
@@ -388,8 +400,8 @@ All pattern behavior is configurable via `server/game.config.json` and environme
   "storyArc": { "questsPerArc": 3, "bossQuestEnabled": true },
   "aiPatterns": {
     "chainingEnabled": true,
+    "routingEnabled": true,
     "parallelEnrichment": true,
-    "modelRouting": true,
     "evaluatorEnabled": true,
     "evaluatorThreshold": 7.0,
     "evaluatorMaxRetries": 1,
@@ -491,5 +503,6 @@ Set in Render dashboard (or `render.yaml` defaults):
 | `LLM_ENABLED` | `true` | Master switch |
 | `LLM_API_KEY` | — | Set in dashboard |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible endpoint |
-| `LLM_MODEL` | `gpt-4.1-mini` | Model name |
+| `LLM_MODEL` | `gpt-4.1-mini` | Capable model name |
+| `LLM_MODEL_FAST` | `gpt-4.1-nano` | Fast model for low-importance calls |
 | `STORY_ARC_DAILY_MAX` | `5` | Daily arc generation cap |

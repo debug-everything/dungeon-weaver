@@ -12,6 +12,7 @@ interface GameConfig {
     evaluatorEnabled?: boolean;
     evaluatorThreshold?: number;
     evaluatorMaxRetries?: number;
+    routingEnabled?: boolean;
   };
 }
 
@@ -33,7 +34,8 @@ export const config = {
     enabled: (process.env.LLM_ENABLED === 'true') && !!process.env.LLM_API_KEY,
     apiKey: process.env.LLM_API_KEY || '',
     baseURL: process.env.LLM_BASE_URL || 'https://api.openai.com/v1',
-    model: process.env.LLM_MODEL || 'gpt-4.1-mini'
+    model: process.env.LLM_MODEL || 'gpt-4.1-mini',
+    modelFast: process.env.LLM_MODEL_FAST || process.env.LLM_MODEL || 'gpt-4.1-nano'
   },
   storyArcDailyMax: parseInt(process.env.STORY_ARC_DAILY_MAX || '5', 10)
 };

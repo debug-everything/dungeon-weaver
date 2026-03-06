@@ -153,40 +153,86 @@ export class QuestLogScene extends Phaser.Scene {
       return;
     }
 
-    // Separate quests by status: completed first (ready to turn in), then active
-    const completedQuests = activeQuests.filter(q => q.state.status === 'completed');
-    const inProgressQuests = activeQuests.filter(q => q.state.status === 'active');
+    // Split quests into arc vs side quests
+    const arcQuestIds = new Set(arcInfo?.arcQuestIds ?? []);
+    const arcQuests = activeQuests.filter(q => arcQuestIds.has(q.definition.id));
+    const sideQuests = activeQuests.filter(q => !arcQuestIds.has(q.definition.id));
 
-    // Completed quests (ready to turn in)
-    if (completedQuests.length > 0) {
-      const sectionHeader = this.add.text(leftPadding, yOffset, '-- Ready to Turn In --', {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#88ff88'
-      });
-      this.contentContainer.add(sectionHeader);
-      yOffset += 20;
+    // Render arc quests
+    if (arcQuests.length > 0) {
+      const arcCompleted = arcQuests.filter(q => q.state.status === 'completed');
+      const arcActive = arcQuests.filter(q => q.state.status === 'active');
 
-      for (const { definition, state } of completedQuests) {
-        yOffset = this.renderQuest(definition, state, yOffset, leftPadding, true);
+      if (arcCompleted.length > 0) {
+        const hdr = this.add.text(leftPadding, yOffset, '-- Ready to Turn In --', {
+          fontSize: '12px', fontFamily: 'monospace', color: '#88ff88'
+        });
+        this.contentContainer.add(hdr);
+        yOffset += 20;
+        for (const { definition, state } of arcCompleted) {
+          yOffset = this.renderQuest(definition, state, yOffset, leftPadding, true);
+        }
+      }
+
+      if (arcActive.length > 0) {
+        if (arcCompleted.length > 0) yOffset += 10;
+        const hdr = this.add.text(leftPadding, yOffset, '-- In Progress --', {
+          fontSize: '12px', fontFamily: 'monospace', color: '#c9a227'
+        });
+        this.contentContainer.add(hdr);
+        yOffset += 20;
+        for (const { definition, state } of arcActive) {
+          yOffset = this.renderQuest(definition, state, yOffset, leftPadding, false);
+        }
       }
     }
 
-    // Active quests (in progress)
-    if (inProgressQuests.length > 0) {
-      if (completedQuests.length > 0) yOffset += 10;
+    // Render side quests
+    if (sideQuests.length > 0) {
+      if (arcQuests.length > 0) yOffset += 10;
 
-      const sectionHeader = this.add.text(leftPadding, yOffset, '-- In Progress --', {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#c9a227'
-      });
-      this.contentContainer.add(sectionHeader);
+      const sideSep = this.add.graphics();
+      sideSep.lineStyle(1, 0x444444, 0.5);
+      sideSep.lineBetween(leftPadding, yOffset, GAME_WIDTH - leftPadding, yOffset);
+      this.contentContainer.add(sideSep);
+      yOffset += 10;
+
+      const sideHeader = this.add.text(GAME_WIDTH / 2, yOffset, 'Side Quests', {
+        fontSize: '13px', fontFamily: 'monospace', color: '#88aacc', fontStyle: 'bold'
+      }).setOrigin(0.5, 0);
+      this.contentContainer.add(sideHeader);
       yOffset += 20;
 
-      for (const { definition, state } of inProgressQuests) {
-        yOffset = this.renderQuest(definition, state, yOffset, leftPadding, false);
+      const sideCompleted = sideQuests.filter(q => q.state.status === 'completed');
+      const sideActive = sideQuests.filter(q => q.state.status === 'active');
+
+      if (sideCompleted.length > 0) {
+        const hdr = this.add.text(leftPadding, yOffset, '-- Ready to Turn In --', {
+          fontSize: '12px', fontFamily: 'monospace', color: '#88ff88'
+        });
+        this.contentContainer.add(hdr);
+        yOffset += 20;
+        for (const { definition, state } of sideCompleted) {
+          yOffset = this.renderQuest(definition, state, yOffset, leftPadding, true);
+        }
       }
+
+      if (sideActive.length > 0) {
+        if (sideCompleted.length > 0) yOffset += 10;
+        const hdr = this.add.text(leftPadding, yOffset, '-- In Progress --', {
+          fontSize: '12px', fontFamily: 'monospace', color: '#88aacc'
+        });
+        this.contentContainer.add(hdr);
+        yOffset += 20;
+        for (const { definition, state } of sideActive) {
+          yOffset = this.renderQuest(definition, state, yOffset, leftPadding, false);
+        }
+      }
+    }
+
+    // When no arc, show all quests without grouping
+    if (arcQuests.length === 0 && sideQuests.length === 0) {
+      // Already handled by the empty check above
     }
 
     this.contentHeight = yOffset;
