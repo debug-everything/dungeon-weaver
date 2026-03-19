@@ -145,11 +145,11 @@ export class BootScene extends Phaser.Scene {
     this.generateSpellBookSprites();
 
     // Splash screen
-    this.load.image('splash_poster', 'assets/splash-poster.png');
+    this.load.image('splash_poster', 'assets/splash-poster.jpg');
   }
 
   create(): void {
-    this.scene.start(SCENE_KEYS.SPLASH);
+    this.scene.start(SCENE_KEYS.MENU);
   }
 
   private generateShieldSprites(): void {
