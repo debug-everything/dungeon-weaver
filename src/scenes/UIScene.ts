@@ -431,10 +431,14 @@ export class UIScene extends Phaser.Scene {
 
     let yOffset = 0;
 
+    const arcQuestIds = gameScene.getArcQuestIds();
+
     for (const { definition, state } of activeQuests) {
-      // Quest name
-      const statusColor = state.status === 'completed' ? '#88ff88' : '#c9a227';
-      const nameText = this.add.text(0, yOffset, definition.name, {
+      // Quest name — arc quests get purple + diamond prefix, side quests stay amber
+      const isArc = arcQuestIds.has(definition.id);
+      const statusColor = state.status === 'completed' ? '#88ff88' : isArc ? '#cc88ff' : '#c9a227';
+      const displayName = isArc ? `◆ ${definition.name}` : definition.name;
+      const nameText = this.add.text(0, yOffset, displayName, {
         fontSize: '10px',
         fontFamily: 'monospace',
         color: statusColor,

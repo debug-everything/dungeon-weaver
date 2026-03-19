@@ -1,4 +1,4 @@
-import { generateStoryArc, generateArcQuest, generateLoreFragment, evaluateQuestQuality, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
+import { generateStoryArc, generateArcQuest, generateLoreFragment, generateIntroNarration, evaluateQuestQuality, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
 import { validateQuest } from './questValidator.js';
 import { config, gameConfig } from '../config.js';
 import { llmLogger } from '../logger.js';
@@ -20,6 +20,7 @@ export interface StoryArc {
   totalQuests: number;
   status: 'active' | 'completed';
   lore: LoreFragment | null;
+  intro: string[] | null;
 }
 
 export interface ArcStatus {
@@ -36,6 +37,7 @@ export interface ArcStatus {
   dailyArcsMax: number;
   arcQuestIds: string[];
   lore: LoreFragment | null;
+  intro: string[] | null;
 }
 
 class StoryArcService {
@@ -57,7 +59,27 @@ class StoryArcService {
 
     await this.generateNewArc();
     if (this.currentArc) {
-      await this.generateNextQuest();
+      await this.generateIntroAndFirstQuest();
+    }
+  }
+
+  private async generateIntroAndFirstQuest(): Promise<void> {
+    const introPromise = gameConfig.aiPatterns?.introNarrationEnabled && this.currentArc
+      ? generateIntroNarration(
+          { title: this.currentArc.title, theme: this.currentArc.theme },
+          this.currentArc.lore
+        ).catch(err => { llmLogger.warn({ err }, 'Intro generation failed'); return null; })
+      : Promise.resolve(null);
+
+    const questPromise = this.generateNextQuest();
+
+    const [intro] = await Promise.all([introPromise, questPromise]);
+    if (this.currentArc && intro) {
+      this.currentArc.intro = intro;
+      llmLogger.info('Intro narration stored on arc "%s" (%d lines)', this.currentArc.title, intro.length);
+    } else {
+      llmLogger.warn('Intro narration not available for arc (intro=%s, arc=%s)',
+        intro ? 'generated' : 'null', this.currentArc ? this.currentArc.title : 'null');
     }
   }
 
@@ -146,7 +168,8 @@ class StoryArcService {
           currentQuestIndex: 0,
           totalQuests,
           status: 'active',
-          lore
+          lore,
+          intro: null
         };
 
         this.existingArcIds.push(outline.id);
@@ -349,7 +372,7 @@ class StoryArcService {
     (async () => {
       const ok = await this.generateNewArc();
       if (ok) {
-        await this.generateNextQuest();
+        await this.generateIntroAndFirstQuest();
       }
     })().catch(err => {
       llmLogger.error({ err }, 'Failed to start new arc');
@@ -390,8 +413,22 @@ class StoryArcService {
       tier: this.getTier(),
       dailyArcsUsed: this.dailyArcCount,
       dailyArcsMax: config.storyArcDailyMax,
-      lore: this.currentArc.lore
+      lore: this.currentArc.lore,
+      intro: this.currentArc.intro
     };
+  }
+
+  async regenerateIntro(): Promise<string[] | null> {
+    if (!this.currentArc || !gameConfig.aiPatterns?.introNarrationEnabled) return null;
+    llmLogger.info('Regenerating intro narration for arc "%s"...', this.currentArc.title);
+    const intro = await generateIntroNarration(
+      { title: this.currentArc.title, theme: this.currentArc.theme },
+      this.currentArc.lore
+    );
+    if (intro) {
+      this.currentArc.intro = intro;
+    }
+    return intro;
   }
 
   isGenerating(): boolean {

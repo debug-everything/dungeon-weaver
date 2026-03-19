@@ -8,6 +8,7 @@
     "evaluatorEnabled": true,
     "evaluatorThreshold": 7.0,
     "evaluatorMaxRetries": 1,
-    "routingEnabled": true
+    "routingEnabled": true,
+    "introNarrationEnabled": true
   }
 }

@@ -215,6 +215,7 @@ this.load.image('sprite_key', 'assets/items/filename.png');
 - ✅ Model routing — fast model (`LLM_MODEL_FAST`) for pool fillers + evaluator, capable model (`LLM_MODEL`) for arc quests + lore (gated by `aiPatterns.routingEnabled`)
 - ✅ Arc coherence rules — explicit instructions for lore references, NPC voice, continuity, and dialog specificity
 - ✅ Enriched quest context — completed quest details (variant names, NPC names) passed to subsequent quest generation
+- ✅ Intro narration — LLM-generated opening cinematic on each "New Game", freshly generated per game via `POST /api/quests/regenerate-intro`, loading screen in MenuScene while awaiting LLM (gated by `aiPatterns.introNarrationEnabled`, uses fast model)
 - ✅ Debug: `reveal` command in terminal to remove fog of war
 
 ## Planned Features (See PRD.md)

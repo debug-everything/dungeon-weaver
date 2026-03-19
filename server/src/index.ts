@@ -2,6 +2,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { logger, llmLogger } from './logger.js';
 import { gameStateRouter } from './routes/gameState.js';
@@ -11,8 +13,26 @@ import { debugRouter } from './routes/debug.js';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false  // Phaser needs inline scripts/eval
+}));
+
+// CORS — locked to specific origin in production via CORS_ORIGIN env var
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({
+  origin: corsOrigin === '*' ? true : corsOrigin.split(',').map(s => s.trim())
+}));
+
+app.use(express.json({ limit: '512kb' }));
+
+// Rate limiting
+const apiLimitWindow = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+const apiLimitMax = parseInt(process.env.RATE_LIMIT_MAX || '60', 10);
+const llmLimitMax = parseInt(process.env.RATE_LIMIT_LLM_MAX || '10', 10);
+
+app.use('/api', rateLimit({ windowMs: apiLimitWindow, max: apiLimitMax, standardHeaders: true, legacyHeaders: false }));
+app.use('/api/quests', rateLimit({ windowMs: apiLimitWindow, max: llmLimitMax, standardHeaders: true, legacyHeaders: false }));
 
 // Routes
 app.use('/api/saves', gameStateRouter);
@@ -29,14 +49,8 @@ if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '../../dist');
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    // Serve .html files directly if they exist, otherwise fall back to SPA
-    if (req.path.endsWith('.html')) {
-      const htmlFile = path.join(distPath, req.path);
-      return res.sendFile(htmlFile, (err) => {
-        if (err) res.sendFile(path.join(distPath, 'index.html'));
-      });
-    }
+  app.get('*', (_req, res) => {
+    // SPA fallback — always serve index.html for non-static routes
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

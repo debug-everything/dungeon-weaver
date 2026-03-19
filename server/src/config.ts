@@ -13,6 +13,7 @@ interface GameConfig {
     evaluatorThreshold?: number;
     evaluatorMaxRetries?: number;
     routingEnabled?: boolean;
+    introNarrationEnabled?: boolean;
   };
 }
 

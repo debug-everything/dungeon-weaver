@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '../config/constants';
-import { listSaves, loadGame, deleteGame, SaveListItem } from '../services/ApiClient';
+import { listSaves, loadGame, deleteGame, regenerateIntro, SaveListItem } from '../services/ApiClient';
 
 export class MenuScene extends Phaser.Scene {
   private saveListContainer!: Phaser.GameObjects.Container;
@@ -193,7 +193,62 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private startGame(): void {
-    this.scene.start(SCENE_KEYS.GAME);
-    this.scene.start(SCENE_KEYS.UI);
+    this.showLoadingScreen();
+    this.fetchIntroAndStart();
+  }
+
+  private showLoadingScreen(): void {
+    // Hide menu elements
+    this.children.each(child => {
+      if ('setVisible' in child) (child as unknown as { setVisible(v: boolean): void }).setVisible(false);
+    });
+    this.saveListContainer.setVisible(false);
+
+    // Loading background
+    this.cameras.main.setBackgroundColor('#0d0d1a');
+
+    // Loading text
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 'Preparing your adventure...', {
+      fontSize: '18px',
+      fontFamily: 'monospace',
+      color: '#cc88ff',
+      fontStyle: 'italic'
+    }).setOrigin(0.5);
+
+    // Animated dots
+    const dots = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, '.', {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      color: '#888888'
+    }).setOrigin(0.5);
+
+    let dotCount = 1;
+    this.time.addEvent({
+      delay: 400,
+      loop: true,
+      callback: () => {
+        dotCount = (dotCount % 3) + 1;
+        dots.setText('.'.repeat(dotCount));
+      }
+    });
+  }
+
+  private fetchIntroAndStart(): void {
+    console.log('[MenuScene] Requesting fresh intro narration...');
+
+    regenerateIntro().then(intro => {
+      if (intro && intro.length > 0) {
+        console.log('[MenuScene] Intro received: %d lines', intro.length);
+        this.scene.start(SCENE_KEYS.GAME, { introLines: intro });
+      } else {
+        console.log('[MenuScene] No intro returned, starting game without intro');
+        this.scene.start(SCENE_KEYS.GAME);
+      }
+      this.scene.start(SCENE_KEYS.UI);
+    }).catch(err => {
+      console.log('[MenuScene] Intro fetch failed:', err);
+      this.scene.start(SCENE_KEYS.GAME);
+      this.scene.start(SCENE_KEYS.UI);
+    });
   }
 }

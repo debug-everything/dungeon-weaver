@@ -94,6 +94,13 @@ export async function getArcStatus(): Promise<unknown> {
   return apiFetch('/quests/arc-status');
 }
 
+export async function regenerateIntro(): Promise<string[] | null> {
+  const data = await apiFetch<{ intro: string[] | null }>('/quests/regenerate-intro', {
+    method: 'POST'
+  });
+  return data.intro;
+}
+
 export async function checkLLMEnabled(): Promise<boolean> {
   try {
     const data = await apiFetch<{ llmEnabled: boolean }>('/health');

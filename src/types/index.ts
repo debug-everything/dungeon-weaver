@@ -277,6 +277,7 @@ export interface StoryArcInfo {
   nextQuestReady: boolean;
   arcQuestIds: string[];
   lore?: LoreFragment;
+  intro?: string[];
 }
 
 // Boss attack pattern types

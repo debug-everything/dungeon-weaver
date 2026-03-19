@@ -67,7 +67,24 @@ questsRouter.post('/complete', async (req, res) => {
 // Get current story arc status
 questsRouter.get('/arc-status', (_req, res) => {
   const status = storyArcService.getArcStatus();
+  llmLogger.debug('Arc status requested: arc=%s, intro=%s',
+    status?.title ?? 'none', status?.intro ? `${status.intro.length} lines` : 'null');
   res.json(status);
+});
+
+// Regenerate intro narration for current arc (called on each "New Game")
+questsRouter.post('/regenerate-intro', async (_req, res) => {
+  if (!config.llm.enabled) {
+    res.json({ intro: null });
+    return;
+  }
+  try {
+    const intro = await storyArcService.regenerateIntro();
+    res.json({ intro });
+  } catch (err) {
+    llmLogger.error({ err }, 'Failed to regenerate intro');
+    res.json({ intro: null });
+  }
 });
 
 // Debug: pool status

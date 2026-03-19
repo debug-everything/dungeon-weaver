@@ -73,6 +73,7 @@ export class GameScene extends Phaser.Scene {
   private lastIndicatorUpdate: number = 0;
   private lastArcPoll: number = 0;
   private arcNextQuestNpcId: string | null = null;
+  private arcQuestIds: Set<string> = new Set();
   private roomClearState: Map<number, { total: number; killed: number }> = new Map();
   private bossUnlocked: boolean = false;
   private currentTier: MonsterTier = 1;
@@ -89,6 +90,8 @@ export class GameScene extends Phaser.Scene {
 
   // LLM status
   private llmEnabled: boolean = false;
+  // Intro narration lines (passed from MenuScene)
+  private pendingIntro: string[] | null = null;
 
   // Spawner/nest system
   private spawnerSprites: Map<string, Phaser.Physics.Arcade.Image> = new Map();
@@ -102,8 +105,8 @@ export class GameScene extends Phaser.Scene {
     super({ key: SCENE_KEYS.GAME });
   }
 
-  init(data?: { floorTransition?: FloorTransitionData }): void {
-    console.log('[GameScene] init called, data:', data ? JSON.stringify({ hasFloorTransition: !!data.floorTransition, targetFloor: data.floorTransition?.targetFloor }) : 'none');
+  init(data?: { floorTransition?: FloorTransitionData; introLines?: string[] }): void {
+    console.log('[GameScene] init called, data:', data ? JSON.stringify({ hasFloorTransition: !!data.floorTransition, targetFloor: data.floorTransition?.targetFloor, hasIntro: !!data.introLines }) : 'none');
     if (data?.floorTransition) {
       this.floorTransitionData = data.floorTransition;
       this.currentFloor = data.floorTransition.targetFloor;
@@ -111,6 +114,7 @@ export class GameScene extends Phaser.Scene {
       this.floorTransitionData = null;
       this.currentFloor = 1;
     }
+    this.pendingIntro = data?.introLines ?? null;
     this.stairsSprite = null;
     this.transitioning = false;
     console.log('[GameScene] init done, currentFloor:', this.currentFloor);
@@ -129,6 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.chestData = new Map();
     this.chestSprites = new Map();
     this.arcNextQuestNpcId = null;
+    this.arcQuestIds = new Set();
     this.lastArcPoll = 0;
     this.roomClearState = new Map();
     this.bossUnlocked = false;
@@ -276,6 +281,15 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => {
       this.events.emit(EVENTS.FLOOR_CHANGED, this.currentFloor);
     });
+
+    // Show intro narration if passed from MenuScene
+    if (this.pendingIntro && this.pendingIntro.length > 0) {
+      const introLines = this.pendingIntro;
+      this.pendingIntro = null;
+      this.time.delayedCall(500, () => {
+        this.launchNarrator(introLines, 'lore');
+      });
+    }
 
     console.log('[GameScene] create completed successfully for floor', this.currentFloor);
     } catch (err) {
@@ -1070,10 +1084,13 @@ export class GameScene extends Phaser.Scene {
       this.arcNextQuestNpcId = null;
       this.spawnQuestTargets(questId);
 
-      // Lore narration on first arc quest accept
+      // Fetch arc status: update arc quest IDs + lore narration on first quest
       getArcStatus().then(raw => {
         if (!raw || typeof raw !== 'object') return;
         const info = raw as StoryArcInfo;
+        if (info.arcQuestIds?.length) {
+          this.arcQuestIds = new Set(info.arcQuestIds);
+        }
         if (info.currentQuestIndex === 0 && info.lore) {
           const lore = info.lore;
           const lines: string[] = [];
@@ -1281,6 +1298,10 @@ export class GameScene extends Phaser.Scene {
           this.arcNextQuestNpcId = info.nextQuestNpcId;
         }
       }
+      // Update arc quest IDs
+      if (info.arcQuestIds?.length) {
+        this.arcQuestIds = new Set(info.arcQuestIds);
+      }
       // Update tier from server
       if (info.tier && info.tier >= 1 && info.tier <= 3) {
         this.currentTier = info.tier as MonsterTier;
@@ -1308,6 +1329,7 @@ export class GameScene extends Phaser.Scene {
   getPlayer(): Player { return this.player; }
   getNPCs(): Phaser.GameObjects.Group { return this.npcs; }
   getMonsters(): Phaser.GameObjects.Group { return this.monsters; }
+  getArcQuestIds(): Set<string> { return this.arcQuestIds; }
   getCurrentFloor(): number { return this.currentFloor; }
 
   private scaleMonsterForFloor(data: MonsterData): MonsterData {

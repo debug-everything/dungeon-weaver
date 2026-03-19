@@ -29,3 +29,14 @@ services:
       - key: STORY_ARC_DAILY_MAX
         value: 5
         sync: true
+      - key: CORS_ORIGIN
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+        sync: true
+      - key: RATE_LIMIT_MAX
+        value: "60"
+        sync: true
+      - key: RATE_LIMIT_LLM_MAX
+        value: "10"
+        sync: true

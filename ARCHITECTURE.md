@@ -54,7 +54,8 @@ The LLM generates dynamic quest definitions organized into coherent **story arcs
 1. Server starts → `questPoolService.initialize()` → `storyArcService.initialize()`
 2. If LLM enabled: generates a story arc outline (title, theme, N quest summaries, NPC assignments)
 2b. If `aiPatterns.chainingEnabled`: generates a lore fragment (locations, faction, history, artifact) grounded in the arc theme
-3. First quest in the arc is generated immediately for the assigned NPC (enriched with lore context if available)
+3. First quest + initial intro narration generated in parallel (gated by `aiPatterns.introNarrationEnabled`)
+3b. On each "New Game" click, MenuScene calls `POST /api/quests/regenerate-intro` to get a fresh intro (3-5 atmospheric lines, fast model). Loading screen shown while awaiting LLM response.
 4. Frontend calls `GET /api/quests/available/:npcId` when player interacts with NPC
 5. If NPC matches the current arc quest's assigned NPC, the arc quest is returned
 6. On quest completion (`POST /api/quests/complete`), next arc quest is generated in background
@@ -168,7 +169,10 @@ storyArcService.generateNewArc()
   → llmService.generateStoryArc()           // Step 1: arc outline
   → llmService.generateLoreFragment(arc)     // Step 2: lore fragment (if chainingEnabled)
   → arc.lore = loreResult                    // Store on arc
-  → llmService.generateArcQuest(arc + lore)  // Step 3: quest with lore context
+  → Promise.all([                            // Step 3: parallel generation
+      llmService.generateIntroNarration()    //   intro narration (if introNarrationEnabled)
+      llmService.generateArcQuest(arc+lore)  //   first quest with lore context
+    ])
 ```
 
 **Feature flag:** `server/game.config.json` → `aiPatterns.chainingEnabled` (default: `false`). When disabled, quests generate without lore context (existing behavior). Lore generation failure is non-fatal — quests proceed without lore.

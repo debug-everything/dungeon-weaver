@@ -181,7 +181,8 @@ async function loadConfig() {
       addLogEntry('LLM Disabled', null, 'Set LLM_ENABLED=true and LLM_API_KEY in server/.env to enable.', true);
     }
   } catch (err: unknown) {
-    $configGrid.innerHTML = `<span class="value off">Failed to load config: ${err instanceof Error ? err.message : err}</span>`;
+    const errMsg = err instanceof Error ? err.message : String(err);
+    $configGrid.innerHTML = `<span class="value off">Failed to load config: ${escHtml(errMsg)}</span>`;
   }
 }
 

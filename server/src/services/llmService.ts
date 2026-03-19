@@ -13,6 +13,8 @@ import {
   buildLoreUserPrompt,
   EVALUATOR_SYSTEM_PROMPT,
   buildEvaluatorUserPrompt,
+  INTRO_SYSTEM_PROMPT,
+  buildIntroUserPrompt,
   LoreFragment
 } from './promptTemplates.js';
 
@@ -215,7 +217,11 @@ export async function generateQuestDefinition(context: QuestGenerationContext): 
   const tier = context.tier ?? 1;
   const userPrompt = buildStandaloneQuestUserPrompt(context);
   const raw = await callLLM(buildQuestSystemPrompt(tier, false), userPrompt, 3000, 0.7, resolveModel('fast'));
-  return JSON.parse(raw) as GeneratedQuestDefinition;
+  try {
+    return JSON.parse(raw) as GeneratedQuestDefinition;
+  } catch {
+    throw new Error(`Failed to parse quest definition JSON: ${raw.slice(0, 200)}`);
+  }
 }
 
 // ── Story Arc generation ──
@@ -225,7 +231,11 @@ export async function generateStoryArc(questCount: number, existingArcIds: strin
 
   llmLogger.info('Generating story arc outline (%d quests)...', questCount);
   const raw = await callLLM(ARC_SYSTEM_PROMPT, userPrompt, 1500, 0.9, resolveModel('capable'));
-  return JSON.parse(raw) as StoryArcOutline;
+  try {
+    return JSON.parse(raw) as StoryArcOutline;
+  } catch {
+    throw new Error(`Failed to parse story arc JSON: ${raw.slice(0, 200)}`);
+  }
 }
 
 export async function generateArcQuest(context: ArcQuestContext): Promise<GeneratedQuestDefinition> {
@@ -235,7 +245,11 @@ export async function generateArcQuest(context: ArcQuestContext): Promise<Genera
 
   llmLogger.info('Generating arc quest %d/%d for NPC "%s" (boss=%s, tier=%d)...', context.questIndex + 1, context.arc.quests.length, questInfo.npcId, context.isBossQuest, tier);
   const raw = await callLLM(buildQuestSystemPrompt(tier, context.isBossQuest), userPrompt, 3000, 0.7, resolveModel('capable'));
-  return JSON.parse(raw) as GeneratedQuestDefinition;
+  try {
+    return JSON.parse(raw) as GeneratedQuestDefinition;
+  } catch {
+    throw new Error(`Failed to parse arc quest JSON: ${raw.slice(0, 200)}`);
+  }
 }
 
 // ── Lore generation (Prompt Chaining step) ──
@@ -308,7 +322,12 @@ export async function evaluateQuestQuality(
 
   llmLogger.info('Evaluating quest quality for "%s"...', quest.name);
   const raw = await callLLM(EVALUATOR_SYSTEM_PROMPT, userPrompt, 500, 0.3, resolveModel('fast'));
-  const parsed = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Failed to parse evaluation JSON: ${raw.slice(0, 200)}`);
+  }
 
   if (!isValidEvaluation(parsed)) {
     throw new Error('Invalid evaluation response: missing or malformed fields');
@@ -324,10 +343,49 @@ export async function evaluateQuestQuality(
 
 // ── Lore generation (Prompt Chaining step) ──
 
+// ── Intro narration generation ──
+
+export async function generateIntroNarration(
+  arc: { title: string; theme: string },
+  lore: LoreFragment | null
+): Promise<string[] | null> {
+  llmLogger.info('Generating intro narration for arc "%s"...', arc.title);
+  try {
+    const raw = await callLLM(INTRO_SYSTEM_PROMPT, buildIntroUserPrompt(arc, lore), 300, 0.9, resolveModel('fast'));
+    let parsed = JSON.parse(raw);
+
+    // json_object mode forces an object wrapper — unwrap if needed
+    if (!Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null) {
+      const values = Object.values(parsed);
+      const arr = values.find(v => Array.isArray(v));
+      if (arr) {
+        llmLogger.info('Intro narration unwrapped from object key');
+        parsed = arr;
+      }
+    }
+
+    if (!Array.isArray(parsed) || parsed.length < 3 || parsed.length > 5 || !parsed.every((s: unknown) => typeof s === 'string')) {
+      llmLogger.warn('Invalid intro narration: expected array of 3-5 strings, got %s', JSON.stringify(parsed).slice(0, 200));
+      return null;
+    }
+
+    llmLogger.info({ lines: parsed }, 'Intro narration generated: %d lines', parsed.length);
+    return parsed;
+  } catch (err) {
+    llmLogger.warn({ err }, 'Intro narration generation failed (non-fatal)');
+    return null;
+  }
+}
+
 export async function generateLoreFragment(arc: StoryArcOutline): Promise<LoreFragment> {
   llmLogger.info('Generating lore fragment for arc "%s"...', arc.title);
   const raw = await callLLM(LORE_SYSTEM_PROMPT, buildLoreUserPrompt(arc), 500, 0.8, resolveModel('capable'));
-  const parsed = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Failed to parse lore fragment JSON: ${raw.slice(0, 200)}`);
+  }
 
   if (!isValidLore(parsed)) {
     throw new Error('Invalid lore fragment: missing required fields');

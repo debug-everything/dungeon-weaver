@@ -18,9 +18,9 @@ import { validateQuest } from '../services/questValidator.js';
 
 export const debugRouter = Router();
 
-// Block in production
+// Only allow in development
 debugRouter.use((_req, res, next) => {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV !== 'development') {
     return res.status(404).json({ error: 'Not found' });
   }
   next();

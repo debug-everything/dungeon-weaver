@@ -426,6 +426,53 @@ ARC THEME: ${arc.theme}
 Create interconnected lore elements (locations, faction, history, artifact) that enrich quests in this arc. The lore should feel organic to the arc's theme and provide concrete names and places that quest dialog can reference.`;
 }
 
+// ─── INTRO NARRATION PROMPTS ───────────────────────────────
+
+export const INTRO_SYSTEM_PROMPT = `You are a narrator for a dungeon crawler RPG. Generate 3-5 short opening narration lines as a JSON object.
+
+These lines play as cinematic text when the player first enters the dungeon.
+
+## GUIDELINES
+- The intro must feel UNIQUE to this specific story arc — lead with the arc's theme, conflict, or threat
+- Reference specific lore names: locations, the faction, the artifact — weave them into the narrative
+- You may mention 1-2 NPCs by name if relevant, but don't list all three like a roster
+- Vary your opening — sometimes start with a location, sometimes with the threat, sometimes with history
+- End with something that creates urgency or curiosity, not a generic "go forth" call to action
+- 3rd-person narrator voice, atmospheric, terse. No exclamation marks.
+- Each line under 120 characters
+
+## RULES
+- Return a JSON object with a "lines" key containing an array of 3-5 strings
+- Every line must contain at least one proper noun from the arc context (a location, faction, artifact, or NPC name)
+
+Respond with ONLY a JSON object like: {"lines": ["line 1", "line 2", "line 3"]}`;
+
+export function buildIntroUserPrompt(arc: { title: string; theme: string }, lore: LoreFragment | null): string {
+  const npcLines = Object.values(NPC_PROFILES).map(p => `- ${p.name}: ${p.personality.split('.')[0]}`).join('\n');
+
+  let loreSection = '';
+  if (lore) {
+    const locationNames = lore.locations.map(l => `"${l.name}"`).join(', ');
+    loreSection = `
+WORLD LORE:
+- Locations: ${locationNames}
+- Faction: "${lore.faction.name}" — ${lore.faction.description}
+- Artifact: "${lore.artifact.name}" — ${lore.artifact.description}
+- History: ${lore.history}`;
+  }
+
+  return `Generate opening narration for this story arc:
+
+ARC TITLE: "${arc.title}"
+ARC THEME: ${arc.theme}
+
+NPCs in the dungeon:
+${npcLines}
+${loreSection}
+
+Create 3-5 atmospheric lines unique to THIS arc. Do not write a generic dungeon intro — ground every line in the specific names, places, and conflicts above.`;
+}
+
 // ─── QUEST EVALUATOR PROMPTS (Evaluator-Optimizer pattern) ──
 
 export const EVALUATOR_SYSTEM_PROMPT = `You are a quality evaluator for a dungeon crawler RPG's quest content. Score a generated quest on narrative quality dimensions.
