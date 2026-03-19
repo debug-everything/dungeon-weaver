@@ -4,6 +4,8 @@ A top-down dungeon crawler where an LLM weaves the quests, lore, and story arcs 
 
 Built with Phaser 3, TypeScript, and an Express backend that talks to any OpenAI-compatible API. The game works fine offline with hardcoded quests, but plug in an LLM and it starts generating coherent multi-quest story arcs, custom monsters, variant items, and cinematic narration on the fly.
 
+<img src="screens/quest-updates.jpg" alt="Gameplay: combat, quests, and narrator" width="400">
+
 ## Why this exists
 
 I grew up on retro RPGs and dungeon crawlers, and I wanted to experiment with how LLMs could make that kind of game less predictable. The main question I'm exploring: can AI-generated quests and story arcs actually improve replay value, or does it just feel random? I'm not a game dev or an artist (you'll notice the entire project leans on 0x72's pixel art), but Phaser 3 was the simplest entry point to get something playable. The quest generation pipeline uses several agentic AI patterns:
@@ -15,6 +17,8 @@ I grew up on retro RPGs and dungeon crawlers, and I wanted to experiment with ho
 - **Orchestrator-Workers** - Floor content planning with thematic room generation (not yet implemented).
 
 Each pattern has a feature flag in `server/game.config.json` so you can toggle them independently.
+
+<img src="screens/quest-nudge.jpg" alt="NPC dialog with AI-generated quest" width="400">
 
 ## The game itself
 
@@ -35,6 +39,8 @@ Procedurally generated BSP dungeons (via rot.js), 3 floors per run, multiple mon
 | TAB | Cycle between overlays |
 
 Gamepad works too (A=attack, B=dodge, X=interact, Y=inventory).
+
+<img src="screens/map.jpg" alt="Dungeon map" width="380"> <img src="screens/inventory.jpg" alt="Inventory and equipment" width="380">
 
 ## Running it
 
@@ -111,4 +117,4 @@ Three AI patterns are implemented (prompt chaining, evaluator-optimizer, model r
 
 ## Assets
 
-All the pixel art comes from [0x72's 16x16 DungeonTileset](https://0x72.itch.io/16x16-dungeon-tileset). Great tileset, made this whole project possible. Not included in the repo, grab it from itch.io and drop the PNGs into `assets/`.
+Tileset assets came from [0x72's 16x16 DungeonTileset](https://0x72.itch.io/16x16-dungeon-tileset).
