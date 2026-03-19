@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { generateStoryArc, generateArcQuest, generateLoreFragment, generateIntroNarration, evaluateQuestQuality, GeneratedQuestDefinition, StoryArcOutline, NPC_PROFILES, LoreFragment } from './llmService.js';
 import { validateQuest } from './questValidator.js';
 import { config, gameConfig } from '../config.js';
@@ -125,7 +126,7 @@ class StoryArcService {
         const validNpcs = Object.keys(NPC_PROFILES);
         for (const q of outline.quests) {
           if (!validNpcs.includes(q.npcId)) {
-            q.npcId = validNpcs[Math.floor(Math.random() * validNpcs.length)];
+            q.npcId = validNpcs[crypto.randomInt(validNpcs.length)];
           }
         }
 
@@ -133,7 +134,7 @@ class StoryArcService {
         while (outline.quests.length < totalQuests) {
           outline.quests.push({
             summary: 'Defeat the remaining threat',
-            npcId: validNpcs[Math.floor(Math.random() * validNpcs.length)],
+            npcId: validNpcs[crypto.randomInt(validNpcs.length)],
             questType: 'destroy'
           });
         }
@@ -237,7 +238,7 @@ class StoryArcService {
 
         // Ensure unique ID
         if (this.existingQuestIds.includes(quest.id)) {
-          quest.id = `quest_llm_arc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          quest.id = `quest_llm_arc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
         }
 
         // Boss enhancements: boost stats and add nameColor marker

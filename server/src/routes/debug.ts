@@ -120,9 +120,13 @@ debugRouter.post('/quest', async (req: Request, res: Response) => {
   if (!session.arc) {
     return res.status(400).json({ error: 'Generate an arc first' });
   }
-  const { questIndex, tier } = req.body as { questIndex: number; tier?: number };
-  if (questIndex < 0 || questIndex >= session.arc.quests.length) {
-    return res.status(400).json({ error: `questIndex must be 0-${session.arc.quests.length - 1}` });
+  const questIndex = req.body?.questIndex;
+  const tier = req.body?.tier;
+  if (typeof questIndex !== 'number' || !Number.isInteger(questIndex) || questIndex < 0 || questIndex >= session.arc.quests.length) {
+    return res.status(400).json({ error: `questIndex must be an integer 0-${session.arc.quests.length - 1}` });
+  }
+  if (tier !== undefined && (typeof tier !== 'number' || !Number.isInteger(tier) || tier < 1 || tier > 3)) {
+    return res.status(400).json({ error: 'tier must be an integer 1-3' });
   }
 
   const isBossQuest = questIndex === session.arc.quests.length - 1;
@@ -155,7 +159,10 @@ debugRouter.post('/quest', async (req: Request, res: Response) => {
 // ── POST /api/debug/evaluate ──
 
 debugRouter.post('/evaluate', async (req: Request, res: Response) => {
-  const { questIndex } = req.body as { questIndex: number };
+  const questIndex = req.body?.questIndex;
+  if (typeof questIndex !== 'number' || !Number.isInteger(questIndex)) {
+    return res.status(400).json({ error: 'questIndex must be an integer' });
+  }
   const quest = session.quests[questIndex];
   if (!quest) {
     return res.status(400).json({ error: `No quest at index ${questIndex}. Generate it first.` });
@@ -190,9 +197,13 @@ debugRouter.post('/evaluate', async (req: Request, res: Response) => {
 // ── POST /api/debug/standalone ──
 
 debugRouter.post('/standalone', async (req: Request, res: Response) => {
-  const { npcId, tier } = req.body as { npcId: string; tier?: number };
-  if (!NPC_PROFILES[npcId]) {
-    return res.status(400).json({ error: `Invalid npcId: ${npcId}. Valid: ${Object.keys(NPC_PROFILES).join(', ')}` });
+  const npcId = req.body?.npcId;
+  const tier = req.body?.tier;
+  if (typeof npcId !== 'string' || !NPC_PROFILES[npcId]) {
+    return res.status(400).json({ error: `Invalid npcId. Valid: ${Object.keys(NPC_PROFILES).join(', ')}` });
+  }
+  if (tier !== undefined && (typeof tier !== 'number' || !Number.isInteger(tier) || tier < 1 || tier > 3)) {
+    return res.status(400).json({ error: 'tier must be an integer 1-3' });
   }
 
   try {

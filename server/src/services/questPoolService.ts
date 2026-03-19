@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { generateQuestDefinition, GeneratedQuestDefinition, NPC_PROFILES } from './llmService.js';
 import { validateQuest } from './questValidator.js';
 import { storyArcService } from './storyArcService.js';
@@ -65,7 +66,7 @@ class QuestPoolService {
         // Ensure unique ID
         if (this.existingIds.includes(quest.id)) {
           const oldId = quest.id;
-          quest.id = `quest_llm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          quest.id = `quest_llm_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
           llmLogger.info('Duplicate ID "%s" renamed to "%s"', oldId, quest.id);
         }
 

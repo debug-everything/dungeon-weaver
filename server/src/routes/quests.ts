@@ -32,9 +32,9 @@ questsRouter.get('/available/:npcId', (req, res) => {
 
 // Accept a quest (removes from pool, triggers replenishment)
 questsRouter.post('/accept', (req, res) => {
-  const { questId } = req.body as { questId: string };
-  if (!questId) {
-    res.status(400).json({ error: 'Missing questId' });
+  const questId = req.body?.questId;
+  if (typeof questId !== 'string' || questId.length === 0) {
+    res.status(400).json({ error: 'questId must be a non-empty string' });
     return;
   }
 
@@ -48,9 +48,9 @@ questsRouter.post('/accept', (req, res) => {
 
 // Notify quest completion (advances story arc)
 questsRouter.post('/complete', async (req, res) => {
-  const { questId } = req.body as { questId: string };
-  if (!questId) {
-    res.status(400).json({ error: 'Missing questId' });
+  const questId = req.body?.questId;
+  if (typeof questId !== 'string' || questId.length === 0) {
+    res.status(400).json({ error: 'questId must be a non-empty string' });
     return;
   }
 
