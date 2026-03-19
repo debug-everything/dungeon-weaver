@@ -19,6 +19,12 @@
 ┌─────────▼───────────────────────────────────────┐
 │              Express Backend (server/)            │
 │                                                  │
+│  Middleware                                       │
+│  ├── helmet          - Security headers (no CSP)  │
+│  ├── cors            - Origin whitelist (env var) │
+│  ├── express-rate-limit - 60/min API, 10/min LLM │
+│  └── express.json    - 512KB body limit           │
+│                                                  │
 │  Routes                                          │
 │  ├── /api/saves    - Save/load game state        │
 │  ├── /api/quests   - LLM quest pool endpoints    │
@@ -46,7 +52,7 @@
 ## LLM Integration
 
 ### How It Works
-The LLM generates dynamic quest definitions organized into coherent **story arcs** — multi-quest narrative sequences with a theme, escalating stakes, and a boss fight finale.
+The LLM generates dynamic quest definitions organized into coherent **story arcs**: multi-quest narrative sequences with a theme, escalating stakes, and a boss fight finale.
 
 **Activation:** Requires both `LLM_ENABLED=true` AND `LLM_API_KEY` to be set in `server/.env`. Either missing = LLM disabled.
 
@@ -153,9 +159,9 @@ Step 3: Generate individual quest           ✅ implemented
         (with lore context for grounded names/places)
         → { quest definition with lore-referenced dialog }
 ```
-Narration (onComplete, onBossEncounter, onBossDefeat) is generated inline as part of Step 3 — the lore context enriches narration fields automatically.
+Narration (onComplete, onBossEncounter, onBossDefeat) is generated inline as part of Step 3. The lore context enriches narration fields automatically.
 
-**Why it matters:** Each step's output makes the next step's output higher quality. Without lore context, quest names feel random. With it, a quest about retrieving the "Shard of Valdris" references the lore's fallen kingdom of Valdris — creating coherence that single-shot generation can't achieve.
+**Why it matters:** Each step's output makes the next step's output higher quality. Without lore context, quest names feel random. With it, a quest about retrieving the "Shard of Valdris" references the lore's fallen kingdom of Valdris, creating coherence that single-shot generation can't achieve.
 
 **Where in code:**
 - `server/src/services/promptTemplates.ts` — `LORE_SYSTEM_PROMPT`, `buildLoreUserPrompt()`, `LoreFragment` interface
@@ -300,7 +306,7 @@ Orchestrator LLM: "Plan floor N content"
               coherent floor content
 ```
 
-**Why it matters:** Currently, dungeon rooms and quests are disconnected — rooms are procedurally random, quests reference generic locations. The orchestrator creates thematic coherence: a "corrupted mine" floor has mine-themed room descriptions, undead miners as enemies, and quests about clearing the corruption. The player feels like they're exploring a designed world, not random rooms.
+**Why it matters:** Currently, dungeon rooms and quests are disconnected. Rooms are procedurally random, quests reference generic locations. The orchestrator creates thematic coherence: a "corrupted mine" floor has mine-themed room descriptions, undead miners as enemies, and quests about clearing the corruption. The player feels like they're exploring a designed world, not random rooms.
 
 **Where in code:**
 - `server/src/services/floorOrchestratorService.ts` — new service

@@ -99,7 +99,7 @@ class QuestPoolService {
   }
 
   getOrGenerateForNPC(npcId: string): GeneratedQuestDefinition[] {
-    // Check story arc first — arc quests take priority
+    // Check story arc first; arc quests take priority
     const arcQuest = storyArcService.getCurrentQuestForNPC(npcId);
     if (arcQuest) {
       return [arcQuest];
@@ -109,7 +109,7 @@ class QuestPoolService {
     const pool = this.pools.get(npcId) ?? [];
     if (pool.length > 0) return [...pool];
 
-    // No quests ready — trigger background generation, return empty immediately
+    // No quests ready, trigger background generation and return empty
     if (!this.generating.get(npcId)) {
       llmLogger.info('No quests ready for NPC "%s", generating in background...', npcId);
       this.replenishNPC(npcId).catch(err => {

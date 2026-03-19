@@ -354,7 +354,7 @@ export async function generateIntroNarration(
     const raw = await callLLM(INTRO_SYSTEM_PROMPT, buildIntroUserPrompt(arc, lore), 300, 0.9, resolveModel('fast'));
     let parsed = JSON.parse(raw);
 
-    // json_object mode forces an object wrapper — unwrap if needed
+    // json_object mode forces an object wrapper, unwrap if needed
     if (!Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null) {
       const values = Object.values(parsed);
       const arr = values.find(v => Array.isArray(v));

@@ -239,6 +239,16 @@ STORY_ARC_DAILY_MAX=5      # Max story arcs generated per day (default: 5)
 Both `LLM_ENABLED=true` AND `LLM_API_KEY` must be set. Missing either = LLM disabled (hardcoded quests only).
 `STORY_ARC_DAILY_MAX` caps how many story arcs can be generated per calendar day (resets at midnight UTC). When the limit is reached, no new arcs are generated until the next day.
 
+**Security & Rate Limiting** (`server/.env`):
+```
+CORS_ORIGIN=*                  # Comma-separated allowed origins (* = any, for dev only)
+RATE_LIMIT_WINDOW_MS=60000     # Rate limit window in ms (default: 60s)
+RATE_LIMIT_MAX=60              # Max general API requests per window (default: 60)
+RATE_LIMIT_LLM_MAX=10          # Max LLM-triggering requests per window (default: 10)
+```
+
+**Important:** Set `CORS_ORIGIN` to your actual domain in production (e.g., `https://dungeon-rpg-ai.onrender.com`). The `*` default is for local development only.
+
 **Logging**: Uses pino with pretty console output + JSON file at `server/logs/server.log`.
 ```bash
 # Watch all logs live
